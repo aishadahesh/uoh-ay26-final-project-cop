@@ -55,6 +55,15 @@ def test_provider_failure_uses_fallback_without_crashing_the_match():
     assert decision.move is Move.STAY
     assert decision.used_fallback is True
     assert "TimeoutError" in decision.rationale
+    assert "offline" in decision.rationale
+    assert "after 3 models" in decision.rationale
+
+
+def test_provider_error_redacts_api_keys(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "super-secret-key")
+    message = GeminiAgentAdvisor._safe_error(RuntimeError("bad super-secret-key"))
+    assert "super-secret-key" not in message
+    assert "<redacted>" in message
 
 
 def test_prompt_contains_local_belief_but_not_an_opponent_true_position():
