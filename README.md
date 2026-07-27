@@ -66,6 +66,51 @@ engine and its tactical rationale appears in the sidebar. Invalid model output
 or an API failure safely falls back to the Manhattan heuristic. Human vs Human
 remains fully offline.
 
+### Agent vs Agent on two computers (MCP)
+
+Choose **Agent vs Agent (Two Computers)** from the same `play` launcher on
+both computers. Each side selects a different role (`cop` / `thief`) and runs
+an ngrok or Localtonet HTTP tunnel to the local port shown in the setup screen.
+
+The launcher pre-fills every field from `config/network_match.json`. Edit that
+file before launching to set the peer role and URLs, game ID, both teams and
+members, four repository URLs, output directory, and email defaults. Do not
+put Gemini keys or Gmail OAuth tokens in this file; those remain in `.env`,
+`credentials.json`, and `token.json`.
+
+- Put the **other computer's public URL** in **Opponent public URL**. It must
+  include the FastMCP route, for example `https://abc123.ngrok.app/mcp`.
+- Put your own tunnel address in **This peer's public tunnel URL** and give it
+  to the opponent.
+- Use the same game ID, sub-game number, shared `config/game.json`, and shared
+  match secret on both computers.
+- Enter Team 1 and Team 2 names, both individual member fields for each team,
+  plus all four repository URLs;
+  they are recorded in the final result schema.
+
+For the lower-level `serve` command, the same opponent address belongs in
+`[network].opponent_url` inside the private role file
+`config/cop/game.toml` or `config/thief/game.toml`; never put it in the shared
+`config/game.json`.
+
+Both peers act as MCP server and client simultaneously. Every move is
+commit-verified. The final score and log hash are authenticated and compared
+on both computers before `mutual_sign_off` becomes `true`. Each peer writes:
+
+```text
+declaration_<game_id>.json
+config_<game_id>_g<NN>.json
+log_<game_id>_g<NN>.json
+result_<game_id>.json
+```
+
+Enable **Automatically email result JSON** to send the final JSON-only report.
+The assignment address `rmisegal+uoh26finalgame@gmail.com` is pre-filled, but
+the recipient field can be changed before starting. Install the email extra first, place
+Google OAuth `credentials.json` in the project root, and complete browser
+consent once; its reusable token is stored as `token.json`. Email is sent only
+after both computers agree on the result.
+
 **Run two real, separate peer processes talking over FastMCP** (two terminals):
 
 ```bash
