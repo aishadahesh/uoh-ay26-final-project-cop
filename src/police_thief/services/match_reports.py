@@ -173,6 +173,14 @@ class RepoCrossLinks:
 
 
 @dataclass(frozen=True)
+class ResultTeamIdentity:
+    """Team name and members recorded alongside the mandatory repo links."""
+
+    team_name: str
+    members: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class MatchResult:
     """Sec. 9.3.19's `[results file]`: final outcome, for league score weighting."""
 
@@ -185,6 +193,8 @@ class MatchResult:
     log_sha256: str
     total_tokens_used: int
     repo_links: RepoCrossLinks
+    team_a: ResultTeamIdentity | None = None
+    team_b: ResultTeamIdentity | None = None
 
 
 def build_match_result(
@@ -197,6 +207,8 @@ def build_match_result(
     log_entries: list[LogEntry],
     token_usage: TokenUsage,
     repo_links: RepoCrossLinks,
+    team_a: ResultTeamIdentity | None = None,
+    team_b: ResultTeamIdentity | None = None,
 ) -> MatchResult:
     return MatchResult(
         game_id=game_id,
@@ -208,6 +220,8 @@ def build_match_result(
         log_sha256=sha256_of_log(log_entries),
         total_tokens_used=token_usage.total,
         repo_links=repo_links,
+        team_a=team_a,
+        team_b=team_b,
     )
 
 
