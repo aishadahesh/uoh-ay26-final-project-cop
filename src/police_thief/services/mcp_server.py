@@ -14,6 +14,7 @@ input validation — never move legality, never cryptographic trust.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from fastmcp import FastMCP
@@ -43,7 +44,10 @@ class MoveEnvelope:
         return bool(self.signed_move.strip()) and bool(self.signature.strip())
 
 
-def build_peer_server(peer_name: str) -> FastMCP:
+ReceiveHandler = Callable[[MoveEnvelope], dict]
+
+
+def build_peer_server(peer_name: str, receive_handler: ReceiveHandler | None = None) -> FastMCP:
     """Construct this peer's FastMCP server instance.
 
     Each peer (cop or thief) calls this with its own `peer_name` (e.g.
@@ -59,6 +63,8 @@ def build_peer_server(peer_name: str) -> FastMCP:
         """Receive one move envelope from the opponent over the network."""
         envelope = MoveEnvelope(signed_move=signed_move, signature=signature)
         accepted = envelope.is_structurally_valid()
+        if accepted and receive_handler is not None:
+            return receive_handler(envelope)
         return {"accepted": accepted, "move": envelope.signed_move if accepted else None}
 
     return mcp
