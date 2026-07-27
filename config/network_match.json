@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.00",
+  "peer": {
+    "role": "cop",
+    "local_port": 8801,
+    "opponent_url": "https://opponent.example/mcp",
+    "public_url": "https://your-tunnel.example/mcp"
+  },
+  "match": {
+    "game_id": "G001",
+    "sub_game_number": 1,
+    "shared_match_secret": "",
+    "output_directory": "results/network"
+  },
+  "team_1": {
+    "name": "uoh-ay26",
+    "members": ["Aisha Abu Dahesh", "Yousef Asadi"],
+    "repos": {
+      "cop": "https://github.com/aishadahesh/uoh-ay26-final-project",
+      "thief": "https://github.com/aishadahesh/uoh-ay26-final-project"
+    }
+  },
+  "team_2": {
+    "name": "",
+    "members": ["", ""],
+    "repos": {
+      "cop": "",
+      "thief": ""
+    }
+  },
+  "email": {
+    "automatic": false,
+    "recipient": "rmisegal+uoh26finalgame@gmail.com"
+  }
+}

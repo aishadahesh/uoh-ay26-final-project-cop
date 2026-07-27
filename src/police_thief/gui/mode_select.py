@@ -10,6 +10,10 @@ from police_thief.gui.theme import COLORS, FONT, configure_window, install_style
 
 _MODE_COPY = {
     GameMode.AGENT_VS_AGENT: ("AUTONOMOUS", "Watch two heuristic agents adapt under fog of war."),
+    GameMode.NETWORK_AGENT_VS_AGENT: (
+        "MCP NETWORK",
+        "Connect two autonomous peers running on different computers.",
+    ),
     GameMode.HUMAN_COP_VS_AGENT: ("PURSUIT", "Track scent, shape the board, and close the net."),
     GameMode.AGENT_VS_HUMAN_THIEF: ("EVASION", "Outthink the pursuing agent and survive 35 turns."),
     GameMode.HUMAN_VS_HUMAN: ("HOTSEAT", "A shared-board tactical duel for two local players."),

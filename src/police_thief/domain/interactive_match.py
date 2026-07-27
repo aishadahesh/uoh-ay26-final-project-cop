@@ -52,6 +52,7 @@ class GameMode(StrEnum):
     terminology."""
 
     AGENT_VS_AGENT = "agent_vs_agent"
+    NETWORK_AGENT_VS_AGENT = "network_agent_vs_agent"
     HUMAN_COP_VS_AGENT = "human_cop_vs_agent"
     AGENT_VS_HUMAN_THIEF = "agent_vs_human_thief"
     HUMAN_VS_HUMAN = "human_vs_human"
@@ -59,6 +60,7 @@ class GameMode(StrEnum):
 
 MODE_LABELS: dict[GameMode, str] = {
     GameMode.AGENT_VS_AGENT: "Agent vs Agent",
+    GameMode.NETWORK_AGENT_VS_AGENT: "Agent vs Agent (Two Computers)",
     GameMode.HUMAN_COP_VS_AGENT: "Human (Cop) vs Agent",
     GameMode.AGENT_VS_HUMAN_THIEF: "Agent vs Human (Thief)",
     GameMode.HUMAN_VS_HUMAN: "Human vs Human",
@@ -66,6 +68,10 @@ MODE_LABELS: dict[GameMode, str] = {
 
 _MODE_CONTROL: dict[GameMode, dict[AgentRole, PlayerType]] = {
     GameMode.AGENT_VS_AGENT: {AgentRole.COP: PlayerType.AGENT, AgentRole.THIEF: PlayerType.AGENT},
+    GameMode.NETWORK_AGENT_VS_AGENT: {
+        AgentRole.COP: PlayerType.AGENT,
+        AgentRole.THIEF: PlayerType.AGENT,
+    },
     GameMode.HUMAN_COP_VS_AGENT: {AgentRole.COP: PlayerType.HUMAN, AgentRole.THIEF: PlayerType.AGENT},
     GameMode.AGENT_VS_HUMAN_THIEF: {AgentRole.COP: PlayerType.AGENT, AgentRole.THIEF: PlayerType.HUMAN},
     GameMode.HUMAN_VS_HUMAN: {AgentRole.COP: PlayerType.HUMAN, AgentRole.THIEF: PlayerType.HUMAN},
