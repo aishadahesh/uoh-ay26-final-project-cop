@@ -11,7 +11,7 @@ from tkinter import messagebox, ttk
 
 from police_thief.gui.theme import COLORS, FONT, MONO_FONT, configure_window, install_styles
 from police_thief.services.gemini_agent import GeminiAgentAdvisor
-from police_thief.services.mcp_server import build_peer_server, run_peer_server
+from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
 from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
 
 
@@ -24,7 +24,8 @@ class NetworkMatchApp:
         self.master = master
         self.settings = settings
         self.on_new_game = on_new_game
-        self.runner = NetworkMatchRunner(settings, gemini_advisor)
+        self.inboxes = PeerInboxes()
+        self.runner = NetworkMatchRunner(settings, self.inboxes, gemini_advisor)
         self.stop_event = threading.Event()
         self.events: queue.Queue[tuple[str, str]] = queue.Queue()
         self.closed = False
@@ -91,9 +92,7 @@ class NetworkMatchApp:
 
     def _serve(self) -> None:
         try:
-            server = build_peer_server(
-                peer_name=f"{self.settings.role.value}_peer", receive_handler=self.runner.receive,
-            )
+            server = build_peer_server(self.settings.role.value, self.inboxes)
             self.events.put(("log", f"MCP server listening on port {self.settings.local_port}"))
             run_peer_server(server, host="0.0.0.0", port=self.settings.local_port)
         except Exception as exc:

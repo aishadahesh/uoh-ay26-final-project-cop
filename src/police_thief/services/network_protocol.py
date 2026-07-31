@@ -1,98 +1,160 @@
-"""Signed wire messages for a cross-computer MCP match."""
+"""Versioned wire contract for reference-compatible peer matches."""
 
 from __future__ import annotations
 
 import hashlib
-import hmac
 import json
+import secrets
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from typing import Any
 
-from police_thief.domain.board import Move, Position
-from police_thief.services.commit_reveal import LogEntry, commit, verify
-from police_thief.shared.constants import AgentRole
+PROTOCOL_NAME = "police-thief-mcp"
+PROTOCOL_VERSION = "3.0.0"
+WIRE_ROLES = {"cop": "police", "thief": "thief"}
+CONTROL_KINDS = frozenset({"enable", "status", "restart", "quit"})
 
 
 class NetworkProtocolError(ValueError):
-    """Raised when a peer message is malformed, stale, or unverifiable."""
+    """Raised when a peer message is malformed, incompatible, or tampered."""
+
+
+def _canonical(data: Any) -> str:
+    return json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+
+def _digest(payload: dict, nonce: str) -> str:
+    return hashlib.sha256(f"{_canonical(payload)}|{nonce}".encode()).hexdigest()
+
+
+def seal_payload(payload: dict) -> dict:
+    nonce = secrets.token_hex(32)
+    return {"payload": payload, "nonce": nonce, "commit": _digest(payload, nonce)}
+
+
+def verify_record(record: dict) -> bool:
+    try:
+        return secrets.compare_digest(
+            str(record["commit"]), _digest(record["payload"], str(record["nonce"])),
+        )
+    except (KeyError, TypeError):
+        return False
+
+
+def create_agreement(terms: dict, identity: dict) -> dict:
+    nonce = secrets.token_hex(16)
+    return {
+        "terms": terms,
+        "nonce": nonce,
+        "signature": _digest(terms, nonce),
+        "identity": identity,
+    }
+
+
+def verify_agreement(message: dict, expected_terms: dict) -> dict:
+    try:
+        terms = message["terms"]
+        nonce = str(message["nonce"])
+        signature = str(message["signature"])
+        identity = dict(message.get("identity", {}))
+    except (KeyError, TypeError, ValueError) as exc:
+        raise NetworkProtocolError(f"malformed negotiation message: {exc}") from exc
+    if terms != expected_terms:
+        raise NetworkProtocolError("opponent game terms do not match local signed terms")
+    if not secrets.compare_digest(signature, _digest(terms, nonce)):
+        raise NetworkProtocolError("opponent negotiation signature is invalid")
+    return identity
 
 
 @dataclass(frozen=True)
-class NetworkMove:
-    game_id: str
-    turn_index: int
-    role: AgentRole
-    state: Position
-    move: Move
-    intent: bool
-    nonce: str
-    h_commit: str
+class TurnMessage:
+    step: int
+    sender: str
+    hint: str
+    smell_grid: dict
+    commit: str
+    timestamp: str
+    barrier_placed: list[int] | None = None
+    capture_claim: list[int] | None = None
+    claim_response: dict | None = None
+    win_claim: dict | None = None
 
-    def to_wire(self) -> tuple[str, str]:
-        payload = asdict(self)
-        payload["kind"] = "move"
-        payload["role"] = self.role.value
-        payload["move"] = self.move.value
-        return json.dumps(payload, separators=(",", ":"), sort_keys=True), self.h_commit
+    def to_dict(self) -> dict:
+        return asdict(self)
 
-    def to_log_entry(self) -> LogEntry:
-        return LogEntry(
-            state={"row": self.state.row, "col": self.state.col},
-            move=self.move,
-            intent=self.intent,
-            nonce=self.nonce,
-            h_commit=self.h_commit,
-        )
-
-
-def create_network_move(
-    game_id: str, turn_index: int, role: AgentRole, state: Position, move: Move
-) -> NetworkMove:
-    state_dict = {"row": state.row, "col": state.col}
-    sealed = commit(state_dict, move, True)
-    return NetworkMove(game_id, turn_index, role, state, move, True, sealed.nonce, sealed.h_commit)
+    @classmethod
+    def from_dict(cls, data: dict) -> TurnMessage:
+        try:
+            message = cls(**data)
+        except (TypeError, ValueError) as exc:
+            raise NetworkProtocolError(f"malformed turn message: {exc}") from exc
+        if message.sender not in WIRE_ROLES.values() or message.step < 1:
+            raise NetworkProtocolError("invalid turn sender or step")
+        if len(message.commit) != 64:
+            raise NetworkProtocolError("turn commitment must be a SHA-256 digest")
+        return message
 
 
-def parse_network_move(payload: str, signature: str) -> NetworkMove:
-    try:
-        raw = json.loads(payload)
-        state = Position(int(raw["state"]["row"]), int(raw["state"]["col"]))
-        message = NetworkMove(
-            game_id=str(raw["game_id"]),
-            turn_index=int(raw["turn_index"]),
-            role=AgentRole(raw["role"]),
-            state=state,
-            move=Move(raw["move"]),
-            intent=bool(raw["intent"]),
-            nonce=str(raw["nonce"]),
-            h_commit=str(raw["h_commit"]),
-        )
-    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise NetworkProtocolError(f"malformed network move: {exc}") from exc
-    if message.h_commit != signature:
-        raise NetworkProtocolError("envelope signature does not match h_commit")
-    state_dict = {"row": state.row, "col": state.col}
-    if not verify(state_dict, message.move, message.intent, message.nonce, message.h_commit):
-        raise NetworkProtocolError("commit-reveal verification failed")
-    return message
+@dataclass(frozen=True)
+class AuditPayload:
+    sender: str
+    records: list[dict]
+    result_claim: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> AuditPayload:
+        try:
+            payload = cls(**data)
+        except (TypeError, ValueError) as exc:
+            raise NetworkProtocolError(f"malformed audit payload: {exc}") from exc
+        if payload.sender not in WIRE_ROLES.values() or not isinstance(payload.records, list):
+            raise NetworkProtocolError("invalid audit sender or records")
+        return payload
 
 
-def create_result_proof(result: dict, shared_key: bytes) -> tuple[str, str]:
-    """Create an authenticated final-result message for mutual sign-off."""
-    payload = json.dumps(
-        {"kind": "result", "result": result}, separators=(",", ":"), sort_keys=True,
-    )
-    signature = hmac.new(shared_key, payload.encode(), hashlib.sha256).hexdigest()
-    return payload, signature
+@dataclass(frozen=True)
+class ControlMessage:
+    kind: str
+    sender: str
+    sub_game_number: int = 1
+    status: str = ""
+    step_budget: float = 0.0
+    payload: dict | None = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> ControlMessage:
+        allowed = set(cls.__dataclass_fields__)
+        try:
+            message = cls(**{key: value for key, value in data.items() if key in allowed})
+        except (TypeError, ValueError) as exc:
+            raise NetworkProtocolError(f"malformed control message: {exc}") from exc
+        if message.kind not in CONTROL_KINDS or message.sender not in WIRE_ROLES.values():
+            raise NetworkProtocolError("invalid control kind or sender")
+        return message
 
 
-def parse_result_proof(payload: str, signature: str, shared_key: bytes) -> dict:
-    expected = hmac.new(shared_key, payload.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected, signature):
-        raise NetworkProtocolError("result proof signature is invalid")
-    try:
-        raw = json.loads(payload)
-        if raw["kind"] != "result" or not isinstance(raw["result"], dict):
-            raise ValueError("not a result proof")
-    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise NetworkProtocolError(f"malformed result proof: {exc}") from exc
-    return raw["result"]
+def now_iso() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+def audit_records(records: list[dict], expected_commits: dict[int, str]) -> tuple[bool, list[int]]:
+    failed: list[int] = []
+    seen: set[int] = set()
+    for record in records:
+        try:
+            step = int(record["payload"]["step"])
+            commit = str(record["commit"])
+        except (KeyError, TypeError, ValueError):
+            failed.append(-1)
+            continue
+        seen.add(step)
+        if expected_commits.get(step) != commit or not verify_record(record):
+            failed.append(step)
+    failed.extend(sorted(set(expected_commits) - seen))
+    return not failed, failed

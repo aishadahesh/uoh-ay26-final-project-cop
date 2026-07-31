@@ -43,7 +43,7 @@ from police_thief.domain.scent import ScentConfig, ScentField
 from police_thief.domain.simulation import run_local_match
 from police_thief.gui.live_gui import LiveGUI
 from police_thief.gui.replay_gui import ReplayGUI
-from police_thief.services.mcp_server import build_peer_server, run_peer_server
+from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
 from police_thief.shared.config import load_network_config
 from police_thief.shared.constants import AgentRole
 from police_thief.shared.game_config import load_match_parameters
@@ -79,7 +79,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def _serve(args: argparse.Namespace) -> None:
     role = AgentRole(args.role)
     network = load_network_config(role, args.config_root)
-    mcp = build_peer_server(peer_name=f"{role.value}_peer")
+    mcp = build_peer_server(role.value, PeerInboxes())
     run_peer_server(mcp, host="0.0.0.0", port=network.my_port)
 
 
