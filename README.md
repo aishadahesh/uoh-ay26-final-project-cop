@@ -2,6 +2,8 @@
 
 Final project for the University of Haifa "Orchestration of AI Agents" course (AY26). Two autonomous agents — a **cop** and a **thief** — play a partial-information pursuit game over a decentralized peer-to-peer network, with no central server, no shared memory between sides, and a cryptographic commit-reveal protocol standing in for a referee.
 
+> **This is the COP repo.** Sibling (thief) repo: https://github.com/aishadahesh/uoh-ay26-final-project-thief
+
 > **Status: practical overview.** This README describes the current state of the codebase and how to run it. The full academic report required for submission (Dec-POMDP model discussion, design-decision justification, learning curves, mandatory screenshots) is a separate, later pass — see `docs/TODO.md` Section O.6 / rule 42 for what's still outstanding there.
 
 ## What's built
