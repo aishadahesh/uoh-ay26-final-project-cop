@@ -1,39 +1,44 @@
-"""Authenticated MCP payload tests for cross-computer matches."""
+"""Cryptographic and schema tests for protocol version 3."""
 
 import pytest
 
-from police_thief.domain.board import Move, Position
 from police_thief.services.network_protocol import (
     NetworkProtocolError,
-    create_network_move,
-    create_result_proof,
-    parse_network_move,
-    parse_result_proof,
+    TurnMessage,
+    audit_records,
+    create_agreement,
+    seal_payload,
+    verify_agreement,
+    verify_record,
 )
-from police_thief.shared.constants import AgentRole
 
 
-def test_network_move_round_trip_is_commit_verified():
-    original = create_network_move("G007", 4, AgentRole.COP, Position(1, 2), Move.EAST)
-    payload, signature = original.to_wire()
-    assert parse_network_move(payload, signature) == original
+def test_signed_negotiation_round_trip():
+    terms = {"board_size": 7, "max_steps": 35}
+    message = create_agreement(terms, {"group_name": "Alpha"})
+    assert verify_agreement(message, terms) == {"group_name": "Alpha"}
 
 
-def test_network_move_rejects_modified_signature():
-    payload, _signature = create_network_move(
-        "G007", 4, AgentRole.COP, Position(1, 2), Move.EAST,
-    ).to_wire()
-    with pytest.raises(NetworkProtocolError, match="signature"):
-        parse_network_move(payload, "0" * 64)
+def test_negotiation_rejects_different_terms():
+    message = create_agreement({"board_size": 7}, {})
+    with pytest.raises(NetworkProtocolError, match="do not match"):
+        verify_agreement(message, {"board_size": 8})
 
 
-def test_result_proof_round_trip_uses_shared_match_secret():
-    result = {"game_id": "G007", "log_sha256": "abc", "mutual_sign_off": False}
-    payload, signature = create_result_proof(result, b"shared-secret")
-    assert parse_result_proof(payload, signature, b"shared-secret") == result
+def test_turn_contains_commit_but_no_private_truth():
+    record = seal_payload({"step": 1, "state": "private", "move": "N", "intent": True})
+    turn = TurnMessage(
+        step=1, sender="thief", hint="near the river", smell_grid={},
+        commit=record["commit"], timestamp="2026-07-31T00:00:00Z",
+    ).to_dict()
+    assert set(turn).isdisjoint({"state", "move", "intent", "nonce"})
+    assert verify_record(record)
 
 
-def test_result_proof_rejects_another_computers_secret():
-    payload, signature = create_result_proof({"game_id": "G007"}, b"correct")
-    with pytest.raises(NetworkProtocolError, match="signature"):
-        parse_result_proof(payload, signature, b"wrong")
+def test_audit_detects_tampering_and_missing_steps():
+    record = seal_payload({"step": 2, "state": {}, "move": "E", "intent": True})
+    expected = {2: record["commit"]}
+    assert audit_records([record], expected) == (True, [])
+    record["payload"]["move"] = "W"
+    assert audit_records([record], expected) == (False, [2])
+    assert audit_records([], expected) == (False, [2])

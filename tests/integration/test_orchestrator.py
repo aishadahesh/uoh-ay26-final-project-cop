@@ -24,7 +24,7 @@ from police_thief.domain.strategy.manhattan_brain import ManhattanHeuristicBrain
 from police_thief.services.commit_reveal import verify
 from police_thief.services.deadline_tracker import DeadlineTracker
 from police_thief.services.log_manager import LogManager
-from police_thief.services.mcp_server import build_peer_server, run_peer_server
+from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
 from police_thief.services.orchestrator import Orchestrator
 from police_thief.services.state_machine import MatchState
 from police_thief.services.watchdog import Watchdog
@@ -40,7 +40,7 @@ def _free_port() -> int:
 @pytest.fixture
 def running_opponent_url():
     port = _free_port()
-    mcp = build_peer_server("integration_test_opponent")
+    mcp = build_peer_server("integration_test_opponent", PeerInboxes())
     thread = threading.Thread(
         target=lambda: run_peer_server(mcp, host="127.0.0.1", port=port),
         daemon=True,

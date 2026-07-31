@@ -12,7 +12,7 @@ import time
 import pytest
 
 from police_thief.services.mcp_client import send_move
-from police_thief.services.mcp_server import build_peer_server, run_peer_server
+from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
 
 
 def _free_port() -> int:
@@ -24,21 +24,24 @@ def _free_port() -> int:
 @pytest.fixture
 def running_server():
     port = _free_port()
-    mcp = build_peer_server("integration_test_peer")
+    inboxes = PeerInboxes()
+    mcp = build_peer_server("cop", inboxes)
     thread = threading.Thread(
         target=lambda: run_peer_server(mcp, host="127.0.0.1", port=port),
         daemon=True,
     )
     thread.start()
     time.sleep(1.0)  # give uvicorn a moment to bind before the first request
-    yield f"http://127.0.0.1:{port}/mcp"
+    yield f"http://127.0.0.1:{port}/mcp", inboxes
 
 
 def test_real_http_roundtrip_accepts_well_formed_move(running_server):
-    result = send_move(running_server, signed_move="N", signature="abc123")
-    assert result == {"accepted": True, "move": "N"}
+    url, inboxes = running_server
+    result = send_move(url, signed_move="N", signature="abc123")
+    assert result == {"accepted": True, "ok": True}
+    assert inboxes.turns.get_nowait() == {"signed_move": "N", "signature": "abc123"}
 
 
-def test_real_http_roundtrip_rejects_blank_signature(running_server):
-    result = send_move(running_server, signed_move="N", signature="   ")
-    assert result == {"accepted": False, "move": None}
+def test_real_http_server_exposes_no_legacy_receive_move_tool(running_server):
+    _url, inboxes = running_server
+    assert inboxes.agreements.empty()
