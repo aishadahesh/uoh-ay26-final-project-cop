@@ -327,10 +327,10 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 
 ### E.5 Barrier-Placement Strategy (Cop)
 - [x] T0252 Implement a barrier-placement policy function distinct from movement policy — `ManhattanHeuristicBrain._pick_move`
-- [x] T0253 Implement a simple corner-the-thief barrier heuristic (progressively block flanking cells) — simplified to "barrier the neighbor closest to the belief peak" (single-step greedy, not a multi-turn cornering plan); a deeper flanking strategy is a natural future refinement, not built now
+- [x] T0253 Implement a simple corner-the-thief barrier heuristic (progressively block flanking cells) — originally "barrier the neighbor closest to the belief peak" (pure distance nudge); enhanced to score each candidate (own cell or an open neighbor) by how much it shrinks the thief's `Board.reachable_area` from the believed peak, so it now targets genuine chokepoints rather than just narrowing distance. Still single-turn greedy, not a multi-turn lookahead cornering plan -- a deeper flanking strategy remains a natural future refinement
 - [x] T0254 Write unit test: barrier placement never targets a cell more than one step from the cop
 - [x] T0255 Write unit test: barrier budget is respected by the placement policy (stops placing at zero budget)
-- [ ] T0256 Tune barrier-placement timing (early game vs. late game) and document reasoning — not built: the brain attempts a barrier placement every turn budget-permitting, with no early/late-game timing logic yet
+- [x] T0256 Tune barrier-placement timing (early game vs. late game) and document reasoning — resolved differently than originally framed: rather than an explicit early/late-game clock, `_pick_move` now conserves the budget based on *usefulness*, not turn number -- it only places when a candidate's reachable-area drop exceeds 1 (a genuine chokepoint), which naturally holds barriers during open-board early play and spends them once the cop is actually near a wall/corner/existing barrier, whenever in the match that happens to occur
 
 ### E.6 Decision Pipeline Wiring & Determinism
 - [x] T0257 Ensure the actual move-selection computation is always pure algorithmic/deterministic code (no LLM call in this stage)

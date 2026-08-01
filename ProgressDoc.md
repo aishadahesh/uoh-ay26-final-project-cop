@@ -548,4 +548,35 @@ ruff check: All checks passed!
 ruff check: All checks passed!
 ```
 
+**Status:** committed.
+
+---
+
+### Post-Split Enhancement — Reachable-Area-Based Barrier Targeting
+
+**What prompted this:** a direct follow-up question after explaining the cop's strategy -- asked for an honest assessment of whether it was good or needed enhancement. The honest answer was that the barrier heuristic was a real weak point: "barrier the neighbor closest to the belief peak" is a pure distance nudge with no sense of whether blocking that cell does anything useful, and no budget discipline (it spent a barrier every single turn it could, regardless of usefulness) -- exactly the gap `docs/TODO.md` T0256 already flagged as not built. Asked to enhance it on that basis.
+
+**What was built:**
+- `Board.reachable_area(source, extra_blocked=None)` (`domain/board.py`) -- a BFS flood fill counting open cells reachable from `source`, optionally treating one extra cell as blocked. This is the tool for asking "if I blocked this cell, how much of the thief's escape space would actually disappear," as opposed to "is this cell closer to my guess."
+- `ManhattanHeuristicBrain._pick_move` rewritten around it: candidates are now `own`'s current cell *and* its open neighbors (previously only neighbors -- the cop's own cell is a legal barrier target per Sec. 3.3.4, but the old heuristic never considered it at all, so it had no way to express "seal the door behind me"). Each candidate is scored by `reachable_area(belief_peak, extra_blocked=candidate)`; the one minimizing that (tie-broken by distance to the peak, for determinism) is the best. If the best candidate only drops the reachable count by 1 -- i.e. it merely removes itself from the board, not a genuine chokepoint -- `_pick_move` returns `None` instead of spending the budget. Only a drop greater than 1 (an actual pocket getting disconnected) is worth a barrier.
+
+**Why this addresses both flagged gaps at once:** the "does this cell matter" question and the "should I spend a barrier now" question turn out to be the same question once framed as a reachable-area drop -- a genuine chokepoint is worth blocking *and* is rare enough in open board play that the heuristic naturally holds its budget until the geometry (a wall, a corner, an already-placed barrier) actually creates one, closing T0256 without needing a separate, arbitrary "early game vs. late game" turn-count rule.
+
+**Verified empirically before trusting it, same discipline as every barrier-related change this project has made:** re-ran the existing corner-scenario integration test's start positions (`cop_start=[2,0]`, `thief_start=[0,0]`) after the change and found the match still resolves to a genuine capture -- but now via a *different*, still fully legitimate Sec. 3.3.5 condition: a single barrier placement (at step 2) that happens to land exactly on the thief's true cell, rather than the multi-barrier boxed-in sequence the pre-enhancement heuristic needed several turns for. A broader sweep of eight other start-position combinations all converged to captures as well, none via a full boxed-in sequence within the tested move budgets -- consistent with the heuristic being smarter about *when* to spend a barrier, not yet capable of a multi-turn lookahead plan that deliberately engineers a chokepoint that doesn't exist yet. The existing integration test was renamed and its docstring corrected to describe what it actually now demonstrates (a barrier-driven capture via either Sec. 3.3.5 condition, with cross-peer synchronization as the property under test) rather than overclaiming a specific "boxed-in" mechanism it no longer needs to hit to prove the wiring correct.
+
+**Tests added/updated:**
+- `test_board.py`: five new tests for `reachable_area` (open board, a real chokepoint disconnecting a 3-cell pocket, a non-chokepoint dropping by exactly 1, and both zero-area edge cases).
+- `test_strategy.py`: replaced the old "always places somewhere in open space" test (no longer true, correctly) with `test_cop_brain_declines_to_place_a_barrier_in_fully_open_space` and added `test_cop_brain_seals_its_own_cell_as_the_sole_doorway_into_a_pocket`, directly exercising the new "seal your own cell" capability the old heuristic structurally couldn't reach.
+- `test_network_match_barrier.py`: replaced the open-space "places somewhere" test with a genuine-chokepoint scenario proving `_maybe_place_barrier` returns the exact expected target and updates the board/budget correctly; added a companion test proving it declines in open space.
+- `test_network_match.py`: renamed and re-documented the barrier-capture integration test to match the mechanism actually observed.
+
+**Quality gate results:**
+```
+454 passed, 1 skipped in ~21s
+TOTAL coverage: 85.39% (required: 85.0%)
+ruff check: All checks passed!
+```
+
+**Tasks checked off:** `docs/TODO.md` T0253 (barrier heuristic upgraded from a distance nudge to a reachable-area chokepoint search), T0256 (budget timing now usefulness-driven rather than unbuilt).
+
 **Status:** awaiting review before committing.
