@@ -28,21 +28,45 @@ class ManhattanHeuristicBrain(BrainBase):
         return greedy_manhattan_move(board, own, target, chase=self.role is AgentRole.COP)
 
     def _pick_move(self, board: Board, own: Position, belief: BeliefMap) -> Position | None:
-        """Cop-only: barrier the neighbor closest to the believed target,
-        progressively narrowing the thief's viable path space
-        (Sec. 3.3.8's "spatial-engineering" framing).
+        """Cop-only: choose the barrier target that most shrinks the
+        thief's believed escape space, among `own`'s current cell and its
+        open neighbors -- both legal targets per Sec. 3.3.3/3.3.4.
+
+        Enhancement over an earlier nearest-to-belief-peak version: rather
+        than blindly nudging toward the believed position, each candidate
+        is scored by how much it shrinks the *reachable area* from that
+        position (`Board.reachable_area`, a flood fill treating the
+        candidate as one more blocked cell) -- a real "does this actually
+        corner the thief" measure, not just "is this cell closer to my
+        best guess." A candidate that only removes itself from the board
+        (no genuine chokepoint yet, a 1-cell drop) is not worth spending
+        the budget on; only a candidate that disconnects a larger pocket
+        (a drop greater than 1) is placed. This also gives the heuristic
+        real budget discipline for free (docs/TODO.md T0256): it stops
+        spending a barrier every single turn regardless of usefulness, and
+        instead waits until one would actually matter -- e.g. sealing the
+        cop's own current cell behind it once that cell is the sole
+        doorway into the pocket the thief is believed to be hiding in.
 
         Already-blocked neighbors are excluded from consideration -- found
         empirically while wiring this into a live match: without this
-        filter, the heuristic could keep "targeting" the same already-
-        blocked cell turn after turn, wasting the entire barrier budget on
-        placements `Board.place_barrier` would now reject outright as
-        redundant.
+        filter, an earlier version of this heuristic could keep
+        "targeting" the same already-blocked cell turn after turn, wasting
+        the entire barrier budget on placements `Board.place_barrier`
+        would now reject outright as redundant.
         """
         if self.role is not AgentRole.COP or board.remaining_barrier_budget <= 0:
             return None
-        candidates = [n for n in board.neighbors(own) if not board.is_blocked(n)]
-        if not candidates:
-            return None
+        candidates = [own, *(n for n in board.neighbors(own) if not board.is_blocked(n))]
         target = belief.arg_max()
-        return min(candidates, key=lambda n: manhattan_distance(n, target))
+        baseline_area = board.reachable_area(target)
+        best_area, best_candidate = min(
+            (
+                (board.reachable_area(target, extra_blocked=candidate), candidate)
+                for candidate in candidates
+            ),
+            key=lambda scored: (scored[0], manhattan_distance(scored[1], target)),
+        )
+        if baseline_area - best_area <= 1:
+            return None
+        return best_candidate

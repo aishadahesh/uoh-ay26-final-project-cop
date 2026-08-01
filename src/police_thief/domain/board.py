@@ -8,6 +8,7 @@ downward below the Mandatory Parameters Table's floors.
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -124,6 +125,31 @@ class Board:
             except MoveRejectedError:
                 continue
         return legal
+
+    def reachable_area(self, source: Position, extra_blocked: Position | None = None) -> int:
+        """Count of open cells reachable from `source` by a flood fill,
+        optionally treating `extra_blocked` as one more blocked cell.
+
+        Used to evaluate a *candidate* barrier placement's real effect on
+        an opponent's escape space before actually placing it (Sec. 3.3.8's
+        "spatial-engineering" framing) -- e.g. distinguishing a barrier
+        that merely removes one open cell from a barrier that seals off an
+        entire pocket. `source` itself counts as blocked if it equals
+        `extra_blocked` (an already-fully-enclosed source has zero
+        reachable area, not one).
+        """
+        if source == extra_blocked or self.is_blocked(source):
+            return 0
+        visited = {source}
+        queue: deque[Position] = deque([source])
+        while queue:
+            current = queue.popleft()
+            for neighbor in self.neighbors(current):
+                if neighbor in visited or neighbor == extra_blocked or self.is_blocked(neighbor):
+                    continue
+                visited.add(neighbor)
+                queue.append(neighbor)
+        return len(visited)
 
     def place_barrier(self, cop_pos: Position, target: Position) -> None:
         """Place a permanent barrier at `target`; must be cop_pos itself or adjacent.
