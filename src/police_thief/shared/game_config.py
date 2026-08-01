@@ -227,12 +227,23 @@ def load_match_parameters(path: Path) -> MatchParameters:
         )
         _validate_rate_limiter_floors(rate_limiter, path)
 
+        thief_start = Position(*board_section["thief_start"])
+        cop_start = Position(*board_section["cop_start"])
+        for label, pos in (("thief_start", thief_start), ("cop_start", cop_start)):
+            if not (0 <= pos.row < grid_size and 0 <= pos.col < grid_size):
+                raise GameConfigError(f"{label} {pos} is outside the {grid_size}x{grid_size} board")
+        if thief_start == cop_start:
+            raise GameConfigError(
+                f"thief_start and cop_start are both {cop_start} -- a match cannot start with "
+                "both agents on the same cell (docs/tasks.md TODO T0775)"
+            )
+
         return MatchParameters(
             board=board,
             scoring=scoring,
             scent=scent,
-            thief_start=Position(*board_section["thief_start"]),
-            cop_start=Position(*board_section["cop_start"]),
+            thief_start=thief_start,
+            cop_start=cop_start,
             max_moves=int(movement_section["max_moves"]),
             survival_threshold=int(movement_section["survival_threshold"]),
             world=world,
