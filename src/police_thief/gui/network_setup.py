@@ -1,4 +1,10 @@
-"""Configuration dialog for cross-computer Agent-vs-Agent matches."""
+"""Configuration dialog for cross-computer Agent-vs-Agent matches.
+
+This repo is the cop side only: the role selector below is locked to
+"cop" regardless of what config/network_match.json's `peer.role` says,
+since this repo has no thief private config to actually run as the
+thief in a live match (see main.py's module docstring).
+"""
 
 from __future__ import annotations
 
@@ -86,7 +92,7 @@ class NetworkSetupDialog:
         window_height = min(820, max(600, screen_height - 120))
         self.window.geometry(f"800x{window_height}")
         self.vars = {
-            "role": tk.StringVar(value=defaults.get("role", "cop")),
+            "role": tk.StringVar(value="cop"),  # this repo is cop-only; see module docstring
             "port": tk.StringVar(value=defaults.get("port", "8801")),
             "opponent": tk.StringVar(value=defaults.get("opponent", "https://opponent.example/mcp")),
             "public": tk.StringVar(value=defaults.get("public", "https://your-tunnel.example/mcp")),
@@ -136,7 +142,7 @@ class NetworkSetupDialog:
         self.window.protocol("WM_DELETE_WINDOW", self._close)
         ttk.Label(shell, text="NETWORK MATCH", style="Title.TLabel").pack(anchor="w")
         ttk.Label(shell, text="TWO COMPUTERS  •  FASTMCP  •  SIGNED MOVES", style="Subtitle.TLabel").pack(anchor="w", pady=(0, 18))
-        self._row(shell, "This computer's role", "role", choices=("cop", "thief"))
+        self._row(shell, "This computer's role", "role", choices=("cop",))
         self._row(shell, "Local MCP port", "port")
         self._row(shell, "Opponent public URL (must end /mcp)", "opponent")
         self._row(shell, "This peer's public tunnel URL", "public")

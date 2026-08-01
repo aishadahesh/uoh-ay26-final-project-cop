@@ -1,4 +1,4 @@
-"""Enables `uv run python -m police_thief --role cop|thief`."""
+"""Enables `uv run python -m police_thief <command> ...` (this repo: cop role only)."""
 
 from police_thief.main import main
 

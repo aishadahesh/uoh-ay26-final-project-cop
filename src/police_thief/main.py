@@ -1,9 +1,18 @@
 """CLI entry point: `uv run python -m police_thief <command> ...`.
 
+This repository is the **cop** side only (docs/tasks.md's mandatory
+two-separate-repos submission split): it ships and reads only
+`config/cop/game.toml`, never a thief config directory, and `serve` below
+always runs this process as the cop. The sibling thief repo (see
+README.md) mirrors this same package restricted the other way.
+
 Commands:
-  serve --role cop|thief   Start this peer's FastMCP server (Chapter 2).
+  serve                    Start this peer's FastMCP server, as the cop,
+                           reading only config/cop/game.toml (Chapter 2).
   simulate                 Run a single-process local match with placeholder
-                           policies and print the result (Chapter 3).
+                           policies and print the result (Chapter 3). No
+                           live opponent config is read -- both sides are
+                           simulated in-process from the public heuristic.
   replay --log-file PATH   Launch the Replay Viewer against a saved match
                            log (Chapter 7) -- runs standalone, independent
                            of any live match code (docs/tasks.md T0437).
@@ -17,14 +26,20 @@ Commands:
                            Agent, or Human vs Human, then play with a move
                            pad / board clicks / barrier placement. A
                            deliberate addition beyond the rulebook's own
-                           scope -- see domain/interactive_match.py.
+                           scope -- see domain/interactive_match.py. Every
+                           mode here is a local, single-process practice
+                           sandbox using the same public heuristic for
+                           whichever side isn't human-controlled -- it never
+                           reads a live opponent's private config and never
+                           represents this repo actually playing a real,
+                           graded match as the thief.
 
 `serve` is the concrete realization of Chapter 2's "Total Separation of
-Working Environments" rule: one shared codebase (docs/PLAN.md ADR-011), but
-each invocation is its own OS process reading only its own role's config,
-sharing no memory with the other role's process. `simulate` has no
-networking or role concept at all -- it exercises board/movement/barrier/
-capture/scoring end-to-end against the single shared config/game.json.
+Working Environments" rule: this process reads only its own (cop) config,
+sharing no memory and no config file with the thief's own, separately-run
+process. `simulate` has no networking or live-opponent concept at all -- it
+exercises board/movement/barrier/capture/scoring end-to-end against the
+single shared config/game.json.
 """
 
 from __future__ import annotations
@@ -57,8 +72,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="police_thief")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    serve = subparsers.add_parser("serve", help="Start this peer's FastMCP server")
-    serve.add_argument("--role", required=True, choices=[role.value for role in AgentRole])
+    serve = subparsers.add_parser("serve", help="Start this peer's FastMCP server, as the cop")
     serve.add_argument("--config-root", type=Path, default=DEFAULT_CONFIG_ROOT)
 
     simulate = subparsers.add_parser("simulate", help="Run a local placeholder-policy match")
@@ -77,9 +91,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _serve(args: argparse.Namespace) -> None:
-    role = AgentRole(args.role)
-    network = load_network_config(role, args.config_root)
-    mcp = build_peer_server(role.value, PeerInboxes())
+    """Always serves as the cop -- this repo has no thief config to run as."""
+    network = load_network_config(AgentRole.COP, args.config_root)
+    mcp = build_peer_server(AgentRole.COP.value, PeerInboxes())
     run_peer_server(mcp, host="0.0.0.0", port=network.my_port)
 
 
