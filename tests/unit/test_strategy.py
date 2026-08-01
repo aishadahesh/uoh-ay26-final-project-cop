@@ -77,6 +77,25 @@ def test_cop_brain_declines_to_place_a_barrier_once_budget_exhausted():
     assert brain._pick_move(board, Position(0, 0), belief) is None
 
 
+def test_cop_brain_excludes_already_blocked_neighbors_from_barrier_target():
+    """Real bug found empirically while wiring this into a live network
+    match: without this filter, the heuristic kept re-targeting the same
+    already-blocked cell every turn, wasting the entire barrier budget on
+    placements Board.place_barrier now rejects outright as redundant."""
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = _belief_peaked_at(board, Position(5, 5))
+    brain = ManhattanHeuristicBrain(role=AgentRole.COP)
+    only_neighbor_toward_target = min(
+        board.neighbors(Position(0, 0)),
+        key=lambda n: manhattan_distance(n, Position(5, 5)),
+    )
+    board.place_barrier(Position(0, 0), only_neighbor_toward_target)
+    target = brain._pick_move(board, Position(0, 0), belief)
+    assert target != only_neighbor_toward_target
+    assert target in board.neighbors(Position(0, 0))
+    assert not board.is_blocked(target)
+
+
 def test_thief_brain_never_places_a_barrier():
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
     belief = _belief_peaked_at(board, Position(5, 5))

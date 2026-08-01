@@ -107,6 +107,16 @@ def test_place_barrier_fails_once_budget_exhausted():
         board.place_barrier(Position(3, 3), Position(3, 2))
 
 
+def test_place_barrier_rejects_an_already_blocked_target(board):
+    """Real bug found empirically: a heuristic that keeps re-targeting the
+    same already-blocked cell must not be allowed to silently waste budget
+    on a no-op (docs/tasks.md Sec. 3.3.7)."""
+    board.place_barrier(Position(3, 3), Position(2, 3))
+    with pytest.raises(MoveRejectedError, match="already blocked"):
+        board.place_barrier(Position(3, 3), Position(2, 3))
+    assert board.remaining_barrier_budget == 13
+
+
 def test_barrier_is_permanent_for_the_rest_of_the_match(board):
     board.place_barrier(Position(3, 3), Position(2, 3))
     assert board.is_blocked(Position(2, 3))
@@ -139,3 +149,22 @@ def test_legal_moves_always_includes_stay_even_when_fully_boxed_in(board):
         board.place_barrier(Position(3, 3), neighbor)
     legal = board.legal_moves(Position(3, 3))
     assert set(legal) == {Move.STAY}
+
+
+def test_apply_declared_barrier_blocks_the_cell(board):
+    board.apply_declared_barrier(Position(2, 2))
+    assert board.is_blocked(Position(2, 2))
+
+
+def test_apply_declared_barrier_decrements_remaining_budget(board):
+    assert board.remaining_barrier_budget == 14
+    board.apply_declared_barrier(Position(2, 2))
+    assert board.remaining_barrier_budget == 13
+
+
+def test_apply_declared_barrier_does_not_validate_adjacency(board):
+    """Unlike place_barrier, this trusts the declaration -- the receiving
+    peer has no cop_pos of its own to validate against (Sec. 3.3.6: barrier
+    declarations are public/plaintext, never re-verified live)."""
+    board.apply_declared_barrier(Position(6, 6))  # nowhere near anything -- must not raise
+    assert board.is_blocked(Position(6, 6))

@@ -181,3 +181,24 @@ def test_load_match_parameters_rejects_max_barriers_below_floor(tmp_path):
     data["movement_and_barriers"]["max_barriers"] = 5
     with pytest.raises(GameConfigError, match="below the mandatory floor"):
         load_match_parameters(_write(tmp_path, data))
+
+
+def test_load_match_parameters_rejects_identical_start_positions(tmp_path):
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data["board_and_agents"]["thief_start"] = data["board_and_agents"]["cop_start"]
+    with pytest.raises(GameConfigError, match="same cell"):
+        load_match_parameters(_write(tmp_path, data))
+
+
+def test_load_match_parameters_rejects_out_of_bounds_cop_start(tmp_path):
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data["board_and_agents"]["cop_start"] = [99, 99]
+    with pytest.raises(GameConfigError, match="outside the"):
+        load_match_parameters(_write(tmp_path, data))
+
+
+def test_load_match_parameters_rejects_out_of_bounds_thief_start(tmp_path):
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data["board_and_agents"]["thief_start"] = [-1, 0]
+    with pytest.raises(GameConfigError, match="outside the"):
+        load_match_parameters(_write(tmp_path, data))
