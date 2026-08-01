@@ -62,12 +62,35 @@ def test_thief_brain_moves_away_from_the_belief_peak():
     assert manhattan_distance(new_pos, Position(5, 5)) > manhattan_distance(Position(4, 4), Position(5, 5))
 
 
-def test_cop_brain_picks_a_barrier_target_adjacent_to_its_own_position():
+def test_cop_brain_declines_to_place_a_barrier_in_fully_open_space():
+    """Enhancement over an earlier nearest-to-belief-peak version: blocking
+    any cell in wide-open space merely removes that one cell from the
+    board (no genuine chokepoint), so the heuristic now conserves its
+    budget instead of spending one every single turn regardless of
+    usefulness (docs/TODO.md T0256)."""
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
-    belief = _belief_peaked_at(board, Position(5, 5))
+    belief = _belief_peaked_at(board, Position(0, 0))
     brain = ManhattanHeuristicBrain(role=AgentRole.COP)
-    target = brain._pick_move(board, Position(0, 0), belief)
-    assert target in board.neighbors(Position(0, 0))
+    assert brain._pick_move(board, Position(3, 3), belief) is None
+    assert board.remaining_barrier_budget == 14
+
+
+def test_cop_brain_seals_its_own_cell_as_the_sole_doorway_into_a_pocket():
+    """The core of the reachable-area enhancement: once the cop's own
+    current cell is the only remaining connection between a pocket (where
+    the thief is believed to be) and the rest of the board, blocking it --
+    legal per Sec. 3.3.4, the cop's own cell -- disconnects the whole
+    pocket, a real cornering move the old nearest-to-target heuristic had
+    no way to recognize (it never even considered the cop's own cell)."""
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    # Wall off the {(0,0), (0,1), (1,0)} pocket everywhere except through
+    # the cop's own current cell, (1,1).
+    board.place_barrier(Position(0, 2), Position(0, 2))
+    board.place_barrier(Position(2, 0), Position(2, 0))
+    belief = _belief_peaked_at(board, Position(0, 0))
+    brain = ManhattanHeuristicBrain(role=AgentRole.COP)
+    target = brain._pick_move(board, Position(1, 1), belief)
+    assert target == Position(1, 1)
 
 
 def test_cop_brain_declines_to_place_a_barrier_once_budget_exhausted():

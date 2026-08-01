@@ -125,6 +125,35 @@ def test_barrier_is_permanent_for_the_rest_of_the_match(board):
     assert board.is_blocked(Position(2, 3))
 
 
+def test_reachable_area_on_a_fully_open_board_is_the_whole_grid(board):
+    assert board.reachable_area(Position(3, 3)) == 49
+
+
+def test_reachable_area_excludes_a_dedicated_pocket_only_reachable_through_it(board):
+    """Blocking a genuine chokepoint should drop reachability by more than
+    just the blocked cell itself -- the whole pocket behind it becomes
+    unreachable too."""
+    board.place_barrier(Position(0, 2), Position(0, 2))
+    board.place_barrier(Position(2, 0), Position(2, 0))
+    open_area = board.reachable_area(Position(0, 0))
+    sealed_area = board.reachable_area(Position(0, 0), extra_blocked=Position(1, 1))
+    assert open_area == 47  # whole board minus the two pre-placed barriers
+    assert sealed_area == 3  # only {(0,0), (0,1), (1,0)} remain reachable
+
+
+def test_reachable_area_removing_a_non_chokepoint_only_drops_by_one(board):
+    assert board.reachable_area(Position(0, 0), extra_blocked=Position(3, 3)) == 48
+
+
+def test_reachable_area_is_zero_when_source_is_already_blocked(board):
+    board.place_barrier(Position(2, 2), Position(2, 2))
+    assert board.reachable_area(Position(2, 2)) == 0
+
+
+def test_reachable_area_is_zero_when_source_equals_extra_blocked(board):
+    assert board.reachable_area(Position(2, 2), extra_blocked=Position(2, 2)) == 0
+
+
 def test_legal_moves_in_open_space_includes_all_five_moves(board):
     legal = board.legal_moves(Position(3, 3))
     assert set(legal) == {Move.NORTH, Move.SOUTH, Move.EAST, Move.WEST, Move.STAY}

@@ -42,16 +42,32 @@ def test_maybe_place_barrier_returns_none_for_thief():
     assert board.remaining_barrier_budget == 14
 
 
-def test_maybe_place_barrier_places_and_returns_the_target_for_cop():
+def test_maybe_place_barrier_declines_in_fully_open_space():
+    """The reachable-area heuristic conserves the budget until a
+    candidate actually shrinks the thief's escape space by more than
+    itself -- never true in wide-open space (docs/TODO.md T0256)."""
     runner = _runner(AgentRole.COP)
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
     belief = _belief_peaked_at(board, Position(5, 5))
     brain = ManhattanHeuristicBrain(role=AgentRole.COP)
     result = runner._maybe_place_barrier(board, Position(0, 0), belief, brain, _noop_emit, step=1)
-    assert result is not None
-    target = Position(*result)
-    assert board.is_blocked(target)
-    assert board.remaining_barrier_budget == 13
+    assert result is None
+    assert board.remaining_barrier_budget == 14
+
+
+def test_maybe_place_barrier_places_and_returns_the_target_for_cop():
+    """A genuine chokepoint scenario: the cop's own current cell, (1, 1),
+    is the sole doorway into the pocket the thief is believed to be in."""
+    runner = _runner(AgentRole.COP)
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    board.place_barrier(Position(0, 2), Position(0, 2))
+    board.place_barrier(Position(2, 0), Position(2, 0))
+    belief = _belief_peaked_at(board, Position(0, 0))
+    brain = ManhattanHeuristicBrain(role=AgentRole.COP)
+    result = runner._maybe_place_barrier(board, Position(1, 1), belief, brain, _noop_emit, step=1)
+    assert result == [1, 1]
+    assert board.is_blocked(Position(1, 1))
+    assert board.remaining_barrier_budget == 11
 
 
 def test_maybe_place_barrier_returns_none_once_budget_exhausted():
