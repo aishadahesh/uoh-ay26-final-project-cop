@@ -112,9 +112,9 @@ This opens a mode-select screen offering:
 
 ### Agent vs Agent on two computers (MCP)
 
-Choose **Agent vs Agent (Two Computers)** from the same `play` launcher on both computers. Each side selects a different role (`cop` / `thief`) and runs an ngrok or Localtonet HTTP tunnel to the local port shown in the setup screen.
+Choose **Agent vs Agent (Two Computers)** from the same `play` launcher on both computers, and run an ngrok or Localtonet HTTP tunnel to the local port shown in the setup screen on each. This repo's setup screen locks **This computer's role** to `cop` — it has no thief config to run as the thief with; the other computer runs the sibling thief repo's own `play` launcher, whose equivalent screen is locked to `thief`.
 
-The launcher pre-fills every field from `config/network_match.json`. Edit that file before launching to set the peer role and URLs, game ID, both teams and members, four repository URLs, output directory, and email defaults. Do not put Gemini keys or Gmail OAuth tokens in this file; those remain in `.env`, `credentials.json`, and `token.json`.
+The launcher pre-fills every other field from `config/network_match.json`. Edit that file before launching to set your own tunnel URL, game ID, both teams and members, four repository URLs, output directory, and email defaults. Do not put Gemini keys or Gmail OAuth tokens in this file; those remain in `.env`, `credentials.json`, and `token.json`.
 
 - Put the **other computer's public URL** in **Opponent public URL**. It must include the FastMCP route, for example `https://abc123.ngrok.app/mcp`.
 - Put your own tunnel address in **This peer's public tunnel URL** and give it to the opponent.
@@ -134,14 +134,13 @@ result_<game_id>.json
 
 Enable **Automatically email result JSON** to send the final JSON-only report. The assignment address `rmisegal+uoh26finalgame@gmail.com` is pre-filled, but the recipient field can be changed before starting. Install the email extra first, place Google OAuth `credentials.json` in the project root, and complete browser consent once; its reusable token is stored as `token.json`. Email is sent only after both computers agree on the result.
 
-**Run two real, separate peer processes talking over FastMCP** (two terminals, `localhost` only, no tunnel needed):
+**Run this side as a real, standalone FastMCP peer process** (`localhost` only, no tunnel needed) — always the cop, reading only `config/cop/game.toml`:
 
 ```bash
-uv run python -m police_thief serve --role cop
-uv run python -m police_thief serve --role thief
+uv run python -m police_thief serve
 ```
 
-Each loads only its own `config/cop/game.toml` — the cop's process never reads `config/thief/game.toml`, and this repository does not ship a thief implementation at all (see the sibling repo linked above).
+This repository ships no thief config, no thief private per-peer settings, and no way to run this process as the thief — `serve` always starts a cop server. Run the sibling thief repo's own `serve` in a second terminal (or on a second computer, per the tunneled setup above) to get the opposing peer.
 
 **Replay a saved, cryptographically-sealed match log:**
 

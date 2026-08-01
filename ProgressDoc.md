@@ -524,4 +524,28 @@ ruff check: All checks passed!
 
 **Tasks checked off:** `docs/TODO.md` T0772-T0776 (Q.2 game-logic edge cases around barrier placement and identical start positions), T0124/T0125 (barrier declarations are public, re-framed around live real-time declaration rather than the sealed move log), T0849/T0850 (rules 15/16 — barrier declarations are now genuinely exercised end-to-end, not just proven-capable-in-isolation), T0636 (barrier-budget-exhaustion regression, now also covered at the live-wiring level, not just the `Board` primitive).
 
+**Status:** committed.
+
+---
+
+### Post-Split Cleanup — Removed the Thief's Private Config and Every Cop-Side Capability to Run as the Thief
+
+**What prompted this:** a direct review request pointing at a concrete, concerning finding — `config/thief/game.toml`, the thief's own private per-peer settings file, was still sitting inside this cop repo after the two-repo submission split (ADR-011's export step). Since the whole point of the mandatory two-repo split is that each side's private configuration, strategy overrides, and internal parameters are genuinely inaccessible to the other, a leftover copy of the thief's private config file directly undermines that guarantee — regardless of whether its actual contents were ever customized away from the shipped placeholder.
+
+**What was found and removed, beyond the one file named in the request:**
+- `config/thief/game.toml` deleted outright (not merely ignored or moved) — this repo now ships only `config/cop/`.
+- `main.py`'s `serve` subcommand previously accepted `--role cop|thief` and would happily try to load `config/thief/game.toml` and run this process as a live thief MCP peer. Restricted to cop-only: the `--role` argument is gone entirely, `_serve` always constructs `AgentRole.COP`. Running `serve` in this repo can now only ever start a cop server — there is no flag, hidden or otherwise, that makes it act as the thief.
+- The "Agent vs Agent (Two Computers)" GUI's `NetworkSetupDialog` had a "This computer's role" dropdown offering `cop`/`thief`. Locked to `cop` only (the combobox's `choices` no longer includes `thief`, and the backing `tk.StringVar` is hardcoded rather than read from `config/network_match.json`'s `peer.role`), so the same live-match capability gap is closed on the GUI path, not just the lower-level `serve` CLI path.
+- `config/network_match.json`'s `team_1.repos` still pointed at the pre-split monorepo URL (`.../uoh-ay26-final-project`) for both `cop` and `thief` — corrected to the two real, separately-hosted repo URLs, so the identity handshake this file feeds (`NetworkMatchRunner._identity()`) advertises accurate, current public repo links rather than stale ones.
+
+**What was deliberately left alone, and why:** `AgentRole.THIEF` as an enum value, and every generic, role-parameterized function that accepts it (`Board`, `BeliefMap`, `ManhattanHeuristicBrain`, `check_capture`, `is_boxed_in`, scoring, the four-tool wire protocol's `WIRE_ROLES` map, `config_dir_for`/`load_network_config`/`load_strategy_class`) — none of this is the thief's *private* information. It is the shared, public rulebook mechanics (docs/tasks.md) both sides' independently-run copies of this same forked codebase implement identically; a cop process necessarily has to reason about "the opponent, who plays the thief role" to run the protocol and score a match at all. Removing it would have broken the "shared game interfaces, protocols, schemas, public rules" this repo legitimately still needs, not just the thief's hidden state. Local, single-process practice modes (`play`'s Human vs Human / Agent vs Agent same-process modes, and the `demo`/`simulate` commands) were also left untouched: they never read any live opponent's config, never send anything over a real network, and use the same public heuristic class for whichever side isn't human-controlled — they are a sandbox, not a channel for this submission to actually compete as the thief in a real, graded match.
+
+**Documentation brought in line with the actual, current repo capability, not just the code:** `docs/TODO.md` T0054/T0170/T0183/T0835/T0879 (all reference `config/thief/`'s historical existence or the old `--role cop|thief` flag) annotated to distinguish what was true during shared-monorepo development from what this specific exported repo can do today, without rewriting the historical record of how the codebase actually evolved. `docs/PLAN.md`'s ADR-011 gained a "Post-split update" note recording that the export it originally only described in the future tense has now actually happened, and how. `docs/PRD_fastmcp_networking.md`/`docs/PRD_gmail_gatekeeper.md` had their remaining actionable (non-historical) references to a live `config/thief/game.toml` or a `serve --role thief` command corrected to match the current cop-only reality. `README.md`'s `serve` and two-computer setup sections rewritten to state plainly that this repo can only run as the cop.
+
+**Quality gate results (unchanged by this pass, confirmed by re-running, not assumed):**
+```
+447 passed, 1 skipped in ~19s
+ruff check: All checks passed!
+```
+
 **Status:** awaiting review before committing.
