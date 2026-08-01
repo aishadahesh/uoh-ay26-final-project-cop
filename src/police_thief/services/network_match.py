@@ -10,6 +10,7 @@ from threading import Event
 
 from police_thief.domain.belief import BeliefMap
 from police_thief.domain.board import Board, Position
+from police_thief.domain.capture import is_boxed_in
 from police_thief.domain.replay import save_log
 from police_thief.domain.scent import ScentField
 from police_thief.domain.scoring import MatchOutcome, score_for
@@ -121,6 +122,7 @@ class NetworkMatchRunner:
         peer_commits: dict[int, str] = {}
         peer_turns: list[TurnMessage] = []
         pending_claim_response: dict | None = None
+        thief_boxed_in = False
         outcome = MatchOutcome.SURVIVAL
         wire_role = WIRE_ROLES[self.settings.role.value]
         emit(f"Peer ready as {wire_role.upper()} - game {self.settings.game_id}")
@@ -140,6 +142,7 @@ class NetworkMatchRunner:
                 own_position = board.apply_move(own_position, move)
                 own_scent.decay()
                 own_scent.emit(own_position)
+                barrier_placed = self._maybe_place_barrier(board, own_position, belief, brain, emit, step)
                 payload = {
                     "step": step,
                     "role": wire_role,
@@ -156,7 +159,8 @@ class NetworkMatchRunner:
                     if self.settings.role is AgentRole.COP else None
                 )
                 win_claim = (
-                    {"type": "survival"}
+                    {"type": "boxed_in"} if self.settings.role is AgentRole.THIEF and thief_boxed_in
+                    else {"type": "survival"}
                     if self.settings.role is AgentRole.THIEF and step == params.max_moves
                     else None
                 )
@@ -165,6 +169,7 @@ class NetworkMatchRunner:
                     smell_grid=self._scent_snapshot(own_scent, params.board.grid_size),
                     commit=record["commit"], timestamp=now_iso(),
                     capture_claim=capture_claim,
+                    barrier_placed=barrier_placed,
                     claim_response=pending_claim_response,
                     win_claim=win_claim,
                 )
@@ -173,7 +178,10 @@ class NetworkMatchRunner:
                 if pending_claim_response and pending_claim_response.get("caught"):
                     outcome = MatchOutcome.CAPTURE
                     break
-                if win_claim or step == params.max_moves:
+                if win_claim:
+                    outcome = MatchOutcome.CAPTURE if win_claim.get("type") == "boxed_in" else MatchOutcome.SURVIVAL
+                    break
+                if step == params.max_moves:
                     outcome = MatchOutcome.SURVIVAL
                     break
             else:
@@ -186,10 +194,21 @@ class NetworkMatchRunner:
                 peer_turns.append(message)
                 belief.update_from_scent(_WireScent(message.smell_grid))
                 emit(f"Step {step}: received sealed {message.sender} turn")
-                if self.settings.role is AgentRole.THIEF and message.capture_claim is not None:
-                    claim = list(message.capture_claim)
-                    caught = claim == [own_position.row, own_position.col]
-                    pending_claim_response = {"claim": claim, "caught": caught}
+                if message.barrier_placed is not None:
+                    barrier_target = Position(*message.barrier_placed)
+                    board.apply_declared_barrier(barrier_target)
+                    emit(f"Step {step}: opponent publicly declared a barrier at {barrier_target}")
+                if self.settings.role is AgentRole.THIEF:
+                    claimed = [
+                        list(claim) for claim in (message.capture_claim, message.barrier_placed)
+                        if claim is not None
+                    ]
+                    if claimed:
+                        caught = [own_position.row, own_position.col] in claimed
+                        pending_claim_response = {"claim": claimed, "caught": caught}
+                    if is_boxed_in(board, own_position):
+                        thief_boxed_in = True
+                        emit(f"Step {step}: no legal move remains -- boxed in (Sec. 3.3.5)")
                 if (
                     self.settings.role is AgentRole.COP
                     and message.claim_response
@@ -197,7 +216,11 @@ class NetworkMatchRunner:
                 ):
                     outcome = MatchOutcome.CAPTURE
                     break
-                if message.win_claim or step == params.max_moves:
+                if message.win_claim:
+                    claim_type = message.win_claim.get("type")
+                    outcome = MatchOutcome.CAPTURE if claim_type == "boxed_in" else MatchOutcome.SURVIVAL
+                    break
+                if step == params.max_moves:
                     outcome = MatchOutcome.SURVIVAL
                     break
 
@@ -235,6 +258,32 @@ class NetworkMatchRunner:
         source = "fallback" if decision.used_fallback else "Gemini"
         emit(f"Step {step}: {source} - {decision.rationale}")
         return decision.move, decision.rationale
+
+    def _maybe_place_barrier(self, board, own_position, belief, brain, emit, step) -> list[int] | None:
+        """Cop-only: the "core spatial-engineering advantage" (Sec. 3.3.3).
+
+        Runs after the cop's move above, not instead of it -- Sec. 3.3.3
+        lists "its own current cell" as a legal barrier target, which only
+        makes sense as the cell the cop just moved to. Reuses
+        `ManhattanHeuristicBrain._pick_move` (Chapter 6), the same barrier-
+        selection heuristic already shipped and tested; deliberately kept
+        deterministic rather than Gemini-advised for this pass (see
+        docs/PRD_strategy_module.md for the rationale on scoping LLM
+        involvement to the verbal layer only, Sec. 6.4.1).
+
+        Declared in plaintext on the wire (Sec. 3.3.6: barrier placements
+        are public in real time, never sealed inside the commit like a
+        move), so the opponent's board stays in sync without waiting for
+        the end-of-match reveal.
+        """
+        if self.settings.role is not AgentRole.COP:
+            return None
+        target = brain._pick_move(board, own_position, belief)
+        if target is None or board.remaining_barrier_budget <= 0:
+            return None
+        board.place_barrier(own_position, target)
+        emit(f"Step {step}: placed a barrier at {target} (publicly declared per Sec. 3.3.6)")
+        return [target.row, target.col]
 
     def _send_control(self, kind: str, status: str) -> None:
         self.transport.send_control(ControlMessage(

@@ -31,11 +31,18 @@ class ManhattanHeuristicBrain(BrainBase):
         """Cop-only: barrier the neighbor closest to the believed target,
         progressively narrowing the thief's viable path space
         (Sec. 3.3.8's "spatial-engineering" framing).
+
+        Already-blocked neighbors are excluded from consideration -- found
+        empirically while wiring this into a live match: without this
+        filter, the heuristic could keep "targeting" the same already-
+        blocked cell turn after turn, wasting the entire barrier budget on
+        placements `Board.place_barrier` would now reject outright as
+        redundant.
         """
         if self.role is not AgentRole.COP or board.remaining_barrier_budget <= 0:
             return None
-        neighbors = board.neighbors(own)
-        if not neighbors:
+        candidates = [n for n in board.neighbors(own) if not board.is_blocked(n)]
+        if not candidates:
             return None
         target = belief.arg_max()
-        return min(neighbors, key=lambda n: manhattan_distance(n, target))
+        return min(candidates, key=lambda n: manhattan_distance(n, target))

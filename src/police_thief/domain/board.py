@@ -129,10 +129,41 @@ class Board:
         """Place a permanent barrier at `target`; must be cop_pos itself or adjacent.
 
         Irreversible: once blocked, a cell has no "unblock" path in this API.
+        Rejects a `target` that is already blocked -- a real bug found
+        empirically while wiring this up live: a heuristic that doesn't
+        skip already-blocked candidates would otherwise "spend" real
+        budget on a cell that was already permanently blocked, silently
+        wasting Sec. 3.3.7's resource-management budget on a no-op.
         """
         if target != cop_pos and target not in self.neighbors(cop_pos):
             raise MoveRejectedError(f"barrier target {target} is not adjacent to {cop_pos}")
+        if self.is_blocked(target):
+            raise MoveRejectedError(f"{target} is already blocked -- placing there again would waste budget")
         if self.remaining_barrier_budget <= 0:
             raise MoveRejectedError("barrier budget exhausted")
+        self._blocked.add(target)
+        self._barriers_placed += 1
+
+    def apply_declared_barrier(self, target: Position) -> None:
+        """Mark `target` blocked on a *receiving* peer's own local board copy.
+
+        docs/tasks.md Sec. 3.3.6: barrier placements are declared publicly
+        and in real time -- unlike a move, they are never sealed inside the
+        commit-reveal envelope (see `services/network_match.py`). The
+        opponent's own process never called `place_barrier` itself (it has
+        no `cop_pos`/budget of its own to validate against), so this method
+        simply trusts the declaration and marks the cell blocked, keeping
+        both sides' board state in sync. A dishonest declaration is not
+        re-validated here -- Sec. 3.3.9 already assigns that job to the
+        end-of-match cross-audit (`services/commit_reveal.py::audit_log`),
+        not to live per-turn re-verification.
+
+        Idempotent: a redundant re-declaration of an already-blocked cell
+        (e.g. the sender's own bug, or the same barrier echoed twice) marks
+        nothing new and does not double-count against the tracked total --
+        this side isn't the one whose budget it would even be.
+        """
+        if self.is_blocked(target):
+            return
         self._blocked.add(target)
         self._barriers_placed += 1
