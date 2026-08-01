@@ -1,0 +1,43 @@
+Educational Use License
+
+Copyright (c) 2026 the author of this repository.
+
+This repository was produced as coursework for the University of Haifa
+"Orchestration of AI Agents" course (AY26), final project. It is shared
+publicly for educational and evaluative purposes only (course grading,
+peer review, and use as a learning reference by future students of the
+same or similar courses).
+
+Permission is granted to any person obtaining a copy of this repository
+to view, run, and study its contents, and to reuse or adapt parts of it
+for their own non-commercial, educational coursework, subject to the
+following conditions:
+
+1. This repository, or any submission derived from it, must not be
+   presented as a verbatim submission template — per the course's own
+   rules, it is a learning artifact, not a shortcut around building an
+   independent solution.
+2. Any reuse must retain attribution to this repository as the source
+   of the reused portion.
+3. This repository is provided "as is", without warranty of any kind,
+   express or implied. It has not been reviewed for production use, and
+   no part of it should be relied upon outside an educational context.
+
+This license deliberately mirrors the "educational use license" terms
+referenced by the course's own example repository (`docs/tasks.md`,
+Appendix D, Sec. 15.5.1): reuse and adaptation for coursework is
+welcomed, but the code is a starting point, not a substitute for the
+author's own solution against the full specification.
+
+Third-party acknowledgements:
+- The distributed peer-to-peer match protocol, board/scent/belief-map
+  mechanics, and reliability layer described in this repository follow
+  the course's own rulebook (`docs/tasks.md`) and Mandatory Parameters
+  Table, which take precedence wherever this repository's design
+  choices might diverge from them.
+- The Gmail OAuth transport pattern (`src/police_thief/services/gmail_oauth.py`)
+  was adapted from a proven pattern used in the author's own prior,
+  separate project for the same course track.
+- The GUI's shared-board, click-to-move interaction model was inspired
+  by (but not copied from) a course reference example repository
+  (see `README.md` for the link), consistent with the reuse terms above.
