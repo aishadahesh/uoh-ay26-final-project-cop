@@ -136,13 +136,13 @@ result_<game_id>.json
 
 Enable **Automatically email result JSON** to send the final JSON-only report. The assignment address `rmisegal+uoh26finalgame@gmail.com` is pre-filled, but the recipient field can be changed before starting. Install the email extra first, place Google OAuth `credentials.json` in the project root, and complete browser consent once; its reusable token is stored as `token.json`. Email is sent only after both computers agree on the result.
 
-**Run this side as a real, standalone FastMCP peer process** (`localhost` only, no tunnel needed) — always the cop, reading only `config/cop/game.toml`. This matches the naming used by `docs/tasks.md` Appendix D's illustrative (non-mandatory) example runner — purely a local invocation convenience with no effect on cross-team compatibility (see [The cop's strategy](#the-cops-strategy) and `services/network_protocol.py::WIRE_ROLES` for what actually governs that):
+**Play a complete, real match from the terminal** — no GUI, always the cop. This matches the naming used by `docs/tasks.md` Appendix D's illustrative (non-mandatory) example runner; the naming choice itself has no effect on cross-team compatibility (see [The cop's strategy](#the-cops-strategy) and `services/network_protocol.py::WIRE_ROLES` for what actually governs that), but unlike a bare listener, this command genuinely negotiates, plays every turn, and completes the end-of-match audit:
 
 ```bash
 uv run python -m police_thief peer --role police
 ```
 
-`--role` accepts only `police` — this repository ships no thief config, no thief private per-peer settings, and no way to run this process as the thief. Run the sibling thief repo's own `peer --role thief` in a second terminal (or on a second computer, per the tunneled setup above) to get the opposing peer.
+Connection details (port, opponent URL) come from `config/cop/game.toml`'s `[network]` section; match/team details (game ID, teams, repos, shared secret, email) come from `config/network_match.json` — the same file the two-computer GUI setup screen reads. Edit `config/network_match.json` before running to point at a real opponent — for example, your own group's thief repo, run the same way on its own machine/port with a matching shared secret and game ID. `--role` accepts only `police` — this repository ships no thief config and no way to run this process as the thief. Run the sibling thief repo's own `peer --role thief` in a second terminal (or on a second computer, per the tunneled setup above) to get the opposing peer.
 
 **Replay a saved, cryptographically-sealed match log:**
 

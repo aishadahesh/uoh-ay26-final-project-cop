@@ -16,10 +16,20 @@ wire-role string) is unrelated to what you type in your own terminal, and
 is unchanged by this naming.
 
 Commands:
-  peer --role police       Start this peer's FastMCP server, as the cop,
-                           reading only config/cop/game.toml (Chapter 2).
-                           Only "police" is accepted -- this repo has no
-                           thief config to run as the thief with.
+  peer --role police       Play a complete, real match as the cop (not
+                           just an idle listener): starts this side's
+                           FastMCP server and drives a full
+                           negotiate/turn/audit match against whatever
+                           opponent config/network_match.json names --
+                           e.g. your own group's thief repo, run the same
+                           way on its own machine/port. Connection details
+                           (port, opponent URL) come from config/cop/
+                           game.toml's [network] section (Chapter 2's
+                           private per-peer file); team/session details
+                           come from config/network_match.json (edit it
+                           before running). Only "police" is accepted --
+                           this repo has no thief config to run as the
+                           thief with.
   simulate                 Run a single-process local match with placeholder
                            policies and print the result (Chapter 3). No
                            live opponent config is read -- both sides are
@@ -56,6 +66,7 @@ single shared config/game.json.
 from __future__ import annotations
 
 import argparse
+import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
@@ -70,6 +81,8 @@ from police_thief.domain.simulation import run_local_match
 from police_thief.gui.live_gui import LiveGUI
 from police_thief.gui.replay_gui import ReplayGUI
 from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
+from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
+from police_thief.services.network_match_config import load_network_defaults
 from police_thief.shared.config import load_network_config
 from police_thief.shared.constants import AgentRole
 from police_thief.shared.game_config import load_match_parameters
@@ -108,11 +121,48 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _peer(args: argparse.Namespace) -> None:
-    """Always serves as the cop (wire role "police") -- this repo has no
-    thief config to run as "thief" with; `--role` accepts only "police"."""
+    """Plays a complete, real match as the cop (wire role "police") --
+    not just an idle listener; `--role` accepts only "police" since this
+    repo has no thief config to run as "thief" with.
+
+    Connection details (port, opponent URL) come from config/cop/
+    game.toml's [network] section (Chapter 2's private per-peer file);
+    match/team/session details come from config/network_match.json, the
+    same file the `play` GUI's two-computer setup screen reads
+    (services/network_match_config.py::load_network_defaults) -- edit it
+    before running to point at a real opponent, e.g. your own group's
+    thief repo run the same way on its own machine/port.
+    """
     network = load_network_config(AgentRole.COP, args.config_root)
-    mcp = build_peer_server(AgentRole.COP.value, PeerInboxes())
-    run_peer_server(mcp, host="0.0.0.0", port=network.my_port)
+    project_root = args.config_root.parent
+    defaults = load_network_defaults(args.config_root / "network_match.json", project_root)
+    settings = NetworkMatchSettings(
+        role=AgentRole.COP, local_port=network.my_port, opponent_url=network.opponent_url,
+        public_url=defaults["public"], game_id=defaults["game"],
+        sub_game_number=int(defaults["subgame"]),
+        shared_config=args.config_root / "game.json", output_dir=Path(defaults["output"]),
+        team_name=defaults["team1_name"],
+        members=(defaults["team1_member1"], defaults["team1_member2"]),
+        opponent_team_name=defaults["team2_name"],
+        opponent_members=(defaults["team2_member1"], defaults["team2_member2"]),
+        own_cop_repo=defaults["own_cop"], own_thief_repo=defaults["own_thief"],
+        opponent_cop_repo=defaults["opponent_cop"], opponent_thief_repo=defaults["opponent_thief"],
+        shared_key=defaults["secret"].encode(),
+        email_mode="real" if defaults["email"] else "dry_run",
+        email_recipient=defaults["email_recipient"],
+        credentials_path=project_root / "credentials.json",
+        token_path=project_root / "token.json",
+    )
+    inboxes = PeerInboxes()
+    server = build_peer_server(AgentRole.COP.value, inboxes)
+    server_thread = threading.Thread(
+        target=run_peer_server, args=(server, "0.0.0.0", network.my_port),
+        daemon=True, name="mcp-peer-server",
+    )
+    server_thread.start()
+    print(f"MCP server listening on 0.0.0.0:{network.my_port}/mcp")
+    result_path = NetworkMatchRunner(settings, inboxes).run(threading.Event(), emit=print)
+    print(f"Match complete -- result saved to {result_path}")
 
 
 def _simulate(args: argparse.Namespace) -> None:

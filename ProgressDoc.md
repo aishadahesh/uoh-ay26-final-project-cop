@@ -626,4 +626,41 @@ The user asked to rename the CLI to match anyway, for consistency and familiarit
 ruff check: All checks passed!
 ```
 
+**Status:** committed.
+
+---
+
+### Post-Split Fix — `peer` Upgraded from an Idle Listener to a Real Match Runner
+
+**What prompted this:** while explaining the just-completed CLI rename, the user asked directly: "can I play using these commands against my group's thief?" Answering honestly required actually reading what `_peer()` (formerly `_serve()`) did -- and it turned out to only start a bare FastMCP server via `build_peer_server`/`run_peer_server`, with nothing ever calling `NetworkMatchRunner.run()`. It queued incoming messages into `PeerInboxes` and did nothing else. This is a real, previously-unnoticed gap: `docs/tasks.md` Appendix D's reference example's own `peer --role police` command *does* play a full match (Sec. 15.2.1 lists board movement, barriers, scent, belief, Commit-Reveal, and audit as part of what that example's peer demonstrates) -- ours didn't, since the actual match-driving logic (`NetworkMatchRunner`) had only ever been wired into the `play` GUI's "Agent vs Agent (Two Computers)" flow (`gui/network_match_app.py`), never into the plain CLI.
+
+**What was built:**
+- `services/network_match_config.py` (new): `load_network_defaults`/`validate_mcp_url`/`DEFAULT_REPORT_EMAIL` extracted out of `gui/network_setup.py` into a plain module with no tkinter dependency, so `main.py` (a non-GUI command) can reuse the exact same, already-tested `config/network_match.json` parsing logic the GUI setup screen uses, rather than duplicating it or importing a GUI module into the CLI layer. `gui/network_setup.py` now imports these from the new module and re-exports them (`__all__`), so no existing import site or test needed to change.
+- `main.py::_peer` rewritten: reads `config/cop/game.toml`'s `[network]` section for connection details (port, opponent URL -- the already-established convention for this "lower-level" path) and `config/network_match.json` for match/team/session details (game ID, teams, repos, shared secret, email), builds a real `NetworkMatchSettings`, starts the FastMCP server in a background thread (exactly like `NetworkMatchApp` does), and calls `NetworkMatchRunner.run()` in the foreground with `emit=print` -- so running `peer --role police` in a terminal now streams the same negotiate/turn/audit progress messages the GUI shows in its log panel, and blocks until the match completes.
+
+**Verified with a real two-process smoke test over actual HTTP before trusting it, not just asserted:** `McpPeerTransport` combined with `NetworkMatchRunner.run()` had never been exercised by any existing test -- every prior `NetworkMatchRunner` test used `MemoryTransport` (in-process queues), and `McpPeerTransport` itself had only ever been exercised via `test_mcp_client.py` in isolation, never through a full match. Built a throwaway scratch script: ran the real `main._peer()` (via `main.parse_args(["peer", "--role", "police", ...])`, the exact code path a user's terminal invocation takes) against a hand-built thief-role `NetworkMatchRunner` counterpart, both with real `build_peer_server`/`run_peer_server` on real localhost ports (18801/18802), no mocking. It worked end to end: a real 35-step match, real HTTP round trips (visible in the `INFO: 127.0.0.1:... "POST /mcp HTTP/1.1" 200 OK` uvicorn access log), matching `result_SMOKE-TEST.json` files written by both sides with `"mutual_sign_off": true`. Scratch script and configs deleted after confirming success -- this was a one-off verification, not a permanent test file.
+
+**Deliberately not added as a permanent automated test:** `main.py` is excluded from the coverage requirement (`pyproject.toml`'s `[tool.coverage.run] omit`, a pre-existing project convention for the thin CLI/GUI-wiring layer), and the two pieces `_peer` composes -- `load_network_defaults` and `NetworkMatchRunner.run()` -- are each already independently tested (`test_network_setup.py`, `test_network_match.py`). A dedicated `main.py` test would mean either running a slow real-HTTP match inside the suite or mocking away the exact wiring the smoke test just proved works for real; the empirical verification was judged the stronger evidence for this specific, one-time integration risk, consistent with this project's own "verify empirically" practice used throughout.
+
+**Quality gate results:**
+```
+454 passed, 1 skipped
+TOTAL coverage: 85.41% (required: 85.0%)
+ruff check: All checks passed!
+```
+
+**Status:** committed.
+
+---
+
+### Post-Split Finding — `Orchestrator` Is No Longer the Single Match Entry Point (Documented, Not Refactored)
+
+**What prompted this:** the user shared `docs/tasks.md` §15.3 ("Code Layout"), the same Appendix D reference-example architecture description as the earlier "How to Run" screenshot -- `SimulationSdk`/`PeerRuntime`/`infra` naming, a 150-line-per-file cap, `police_class`/`thief_class` extension points. Checked against the full 55-rule list in Appendix E: none of this is a separate mandatory rule, confirming it's the same non-mandatory illustrative category as before -- restructuring this project's own, independently-designed `domain`/`services`/`gui`/`shared` layout to mimic those names would work against §15.1/§15.5.1's own instruction not to treat that repo as a submission template, not for it.
+
+**What reviewing it turned up instead, a real finding:** rule 3 in Appendix E sits right next to this section -- *"[MUST] Define the Orchestrator component as the single entry point for all sub-systems."* Checked whether that's still true, and it isn't. `services/orchestrator.py::Orchestrator` (Chapter 8) is real and tested, but grepping `services/network_match.py` and `main.py` for any reference to it turned up none. `NetworkMatchRunner` -- the class that drives every match actually played through this repo today, both via the `play` GUI and the newly-real `peer` CLI command -- reimplements its own turn loop, audit exchange, and control messages directly, entirely bypassing `Orchestrator`. `docs/TODO.md` T0837 had already flagged a narrower version of this (Gatekeeper/Gmail-reporting not routed through the Orchestrator), but not this larger one: the core turn loop itself now has two separate, parallel implementations, and `Orchestrator` is effectively dead code on the path every real match actually takes.
+
+**Decision, made explicitly rather than assumed:** asked the user directly whether to refactor `NetworkMatchRunner` to route through `Orchestrator` (making rule 3 genuinely true again) or to document the gap honestly and leave it. Chose to document: `NetworkMatchRunner` is working and was just empirically verified end-to-end over real HTTP (real `mutual_sign_off: true`) in the previous entry; merging it into `Orchestrator` now is a nontrivial architectural change with real risk of regressing that, and doing it without a concrete plan the user has weighed in on would trade a documented, honest gap for an unreviewed, riskier one.
+
+**Tasks updated:** `docs/TODO.md` T0837 rewritten to describe the full gap (both the original Gatekeeper/reporting piece and the larger, previously-unnoticed turn-loop duplication), rather than the narrower framing it had before.
+
 **Status:** awaiting review before committing.
