@@ -36,9 +36,16 @@ def test_turn_contains_commit_but_no_private_truth():
 
 
 def test_audit_detects_tampering_and_missing_steps():
+    step0 = seal_payload({"step": 0, "type": "system_spec", "model": "test"})
     record = seal_payload({"step": 2, "state": {}, "move": "E", "intent": True})
     expected = {2: record["commit"]}
-    assert audit_records([record], expected) == (True, [])
+    assert audit_records([step0, record], expected, require_step0=True) == (True, [])
     record["payload"]["move"] = "W"
-    assert audit_records([record], expected) == (False, [2])
-    assert audit_records([], expected) == (False, [2])
+    assert audit_records([step0, record], expected, require_step0=True) == (False, [2])
+    assert audit_records([], expected, require_step0=True) == (False, [2, 0])
+
+
+def test_audit_accepts_reference_step_zero_but_rejects_duplicates():
+    step0 = seal_payload({"step": 0, "type": "system_spec", "spec": {}})
+    assert audit_records([step0], {}, require_step0=True) == (True, [])
+    assert audit_records([step0, step0], {}, require_step0=True) == (False, [0])

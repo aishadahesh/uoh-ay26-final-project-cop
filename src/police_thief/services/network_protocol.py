@@ -143,9 +143,19 @@ def now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def audit_records(records: list[dict], expected_commits: dict[int, str]) -> tuple[bool, list[int]]:
+def audit_records(
+    records: list[dict], expected_commits: dict[int, str], *, require_step0: bool = False,
+) -> tuple[bool, list[int]]:
+    """Verify revealed records against the commitments seen during play.
+
+    The lecturer's v3 reference peer includes one extra, self-verifying
+    ``system_spec`` record at step 0.  It cannot have a prior turn commitment
+    because it is never sent as a turn, so it is validated separately while
+    all positive steps must still match the exact commitments received live.
+    """
     failed: list[int] = []
     seen: set[int] = set()
+    saw_step0 = False
     for record in records:
         try:
             step = int(record["payload"]["step"])
@@ -153,8 +163,23 @@ def audit_records(records: list[dict], expected_commits: dict[int, str]) -> tupl
         except (KeyError, TypeError, ValueError):
             failed.append(-1)
             continue
+        if step == 0:
+            valid_step0 = (
+                not saw_step0
+                and record["payload"].get("type") == "system_spec"
+                and verify_record(record)
+            )
+            saw_step0 = True
+            if not valid_step0:
+                failed.append(0)
+            continue
+        if step in seen:
+            failed.append(step)
+            continue
         seen.add(step)
         if expected_commits.get(step) != commit or not verify_record(record):
             failed.append(step)
     failed.extend(sorted(set(expected_commits) - seen))
+    if require_step0 and not saw_step0:
+        failed.append(0)
     return not failed, failed

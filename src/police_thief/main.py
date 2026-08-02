@@ -82,7 +82,7 @@ from police_thief.gui.live_gui import LiveGUI
 from police_thief.gui.replay_gui import ReplayGUI
 from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
 from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
-from police_thief.services.network_match_config import load_network_defaults
+from police_thief.services.network_match_config import load_network_defaults, validate_peer_defaults
 from police_thief.shared.config import load_network_config
 from police_thief.shared.constants import AgentRole
 from police_thief.shared.game_config import load_match_parameters
@@ -136,6 +136,19 @@ def _peer(args: argparse.Namespace) -> None:
     network = load_network_config(AgentRole.COP, args.config_root)
     project_root = args.config_root.parent
     defaults = load_network_defaults(args.config_root / "network_match.json", project_root)
+    try:
+        validate_peer_defaults(defaults, network.opponent_url)
+    except ValueError as exc:
+        raise SystemExit(f"Cannot start the network agent: {exc}") from exc
+    from dotenv import load_dotenv
+
+    from police_thief.services.gemini_agent import GeminiAgentAdvisor, GeminiConfigurationError
+
+    load_dotenv(project_root / ".env")
+    try:
+        gemini_advisor = GeminiAgentAdvisor()
+    except GeminiConfigurationError as exc:
+        raise SystemExit(f"Cannot start the network agent: {exc}") from exc
     settings = NetworkMatchSettings(
         role=AgentRole.COP, local_port=network.my_port, opponent_url=network.opponent_url,
         public_url=defaults["public"], game_id=defaults["game"],
@@ -152,6 +165,7 @@ def _peer(args: argparse.Namespace) -> None:
         email_recipient=defaults["email_recipient"],
         credentials_path=project_root / "credentials.json",
         token_path=project_root / "token.json",
+        llm_model=gemini_advisor.model,
     )
     inboxes = PeerInboxes()
     server = build_peer_server(AgentRole.COP.value, inboxes)
@@ -161,7 +175,9 @@ def _peer(args: argparse.Namespace) -> None:
     )
     server_thread.start()
     print(f"MCP server listening on 0.0.0.0:{network.my_port}/mcp")
-    result_path = NetworkMatchRunner(settings, inboxes).run(threading.Event(), emit=print)
+    result_path = NetworkMatchRunner(
+        settings, inboxes, gemini_advisor=gemini_advisor,
+    ).run(threading.Event(), emit=print)
     print(f"Match complete -- result saved to {result_path}")
 
 

@@ -25,11 +25,12 @@
   },
   "pheromones": {
     "scent_center_intensity": 0.9,
+    "scent_min_center_intensity": 0.5,
     "scent_decay_rate": 0.10,
     "scent_field_size": 5
   },
   "world": {
-    "map_area": "",
+    "map_area": "New York",
     "hint_max_words": 15
   },
   "network_and_league": {

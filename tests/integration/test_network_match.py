@@ -44,30 +44,35 @@ class MemoryTransport:
 def test_two_peers_negotiate_play_and_mutually_audit(tmp_path):
     project_root = Path(__file__).parents[2]
     common = {
-        "local_port": 8801, "public_url": "https://local.example/mcp",
+        "local_port": 8801,
         "game_id": "NETWORK-TEST", "sub_game_number": 1,
         "shared_config": project_root / "config" / "game.json",
-        "team_name": "test-team", "members": ("Ada", "Grace"),
-        "opponent_team_name": "rival-team",
-        "opponent_members": ("Linus", "Margaret"),
-        "own_cop_repo": "https://example.test/a-cop",
-        "own_thief_repo": "https://example.test/a-thief",
-        "opponent_cop_repo": "https://example.test/b-cop",
-        "opponent_thief_repo": "https://example.test/b-thief",
         "shared_key": b"integration-secret",
     }
     cop_inboxes, thief_inboxes = PeerInboxes(), PeerInboxes()
     cop = NetworkMatchRunner(
         NetworkMatchSettings(
             role=AgentRole.COP, opponent_url="https://thief.example/mcp",
-            output_dir=tmp_path / "cop", **common,
+            public_url="https://cop.example/mcp", output_dir=tmp_path / "cop",
+            team_name="alpha", members=("Ada", "Grace"),
+            opponent_team_name="beta", opponent_members=("Linus", "Margaret"),
+            own_cop_repo="https://example.test/a-cop",
+            own_thief_repo="https://example.test/a-thief",
+            opponent_cop_repo="https://example.test/b-cop",
+            opponent_thief_repo="https://example.test/b-thief", **common,
         ),
         cop_inboxes, transport=MemoryTransport(cop_inboxes, thief_inboxes),
     )
     thief = NetworkMatchRunner(
         NetworkMatchSettings(
             role=AgentRole.THIEF, opponent_url="https://cop.example/mcp",
-            output_dir=tmp_path / "thief", **common,
+            public_url="https://thief.example/mcp", output_dir=tmp_path / "thief",
+            team_name="beta", members=("Linus", "Margaret"),
+            opponent_team_name="alpha", opponent_members=("Ada", "Grace"),
+            own_cop_repo="https://example.test/b-cop",
+            own_thief_repo="https://example.test/b-thief",
+            opponent_cop_repo="https://example.test/a-cop",
+            opponent_thief_repo="https://example.test/a-thief", **common,
         ),
         thief_inboxes, transport=MemoryTransport(thief_inboxes, cop_inboxes),
     )
@@ -77,6 +82,8 @@ def test_two_peers_negotiate_play_and_mutually_audit(tmp_path):
     results = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
     assert all(result["mutual_sign_off"] for result in results)
     assert results[0]["log_sha256"] == results[1]["log_sha256"]
+    assert results[0]["team_a"] == results[1]["team_a"]
+    assert results[0]["repo_links"] == results[1]["repo_links"]
     assert (tmp_path / "cop" / "declaration_NETWORK-TEST.json").is_file()
     assert (tmp_path / "thief" / "config_NETWORK-TEST_g01.json").is_file()
 
@@ -117,16 +124,9 @@ def test_two_peers_synchronize_barriers_and_resolve_a_barrier_driven_capture(tmp
     config_path.write_text(json.dumps(shared_config), encoding="utf-8")
 
     common = {
-        "local_port": 8802, "public_url": "https://local.example/mcp",
+        "local_port": 8802,
         "game_id": "BARRIER-TEST", "sub_game_number": 1,
         "shared_config": config_path,
-        "team_name": "test-team", "members": ("Ada", "Grace"),
-        "opponent_team_name": "rival-team",
-        "opponent_members": ("Linus", "Margaret"),
-        "own_cop_repo": "https://example.test/a-cop",
-        "own_thief_repo": "https://example.test/a-thief",
-        "opponent_cop_repo": "https://example.test/b-cop",
-        "opponent_thief_repo": "https://example.test/b-thief",
         "shared_key": b"integration-secret",
     }
     try:
@@ -134,14 +134,26 @@ def test_two_peers_synchronize_barriers_and_resolve_a_barrier_driven_capture(tmp
         cop = NetworkMatchRunner(
             NetworkMatchSettings(
                 role=AgentRole.COP, opponent_url="https://thief.example/mcp",
-                output_dir=tmp_path / "cop", **common,
+                public_url="https://cop.example/mcp", output_dir=tmp_path / "cop",
+                team_name="alpha", members=("Ada", "Grace"),
+                opponent_team_name="beta", opponent_members=("Linus", "Margaret"),
+                own_cop_repo="https://example.test/a-cop",
+                own_thief_repo="https://example.test/a-thief",
+                opponent_cop_repo="https://example.test/b-cop",
+                opponent_thief_repo="https://example.test/b-thief", **common,
             ),
             cop_inboxes, transport=MemoryTransport(cop_inboxes, thief_inboxes),
         )
         thief = NetworkMatchRunner(
             NetworkMatchSettings(
                 role=AgentRole.THIEF, opponent_url="https://cop.example/mcp",
-                output_dir=tmp_path / "thief", **common,
+                public_url="https://thief.example/mcp", output_dir=tmp_path / "thief",
+                team_name="beta", members=("Linus", "Margaret"),
+                opponent_team_name="alpha", opponent_members=("Ada", "Grace"),
+                own_cop_repo="https://example.test/b-cop",
+                own_thief_repo="https://example.test/b-thief",
+                opponent_cop_repo="https://example.test/a-cop",
+                opponent_thief_repo="https://example.test/a-thief", **common,
             ),
             thief_inboxes, transport=MemoryTransport(thief_inboxes, cop_inboxes),
         )

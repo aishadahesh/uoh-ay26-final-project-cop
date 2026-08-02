@@ -14,6 +14,7 @@ from police_thief.domain.replay import (
     save_log,
 )
 from police_thief.services.commit_reveal import LogEntry, commit
+from police_thief.services.network_protocol import seal_payload
 
 
 def _make_entries(n: int) -> list[LogEntry]:
@@ -153,3 +154,18 @@ def test_end_to_end_tampering_via_a_real_file_round_trip(tmp_path):
     session = ReplaySession(reloaded)
     assert session.is_fully_verified is False
     assert session.first_tampered_index == 1
+
+
+def test_replay_verifies_reference_style_full_payload_commitment():
+    payload = {
+        "step": 1, "state": "grid=7x7;self=[1, 2]", "move": "move:north",
+        "intent": "truth", "hint": "near the river",
+    }
+    record = seal_payload(payload)
+    entry = LogEntry(
+        state=payload["state"], move=payload["move"], intent=payload["intent"],
+        nonce=record["nonce"], h_commit=record["commit"], payload=payload,
+    )
+
+    assert ReplaySession([entry]).is_fully_verified
+    assert not ReplaySession([dataclasses.replace(entry, move="tampered")]).is_fully_verified

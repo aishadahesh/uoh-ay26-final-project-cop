@@ -5,11 +5,13 @@ test binds an actual TCP port and calls it over real HTTP -- exercising the
 same code path main.py uses in production (docs/tasks.md Chapter 2).
 """
 
+import asyncio
 import socket
 import threading
 import time
 
 import pytest
+from fastmcp import Client
 
 from police_thief.services.mcp_client import send_move
 from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
@@ -45,3 +47,28 @@ def test_real_http_roundtrip_accepts_well_formed_move(running_server):
 def test_real_http_server_exposes_no_legacy_receive_move_tool(running_server):
     _url, inboxes = running_server
     assert inboxes.agreements.empty()
+
+
+def test_real_http_server_routes_all_four_reference_tools(running_server):
+    url, inboxes = running_server
+    payloads = {
+        "negotiate": ("message", {"terms": {}}),
+        "receive_turn": ("message", {"step": 1}),
+        "submit_audit": ("payload", {"records": []}),
+        "receive_control": ("message", {"kind": "status"}),
+    }
+
+    async def exercise() -> None:
+        async with Client(url) as client:
+            tools = {tool.name for tool in await client.list_tools()}
+            assert tools == set(payloads)
+            for tool, (argument, payload) in payloads.items():
+                result = await client.call_tool(tool, {argument: payload})
+                assert result.data == {"ok": True}
+
+    asyncio.run(exercise())
+    assert inboxes.agreements.get_nowait() == {"terms": {}}
+    # The legacy test already queued one turn only in its own fresh fixture.
+    assert inboxes.turns.get_nowait() == {"step": 1}
+    assert inboxes.audits.get_nowait() == {"records": []}
+    assert inboxes.controls.get_nowait() == {"kind": "status"}

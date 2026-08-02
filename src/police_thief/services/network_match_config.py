@@ -61,3 +61,38 @@ def validate_mcp_url(value: str) -> str:
     if parsed.scheme not in {"http", "https"} or not parsed.netloc or not parsed.path.endswith("/mcp"):
         raise ValueError("URL must be http(s) and end with /mcp")
     return url
+
+
+def validate_peer_defaults(defaults: dict, opponent_url: str) -> None:
+    """Fail before opening a port when live-match metadata is incomplete."""
+    urls = {
+        "opponent URL": validate_mcp_url(opponent_url),
+        "public URL": validate_mcp_url(defaults["public"]),
+    }
+    for label, url in urls.items():
+        if (urlparse(url).hostname or "").endswith(".example"):
+            raise ValueError(f"{label} is still a placeholder: {url}")
+
+    required_text = {
+        "game ID": defaults["game"],
+        "shared match secret": defaults["secret"],
+        "Team 1 name": defaults["team1_name"],
+        "Team 1 member 1": defaults["team1_member1"],
+        "Team 1 member 2": defaults["team1_member2"],
+        "Team 2 name": defaults["team2_name"],
+        "Team 2 member 1": defaults["team2_member1"],
+        "Team 2 member 2": defaults["team2_member2"],
+    }
+    required_repos = {
+        "Team 1 cop repository": defaults["own_cop"],
+        "Team 1 thief repository": defaults["own_thief"],
+        "Team 2 cop repository": defaults["opponent_cop"],
+        "Team 2 thief repository": defaults["opponent_thief"],
+    }
+    missing = [label for label, value in required_text.items() if not str(value).strip()]
+    for label, value in required_repos.items():
+        parsed = urlparse(str(value).strip())
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            missing.append(label)
+    if missing:
+        raise ValueError("live peer configuration is incomplete: " + ", ".join(missing))

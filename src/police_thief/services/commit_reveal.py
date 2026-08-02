@@ -83,6 +83,10 @@ class LogEntry:
     intent: Any
     nonce: str
     h_commit: str
+    # Network-v3 commitments cover the complete canonical wire payload,
+    # while older/local logs cover only state/move/intent.  Retaining the
+    # payload lets the Replay Viewer verify either format correctly.
+    payload: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -102,6 +106,19 @@ def audit_log(entries: list[LogEntry]) -> AuditResult:
     -- cryptography, not human judgment, is the decisive factor (Sec. 5.4.2).
     """
     for index, entry in enumerate(entries):
-        if not verify(entry.state, entry.move, entry.intent, entry.nonce, entry.h_commit):
+        if entry.payload is None:
+            valid = verify(entry.state, entry.move, entry.intent, entry.nonce, entry.h_commit)
+        else:
+            mirrors_payload = (
+                entry.state == entry.payload.get("state")
+                and entry.move == entry.payload.get("move")
+                and entry.intent == entry.payload.get("intent")
+            )
+            serialized = json.dumps(
+                entry.payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+            )
+            recomputed = hashlib.sha256(f"{serialized}|{entry.nonce}".encode()).hexdigest()
+            valid = mirrors_payload and secrets.compare_digest(recomputed, entry.h_commit)
+        if not valid:
             return AuditResult(verified=False, tampered_index=index)
     return AuditResult(verified=True)

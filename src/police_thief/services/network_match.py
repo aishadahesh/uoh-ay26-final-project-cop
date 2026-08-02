@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import json
+import platform
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from threading import Event
 
 from police_thief.domain.belief import BeliefMap
 from police_thief.domain.board import Board, Position
 from police_thief.domain.capture import is_boxed_in
+from police_thief.domain.hints import TemplateHintProvider
 from police_thief.domain.replay import save_log
 from police_thief.domain.scent import ScentField
 from police_thief.domain.scoring import MatchOutcome, score_for
@@ -78,6 +80,7 @@ class NetworkMatchSettings:
     email_recipient: str = "rmisegal+uoh26finalgame@gmail.com"
     credentials_path: Path = Path("credentials.json")
     token_path: Path = Path("token.json")
+    llm_model: str = "deterministic-heuristic"
 
 
 class _WireScent:
@@ -103,10 +106,12 @@ class NetworkMatchRunner:
         timeout = params.network_league.response_timeout_sec
         terms = self._terms(params)
         emit("Negotiating signed game terms and peer identity")
+        own_identity = self._identity()
         peer_agreement = self.transport.exchange_agreement(
-            create_agreement(terms, self._identity()), timeout,
+            create_agreement(terms, own_identity), timeout,
         )
         peer_identity = verify_agreement(peer_agreement, terms)
+        self._validate_peer_identity(peer_identity)
         emit(f"Negotiation verified with {peer_identity.get('group_name', 'opponent')}")
         self._write_pregame_files(params)
         self._send_control("enable", "READY")
@@ -118,26 +123,32 @@ class NetworkMatchRunner:
         own_scent = ScentField(params.board.grid_size, params.scent)
         belief = BeliefMap(board)
         brain = ManhattanHeuristicBrain(self.settings.role)
-        own_records: list[dict] = []
+        hint_provider = TemplateHintProvider(params.world.hint_max_words)
+        own_records: list[dict] = [self._sealed_system_spec()]
         peer_commits: dict[int, str] = {}
-        peer_turns: list[TurnMessage] = []
         pending_claim_response: dict | None = None
         thief_boxed_in = False
         outcome = MatchOutcome.SURVIVAL
         wire_role = WIRE_ROLES[self.settings.role.value]
         emit(f"Peer ready as {wire_role.upper()} - game {self.settings.game_id}")
 
-        for step in range(1, params.max_moves + 1):
+        # Reference v3 numbers each peer's own turns 1..max_steps.  The thief
+        # moves first, so a full survival game has 2*max_steps-1 wire turns.
+        for global_turn in range(1, params.max_moves * 2):
             if stop.is_set():
                 self._send_control("quit", "STOPPED")
                 raise RuntimeError("network match cancelled")
-            active_role = AgentRole.THIEF if step % 2 == 1 else AgentRole.COP
+            active_role = AgentRole.THIEF if global_turn % 2 == 1 else AgentRole.COP
+            step = (global_turn + 1) // 2
             if active_role is self.settings.role:
                 self._send_control("status", "THINKING")
                 fallback = brain._decide_move(board, own_position, belief)
-                move, hint = self._choose_move(
+                move, _private_reason = self._choose_move(
                     board, belief, own_position, fallback, step, params.max_moves, emit,
                 )
+                # Gemini's rationale is private reasoning and may mention local
+                # truth.  Only a bounded direction claim crosses the wire.
+                hint = hint_provider.generate(move, tell_truth=True).text
                 state_before = own_position
                 own_position = board.apply_move(own_position, move)
                 own_scent.decay()
@@ -161,7 +172,7 @@ class NetworkMatchRunner:
                 win_claim = (
                     {"type": "boxed_in"} if self.settings.role is AgentRole.THIEF and thief_boxed_in
                     else {"type": "survival"}
-                    if self.settings.role is AgentRole.THIEF and step == params.max_moves
+                    if self.settings.role is AgentRole.THIEF and step >= params.max_moves
                     else None
                 )
                 message = TurnMessage(
@@ -181,9 +192,6 @@ class NetworkMatchRunner:
                 if win_claim:
                     outcome = MatchOutcome.CAPTURE if win_claim.get("type") == "boxed_in" else MatchOutcome.SURVIVAL
                     break
-                if step == params.max_moves:
-                    outcome = MatchOutcome.SURVIVAL
-                    break
             else:
                 self._send_control("status", "WAITING")
                 message = TurnMessage.from_dict(self.transport.receive_turn(timeout))
@@ -191,7 +199,6 @@ class NetworkMatchRunner:
                 if message.step != step or message.sender != expected_sender:
                     raise NetworkProtocolError("received an out-of-order or wrong-role turn")
                 peer_commits[step] = message.commit
-                peer_turns.append(message)
                 belief.update_from_scent(_WireScent(message.smell_grid))
                 emit(f"Step {step}: received sealed {message.sender} turn")
                 if message.barrier_placed is not None:
@@ -199,13 +206,15 @@ class NetworkMatchRunner:
                     board.apply_declared_barrier(barrier_target)
                     emit(f"Step {step}: opponent publicly declared a barrier at {barrier_target}")
                 if self.settings.role is AgentRole.THIEF:
-                    claimed = [
+                    claims = [
                         list(claim) for claim in (message.capture_claim, message.barrier_placed)
                         if claim is not None
                     ]
-                    if claimed:
-                        caught = [own_position.row, own_position.col] in claimed
-                        pending_claim_response = {"claim": claimed, "caught": caught}
+                    if claims:
+                        own_cell = [own_position.row, own_position.col]
+                        caught = own_cell in claims
+                        reported_claim = own_cell if caught else claims[0]
+                        pending_claim_response = {"claim": reported_claim, "caught": caught}
                     if is_boxed_in(board, own_position):
                         thief_boxed_in = True
                         emit(f"Step {step}: no legal move remains -- boxed in (Sec. 3.3.5)")
@@ -220,21 +229,20 @@ class NetworkMatchRunner:
                     claim_type = message.win_claim.get("type")
                     outcome = MatchOutcome.CAPTURE if claim_type == "boxed_in" else MatchOutcome.SURVIVAL
                     break
-                if step == params.max_moves:
-                    outcome = MatchOutcome.SURVIVAL
-                    break
 
         emit("Exchanging final audit records and nonce reveals")
         peer_audit = AuditPayload.from_dict(self.transport.exchange_audit(
             AuditPayload(wire_role, own_records, outcome.value).to_dict(), timeout,
         ))
-        audit_ok, failed = audit_records(peer_audit.records, peer_commits)
+        audit_ok, failed = audit_records(peer_audit.records, peer_commits, require_step0=True)
         if not audit_ok:
             raise RuntimeError(f"opponent audit failed at steps {failed}")
         if peer_audit.result_claim != outcome.value:
             raise RuntimeError("opponent result claim does not match local result")
-        entries = self._combined_log(own_records, peer_audit.records)
-        path = self._write_result(params, entries, outcome, emit)
+        entries = self._combined_log(
+            own_records, peer_audit.records, wire_role, peer_audit.sender,
+        )
+        path = self._write_result(params, entries, outcome, peer_identity, emit)
         self._send_control("status", "COMPLETE")
         if self.settings.email_mode == "real":
             from police_thief.services.network_reporting import email_result_file
@@ -297,7 +305,7 @@ class NetworkMatchRunner:
             "smell_grid_size": params.scent.field_size,
             "decay_per_step": params.scent.decay_rate,
             "emit_intensity": params.scent.center_intensity,
-            "min_center_intensity": params.scent.center_intensity,
+            "min_center_intensity": params.scent.min_center_intensity,
             "max_steps": params.max_moves,
             "barriers_max": params.board.max_barriers,
             "setting": params.world.map_area,
@@ -311,15 +319,57 @@ class NetworkMatchRunner:
 
     def _identity(self) -> dict:
         s = self.settings
+        hardware = gather_hardware_spec(s.llm_model)
         return {
             "group_id": s.team_name.lower().replace(" ", "-"),
             "group_name": s.team_name,
             "members": list(s.members),
             "repos": {"cop": s.own_cop_repo, "thief": s.own_thief_repo},
             "mcp_servers": {WIRE_ROLES[s.role.value]: s.public_url},
-            "llm_model": "gemini",
+            "llm_model": s.llm_model,
+            # Exact public hardware keys consumed by the reference report
+            # builder after a successful match.
+            "spec": {
+                "os": hardware.os_name,
+                "cpu_type": platform.processor() or "unknown",
+                "cpu_cores": hardware.cpu_count,
+                "cpu_freq_mhz": "unknown",
+                "ram_gb": hardware.ram_gb,
+                "gpu_type": "present" if hardware.gpu_present else "unknown",
+                "gpu_cores_or_cuda": "unknown",
+                "vram_gb": "unknown",
+            },
             "protocol": {"name": "police-thief-mcp", "version": "3.0.0"},
         }
+
+    def _validate_peer_identity(self, identity: dict) -> None:
+        """Bind the negotiated peer to the opponent declared before play."""
+        s = self.settings
+        expected = {
+            "group_name": s.opponent_team_name,
+            "members": list(s.opponent_members),
+            "repos": {"cop": s.opponent_cop_repo, "thief": s.opponent_thief_repo},
+        }
+        for field, value in expected.items():
+            configured = value not in ("", "TBD", [], {"cop": "TBD", "thief": "TBD"})
+            if configured and identity.get(field) != value:
+                raise NetworkProtocolError(
+                    f"opponent identity mismatch for {field}: configured {value!r}, "
+                    f"negotiated {identity.get(field)!r}"
+                )
+
+    def _sealed_system_spec(self) -> dict:
+        """Build the lecturer-reference step-0 record revealed at final audit."""
+        payload = {
+            "step": 0,
+            "type": "system_spec",
+            "spec": asdict(gather_hardware_spec(self.settings.llm_model)),
+            "model": self.settings.llm_model,
+            "code_version": "3.0.0",
+            "group_name": self.settings.team_name,
+            "sub_game_number": self.settings.sub_game_number,
+        }
+        return seal_payload(payload)
 
     @staticmethod
     def _scent_snapshot(scent: ScentField, size: int) -> dict[str, float]:
@@ -330,22 +380,37 @@ class NetworkMatchRunner:
         }
 
     @staticmethod
-    def _combined_log(own_records: list[dict], peer_records: list[dict]) -> list[LogEntry]:
-        records = sorted((*own_records, *peer_records), key=lambda item: item["payload"]["step"])
+    def _combined_log(
+        own_records: list[dict], peer_records: list[dict], own_role: str, peer_role: str,
+    ) -> list[LogEntry]:
+        # Step numbers are local to each peer.  Decorate records with their
+        # source role so both computers produce the same thief-then-police
+        # ordering and therefore the same replay-log hash.
+        decorated = [
+            (own_role, record) for record in own_records if record["payload"]["step"] > 0
+        ] + [
+            (peer_role, record) for record in peer_records if record["payload"]["step"] > 0
+        ]
+        records = sorted(
+            decorated,
+            key=lambda item: (
+                item[1]["payload"]["step"], 0 if item[0] == "thief" else 1,
+            ),
+        )
         return [
             LogEntry(
                 state=record["payload"]["state"], move=record["payload"]["move"],
                 intent=record["payload"]["intent"], nonce=record["nonce"],
-                h_commit=record["commit"],
+                h_commit=record["commit"], payload=record["payload"],
             )
-            for record in records
+            for _role, record in records
         ]
 
     def _write_pregame_files(self, params) -> None:
         s = self.settings
         fingerprint = config_fingerprint(s.shared_config)
         step0 = Step0Declaration(
-            hardware=gather_hardware_spec("gemini-network-agent"), code_version="3.00",
+            hardware=gather_hardware_spec(s.llm_model), code_version="3.00",
             team_name=s.team_name, game_id=s.game_id, sub_game_number=s.sub_game_number,
             git_commit_hash=get_git_commit_hash(str(s.shared_config.parent.parent)),
             config_fingerprint=fingerprint,
@@ -360,18 +425,32 @@ class NetworkMatchRunner:
             s.game_id, s.sub_game_number, raw_config, fingerprint,
         ), s.output_dir)
 
-    def _write_result(self, params, entries, outcome, emit: EventSink) -> Path:
+    def _write_result(self, params, entries, outcome, peer_identity: dict, emit: EventSink) -> Path:
         s = self.settings
         save_log(entries, s.output_dir / f"log_{s.game_id}_g{s.sub_game_number:02d}.json")
         cop_score, thief_score = score_for(outcome, params.scoring)
+        own_identity = self._identity()
+        teams = sorted(
+            (own_identity, peer_identity),
+            key=lambda identity: str(
+                identity.get("group_id") or identity.get("group_name") or ""
+            ).casefold(),
+        )
+        team_a, team_b = teams
+        repos_a = team_a.get("repos", {})
+        repos_b = team_b.get("repos", {})
         result = build_match_result(
             s.game_id, s.sub_game_number, cop_score, thief_score, outcome.value, True,
             entries, TokenUsage(), RepoCrossLinks(
-                s.own_cop_repo, s.own_thief_repo,
-                s.opponent_cop_repo, s.opponent_thief_repo,
+                str(repos_a.get("cop", "")), str(repos_a.get("thief", "")),
+                str(repos_b.get("cop", "")), str(repos_b.get("thief", "")),
             ),
-            ResultTeamIdentity(s.team_name, s.members),
-            ResultTeamIdentity(s.opponent_team_name, s.opponent_members),
+            ResultTeamIdentity(
+                str(team_a.get("group_name", "")), tuple(team_a.get("members", ())),
+            ),
+            ResultTeamIdentity(
+                str(team_b.get("group_name", "")), tuple(team_b.get("members", ())),
+            ),
         )
         path = save_match_result(result, s.output_dir)
         emit(f"Audit verified; result saved to {path}")

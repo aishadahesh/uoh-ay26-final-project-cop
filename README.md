@@ -125,7 +125,7 @@ The launcher pre-fills every other field from `config/network_match.json`. Edit 
 
 For the lower-level `peer` command, the same opponent address belongs in `[network].opponent_url` inside the private role file `config/cop/game.toml`; never put it in the shared `config/game.json`.
 
-Both peers act as MCP server and client simultaneously, over the four-tool reference protocol (`negotiate` / `receive_turn` / `submit_audit` / `receive_control` — see `docs/PRD_fastmcp_networking.md`). Every move is commit-verified; every barrier placement is publicly declared in real time. The final score and log hash are authenticated and compared on both computers before `mutual_sign_off` becomes `true`. Each peer writes:
+Both peers act as MCP server and client simultaneously, over the four-tool reference protocol (`negotiate` / `receive_turn` / `submit_audit` / `receive_control` — see `docs/PRD_fastmcp_networking.md`). Turn numbers are local to each peer (`1..max_steps`), every move is commit-verified, the mandatory sealed step-0 system record is audited, and every barrier placement is publicly declared in real time. Both peers must return the same audited outcome before `mutual_sign_off` becomes `true`. Each peer writes:
 
 ```text
 declaration_<game_id>.json
@@ -142,7 +142,7 @@ Enable **Automatically email result JSON** to send the final JSON-only report. T
 uv run python -m police_thief peer --role police
 ```
 
-Connection details (port, opponent URL) come from `config/cop/game.toml`'s `[network]` section; match/team details (game ID, teams, repos, shared secret, email) come from `config/network_match.json` — the same file the two-computer GUI setup screen reads. Edit `config/network_match.json` before running to point at a real opponent — for example, your own group's thief repo, run the same way on its own machine/port with a matching shared secret and game ID. `--role` accepts only `police` — this repository ships no thief config and no way to run this process as the thief. Run the sibling thief repo's own `peer --role thief` in a second terminal (or on a second computer, per the tunneled setup above) to get the opposing peer.
+Connection details (port, opponent URL) come from `config/cop/game.toml`'s `[network]` section; match/team details (game ID, teams, repos, shared secret, email) come from `config/network_match.json` — the same file the two-computer GUI setup screen reads. Edit both files before running: placeholder URLs, an empty secret, or incomplete team metadata now fail before a server port opens. The terminal peer also requires `GEMINI_API_KEY` in `.env`; it uses that configured Gemini model for tactical choices and advertises the exact model in its identity and step-0 declaration. `--role` accepts only `police` — this repository ships no thief config and no way to run this process as the thief. Run the sibling thief repo's own `peer --role thief` in a second terminal or on a second computer.
 
 **Replay a saved, cryptographically-sealed match log:**
 
@@ -156,10 +156,10 @@ The Replay Viewer independently recomputes every step's commit hash from the rev
 
 Two distinct configuration layers, deliberately kept separate (`docs/tasks.md` Chapter 2, "Total Separation of Working Environments"):
 
-- **`config/game.json`** — the shared, signed match config. Both sides load a byte-identical copy (`config_fingerprint`, checked at negotiation time); nothing in here may be team-specific. Sections: `board_and_agents` (grid size, start positions), `movement_and_barriers` (`max_barriers`, `max_moves`, `survival_threshold`), `scoring`, `pheromones` (scent decay/emission, fixed — not team-negotiable), `world`, `network_and_league` (fixed league parameters, e.g. `num_games`), `rate_limiter_gatekeeper` (minimum floors, may be raised but never lowered). `shared/game_config.py::load_match_parameters` validates every field against the rulebook's Mandatory Parameters Table and raises `GameConfigError` on any violation — including a below-floor `grid_size`/`max_barriers`, an unsupported `schema_version`, or `thief_start`/`cop_start` that are identical or out of bounds.
+- **`config/game.json`** — the shared, signed match config. Both sides must negotiate identical public terms; nothing in here may be team-specific. Its fixed scent values include emission intensity `0.9` and minimum center intensity `0.5`; `world.map_area` is the agreed setting (currently `New York`); and `max_moves` is interpreted per peer, matching reference v3. `shared/game_config.py::load_match_parameters` validates every field and rejects invalid mandatory values or positions.
 - **`config/cop/game.toml`** — private, per-peer settings never shared with or read by the thief process: `[game]` (team identity — `group_name`/`group_id` are the 8-character `"uoh-ay26"` code required by rule 45, plus `sub_game_number`/`members`/`repos` matching the rulebook's own private-file format; not currently read by any loader — the live match's identity comes from `NetworkMatchSettings` instead, see below), `[network]` (`my_port`, `opponent_url`, `turn_timeout_seconds`), an optional `[strategy] cop_class` dotted path to swap in a different `BrainBase` subclass (defaults to `ManhattanHeuristicBrain`), an optional `[trash_talk] provider` (only `template`, zero-token, is implemented today), and an optional `[email]` section for Gmail reporting.
 - **`config/network_match.json`** — pre-fills the two-computer GUI launcher's fields (team names, members, repo URLs, output directory, email defaults) so they don't need retyping every session; never put secrets here.
-- **`.env`** — `GEMINI_API_KEY`/`GEMINI_MODEL` for the optional advisor; never committed (`.gitignore`).
+- **`.env`** — `GEMINI_API_KEY`/`GEMINI_MODEL`; required for terminal and GUI network-agent play, never committed (`.gitignore`).
 - **`credentials.json` / `token.json`** — real Gmail OAuth artifacts; never committed.
 
 ## Testing & quality gates

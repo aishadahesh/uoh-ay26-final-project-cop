@@ -5,6 +5,7 @@ import json
 import pytest
 
 from police_thief.gui.network_setup import load_network_defaults, validate_mcp_url
+from police_thief.services.network_match_config import validate_peer_defaults
 
 
 def _defaults():
@@ -58,3 +59,31 @@ def test_mcp_url_must_include_transport_route():
     assert validate_mcp_url("https://peer.example/mcp/") == "https://peer.example/mcp"
     with pytest.raises(ValueError, match="end with /mcp"):
         validate_mcp_url("https://peer.example")
+
+
+def test_peer_defaults_reject_placeholders_and_missing_opponent_identity(tmp_path):
+    path = tmp_path / "network_match.json"
+    raw = _defaults()
+    raw["peer"]["public_url"] = "https://your-tunnel.example/mcp"
+    raw["team_2"]["name"] = ""
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    loaded = load_network_defaults(path, tmp_path)
+
+    with pytest.raises(ValueError, match="placeholder"):
+        validate_peer_defaults(loaded, "https://real-peer.test/mcp")
+
+
+def test_peer_defaults_accept_complete_live_metadata(tmp_path):
+    path = tmp_path / "network_match.json"
+    raw = _defaults()
+    raw["peer"]["public_url"] = "https://thief.example.com/mcp"
+    raw["team_1"]["repos"] = {
+        "cop": "https://github.com/alpha/cop", "thief": "https://github.com/alpha/thief",
+    }
+    raw["team_2"]["repos"] = {
+        "cop": "https://github.com/beta/cop", "thief": "https://github.com/beta/thief",
+    }
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    loaded = load_network_defaults(path, tmp_path)
+
+    validate_peer_defaults(loaded, "http://127.0.0.1:8802/mcp")
