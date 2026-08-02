@@ -5,8 +5,14 @@ version = "1.00"
 # Environments") and Appendix B (private vs. shared config files).
 
 [game]
-group_name = "TBD"
-group_id = "TBD"
+# Rule 45: an 8-character unique code without spaces (docs/tasks.md line
+# 827) -- "uoh-ay26" matches this team's actual GitHub org/repo naming
+# (uoh-ay26-final-project-cop) and config/network_match.json's team_1.name.
+group_name = "uoh-ay26"
+group_id = "uoh-ay26"
+sub_game_number = 1
+members = ["Aisha Abu Dahesh", "Yousef Asadi"]
+repos = { cop = "https://github.com/aishadahesh/uoh-ay26-final-project-cop", thief = "https://github.com/aishadahesh/uoh-ay26-final-project-thief" }
 
 [network]
 my_port = 8801

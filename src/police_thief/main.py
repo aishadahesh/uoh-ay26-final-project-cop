@@ -2,18 +2,29 @@
 
 This repository is the **cop** side only (docs/tasks.md's mandatory
 two-separate-repos submission split): it ships and reads only
-`config/cop/game.toml`, never a thief config directory, and `serve` below
-always runs this process as the cop. The sibling thief repo (see
+`config/cop/game.toml`, never a thief config directory, and `peer` below
+always runs this process as the cop (wire role "police" -- see
+services/network_protocol.py::WIRE_ROLES). The sibling thief repo (see
 README.md) mirrors this same package restricted the other way.
 
+`peer --role police` / `replay --log` match the naming used by
+docs/tasks.md Appendix D's illustrative (non-mandatory) example runner --
+purely a local invocation convenience. It has no effect on cross-team
+compatibility: the wire protocol two teams actually speak over the network
+(negotiate/receive_turn/submit_audit/receive_control, and the "police"
+wire-role string) is unrelated to what you type in your own terminal, and
+is unchanged by this naming.
+
 Commands:
-  serve                    Start this peer's FastMCP server, as the cop,
+  peer --role police       Start this peer's FastMCP server, as the cop,
                            reading only config/cop/game.toml (Chapter 2).
+                           Only "police" is accepted -- this repo has no
+                           thief config to run as the thief with.
   simulate                 Run a single-process local match with placeholder
                            policies and print the result (Chapter 3). No
                            live opponent config is read -- both sides are
                            simulated in-process from the public heuristic.
-  replay --log-file PATH   Launch the Replay Viewer against a saved match
+  replay --log PATH        Launch the Replay Viewer against a saved match
                            log (Chapter 7) -- runs standalone, independent
                            of any live match code (docs/tasks.md T0437).
   demo                     Open a standalone Live GUI window: the cop chases
@@ -34,7 +45,7 @@ Commands:
                            represents this repo actually playing a real,
                            graded match as the thief.
 
-`serve` is the concrete realization of Chapter 2's "Total Separation of
+`peer` is the concrete realization of Chapter 2's "Total Separation of
 Working Environments" rule: this process reads only its own (cop) config,
 sharing no memory and no config file with the thief's own, separately-run
 process. `simulate` has no networking or live-opponent concept at all -- it
@@ -68,18 +79,24 @@ DEFAULT_GAME_CONFIG = DEFAULT_CONFIG_ROOT / "game.json"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parse the `serve`/`simulate`/`replay` subcommands and their options."""
+    """Parse the `peer`/`simulate`/`replay` subcommands and their options."""
     parser = argparse.ArgumentParser(prog="police_thief")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    serve = subparsers.add_parser("serve", help="Start this peer's FastMCP server, as the cop")
-    serve.add_argument("--config-root", type=Path, default=DEFAULT_CONFIG_ROOT)
+    peer = subparsers.add_parser(
+        "peer", help="Start this peer's FastMCP server, as the cop (wire role \"police\")",
+    )
+    peer.add_argument(
+        "--role", required=True, choices=["police"],
+        help="Only 'police' is supported -- this repo has no thief config to run as 'thief' with",
+    )
+    peer.add_argument("--config-root", type=Path, default=DEFAULT_CONFIG_ROOT)
 
     simulate = subparsers.add_parser("simulate", help="Run a local placeholder-policy match")
     simulate.add_argument("--game-config", type=Path, default=DEFAULT_GAME_CONFIG)
 
     replay = subparsers.add_parser("replay", help="Launch the Replay Viewer on a saved match log")
-    replay.add_argument("--log-file", required=True, type=Path)
+    replay.add_argument("--log", required=True, type=Path, dest="log_file")
 
     demo = subparsers.add_parser("demo", help="Open a standalone Live GUI demo (no networking)")
     demo.add_argument("--turns", type=int, default=25)
@@ -90,8 +107,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _serve(args: argparse.Namespace) -> None:
-    """Always serves as the cop -- this repo has no thief config to run as."""
+def _peer(args: argparse.Namespace) -> None:
+    """Always serves as the cop (wire role "police") -- this repo has no
+    thief config to run as "thief" with; `--role` accepts only "police"."""
     network = load_network_config(AgentRole.COP, args.config_root)
     mcp = build_peer_server(AgentRole.COP.value, PeerInboxes())
     run_peer_server(mcp, host="0.0.0.0", port=network.my_port)
@@ -252,10 +270,10 @@ def _play(args: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Dispatch to `serve`, `simulate`, `replay`, `demo`, or `play` based on the parsed subcommand."""
+    """Dispatch to `peer`, `simulate`, `replay`, `demo`, or `play` based on the parsed subcommand."""
     args = parse_args(argv)
-    if args.command == "serve":
-        _serve(args)
+    if args.command == "peer":
+        _peer(args)
     elif args.command == "simulate":
         _simulate(args)
     elif args.command == "replay":

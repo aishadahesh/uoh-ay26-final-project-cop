@@ -23,7 +23,7 @@ Chapter 7 answers two distinct questions: "what is happening right now?" (the Li
 | Replay Viewer cryptographic core | `domain/replay.py::ReplaySession`, reusing Chapter 5's `verify()`/`audit_log()` | a tampered log entry at index *i* → every step from *i* onward renders `TAMPERED` |
 | Step-by-step scrubbing | `ReplaySession.next`/`previous`/`jump_to` | out-of-range `jump_to` raises `IndexError` and leaves the current step unchanged |
 | Verified/tampered summary | `ReplaySession.verified_count`/`tampered_count` | `2 verified / 3 tampered (of 5 total steps)` on a log tampered at index 2 |
-| Standalone launch | `python -m police_thief replay --log-file PATH` | constructs and renders correctly independent of any live match code |
+| Standalone launch | `python -m police_thief replay --log PATH` | constructs and renders correctly independent of any live match code |
 | Shared grid-drawing widget | `gui/board_canvas.py::BoardCanvas` | one NxN grid of colored cells + `draw_agent`/`draw_dot`/`clear_markers`, composed by both `LiveGUI` and `ReplayGUI` |
 | Live GUI agent marker + own trail | `LiveViewModel.role_label`/`.visited` (both keyword-only, defaulted -- every pre-existing call site is unaffected) | a circular marker labeled with `role_label` on the own-position cell; a faint dot on every other cell in `visited` |
 | Replay Viewer board visualization | `gui/replay_gui.py::_extract_position` | recognizes only `{"row": int, "col": int}` (the shape `Orchestrator.run_turn`, Ch.8, already produces); any other `LogEntry.state` shape → no board drawing, never a crash or a guess |

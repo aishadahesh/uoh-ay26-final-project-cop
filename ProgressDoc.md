@@ -579,4 +579,51 @@ ruff check: All checks passed!
 
 **Tasks checked off:** `docs/TODO.md` T0253 (barrier heuristic upgraded from a distance nudge to a reachable-area chokepoint search), T0256 (budget timing now usefulness-driven rather than unbuilt).
 
+**Status:** committed.
+
+---
+
+### Post-Split Fix — Corrected the Cop's Team Identity and Finished the `[game]` Section
+
+**What prompted this:** a direct request to check whether `config/cop/game.toml` was accurately filled in. It wasn't, in two ways.
+
+**Finding #1 — a real typo, not just an unfilled placeholder:** `group_name`/`group_id` had already been changed from the `"TBD"` placeholder flagged in the Chapter 11 sanity sweep to `"uof-ay26"` -- but that value matches nothing else in the project. Every other reference to this team's identity (`config/network_match.json`'s `team_1.name`, the actual GitHub org and both repo names, `README.md`, `ProgressDoc.md`) consistently uses `"uoh-ay26"`. Fixed to match: an 8-character code, no spaces, satisfying rule 45, and now internally consistent across the repo instead of silently diverging from it.
+
+**Finding #2 — the `[game]` section was still incomplete relative to the rulebook's own format:** `docs/tasks.md` §13.4.1's illustrative `config/game.toml` excerpt shows `[game]` containing `group_name`, `group_id`, `sub_game_number`, `members`, and `repos` together -- `docs/TODO.md` T0556 tracked finishing this and had been sitting unchecked. Added `sub_game_number = 1`, `members` (the same two real names already used in `config/network_match.json`, not invented IDs), and `repos = { cop = ..., thief = ... }` (the same two real, now-correct repo URLs fixed in an earlier session's `config/network_match.json` correction).
+
+**An honest limitation surfaced rather than papered over while doing this:** none of `[game]`'s fields are actually read by any loader in this codebase -- `shared/config.py::load_network_config`/`load_strategy_class` only ever parse `[network]`/`[strategy]`. The live two-computer match's actual team identity and repo URLs come from `NetworkMatchSettings`, populated from `config/network_match.json` or the GUI form, not from this TOML file. Filling `[game]` in accurately means matching the rulebook's documented private-file shape with truthful values -- it does not by itself wire this table into the running system, and `README.md`/`docs/TODO.md` say so explicitly rather than implying it now does something it doesn't.
+
+**Deliberately not added:** the rulebook's illustrative excerpt also shows an `[llm]` section (`model`, `step_deadline_seconds`). Not added here, because it would misrepresent this project's actual implementation -- this codebase's real Gemini model/deadline configuration is entirely `.env`-based (`GEMINI_MODEL`/`GEMINI_API_KEY`, `services/gemini_agent.py`), not TOML-based, and adding an inert `[llm]` section here would create a second, fake-looking source of truth for a value nothing reads from this file.
+
+**Quality gate results:**
+```
+454 passed, 1 skipped in ~20s
+ruff check: All checks passed!
+```
+
+**Tasks checked off:** `docs/TODO.md` T0556 (`[game]` section finalized, with an honest wiring caveat), T0879 (rule 45 now genuinely satisfied, not a `"TBD"` placeholder).
+
+**Status:** awaiting review before committing.
+
+---
+
+### Post-Split Enhancement — Renamed the CLI to Match the Reference Example's Invocation Style
+
+**What prompted this:** the user shared a screenshot of `docs/tasks.md` §15.4 ("How to Run"), the course's optional reference example repo's own invocation syntax (`peer --role police|thief`, `replay --log ...`), and asked whether this repo was "ready to run, matching the requested way." The honest answer, given first: that section is Appendix D's illustrative example runner, explicitly flagged non-mandatory ("[MUST NOT be treated as a submission template]", §15.1/15.5.1) -- and the exact local command name has zero effect on cross-team play, since two teams only ever interact over the wire protocol (`negotiate`/`receive_turn`/`submit_audit`/`receive_control`, and the `WIRE_ROLES = {"cop": "police", "thief": "thief"}` translation already in place), never by invoking each other's CLI. That compatibility work was already done in an earlier session's four-tool protocol migration.
+
+The user asked to rename the CLI to match anyway, for consistency and familiarity when comparing notes with other groups, even after that clarification.
+
+**What was renamed, purely a local invocation change with no behavior change underneath:**
+- `main.py`'s `serve` subcommand renamed to `peer`, now requiring `--role`, with `choices=["police"]` -- the only value this repo, having no thief config, can legitimately support. Passing `--role thief` fails cleanly with argparse's own "invalid choice" error rather than a deeper, more confusing failure. `_serve()` renamed to `_peer()`; behavior unchanged (still starts the cop's FastMCP server via `build_peer_server(AgentRole.COP.value, ...)`).
+- `replay --log-file PATH` renamed to `replay --log PATH` (via `dest="log_file"`, so the rest of the code needed no change).
+- `README.md`, `docs/PLAN.md`, `docs/PRD_fastmcp_networking.md`, `docs/PRD_gui_replay.md`, and the relevant `docs/TODO.md` entries (T0153, T0183, T0421, T0835, T0854) updated to the new invocation syntax, with the historical entries left describing what was actually true at the time they were written rather than rewritten to pretend the old syntax never existed.
+
+**Verified live, not just asserted:** ran `python -m police_thief --help`, `peer --help`, `peer --role thief` (confirmed it fails with a clean argparse error), and `replay --help` after the change to confirm the new syntax behaves exactly as intended before calling it done.
+
+**Quality gate results:**
+```
+454 passed, 1 skipped
+ruff check: All checks passed!
+```
+
 **Status:** awaiting review before committing.

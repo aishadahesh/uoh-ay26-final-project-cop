@@ -123,7 +123,7 @@ The launcher pre-fills every other field from `config/network_match.json`. Edit 
 - Use the same game ID, sub-game number, shared `config/game.json`, and shared match secret on both computers.
 - Enter Team 1 and Team 2 names, both individual member fields for each team, plus all four repository URLs; they are recorded in the final result schema.
 
-For the lower-level `serve` command, the same opponent address belongs in `[network].opponent_url` inside the private role file `config/cop/game.toml`; never put it in the shared `config/game.json`.
+For the lower-level `peer` command, the same opponent address belongs in `[network].opponent_url` inside the private role file `config/cop/game.toml`; never put it in the shared `config/game.json`.
 
 Both peers act as MCP server and client simultaneously, over the four-tool reference protocol (`negotiate` / `receive_turn` / `submit_audit` / `receive_control` — see `docs/PRD_fastmcp_networking.md`). Every move is commit-verified; every barrier placement is publicly declared in real time. The final score and log hash are authenticated and compared on both computers before `mutual_sign_off` becomes `true`. Each peer writes:
 
@@ -136,18 +136,18 @@ result_<game_id>.json
 
 Enable **Automatically email result JSON** to send the final JSON-only report. The assignment address `rmisegal+uoh26finalgame@gmail.com` is pre-filled, but the recipient field can be changed before starting. Install the email extra first, place Google OAuth `credentials.json` in the project root, and complete browser consent once; its reusable token is stored as `token.json`. Email is sent only after both computers agree on the result.
 
-**Run this side as a real, standalone FastMCP peer process** (`localhost` only, no tunnel needed) — always the cop, reading only `config/cop/game.toml`:
+**Run this side as a real, standalone FastMCP peer process** (`localhost` only, no tunnel needed) — always the cop, reading only `config/cop/game.toml`. This matches the naming used by `docs/tasks.md` Appendix D's illustrative (non-mandatory) example runner — purely a local invocation convenience with no effect on cross-team compatibility (see [The cop's strategy](#the-cops-strategy) and `services/network_protocol.py::WIRE_ROLES` for what actually governs that):
 
 ```bash
-uv run python -m police_thief serve
+uv run python -m police_thief peer --role police
 ```
 
-This repository ships no thief config, no thief private per-peer settings, and no way to run this process as the thief — `serve` always starts a cop server. Run the sibling thief repo's own `serve` in a second terminal (or on a second computer, per the tunneled setup above) to get the opposing peer.
+`--role` accepts only `police` — this repository ships no thief config, no thief private per-peer settings, and no way to run this process as the thief. Run the sibling thief repo's own `peer --role thief` in a second terminal (or on a second computer, per the tunneled setup above) to get the opposing peer.
 
 **Replay a saved, cryptographically-sealed match log:**
 
 ```bash
-uv run python -m police_thief replay --log-file path/to/log.json
+uv run python -m police_thief replay --log path/to/log.json
 ```
 
 The Replay Viewer independently recomputes every step's commit hash from the revealed nonce and flags `TAMPERED` in red the instant a saved log has been altered — it trusts nothing it wasn't shown proof of.
@@ -157,12 +157,10 @@ The Replay Viewer independently recomputes every step's commit hash from the rev
 Two distinct configuration layers, deliberately kept separate (`docs/tasks.md` Chapter 2, "Total Separation of Working Environments"):
 
 - **`config/game.json`** — the shared, signed match config. Both sides load a byte-identical copy (`config_fingerprint`, checked at negotiation time); nothing in here may be team-specific. Sections: `board_and_agents` (grid size, start positions), `movement_and_barriers` (`max_barriers`, `max_moves`, `survival_threshold`), `scoring`, `pheromones` (scent decay/emission, fixed — not team-negotiable), `world`, `network_and_league` (fixed league parameters, e.g. `num_games`), `rate_limiter_gatekeeper` (minimum floors, may be raised but never lowered). `shared/game_config.py::load_match_parameters` validates every field against the rulebook's Mandatory Parameters Table and raises `GameConfigError` on any violation — including a below-floor `grid_size`/`max_barriers`, an unsupported `schema_version`, or `thief_start`/`cop_start` that are identical or out of bounds.
-- **`config/cop/game.toml`** — private, per-peer settings never shared with or read by the thief process: `[network]` (`my_port`, `opponent_url`, `turn_timeout_seconds`), an optional `[strategy] cop_class` dotted path to swap in a different `BrainBase` subclass (defaults to `ManhattanHeuristicBrain`), an optional `[trash_talk] provider` (only `template`, zero-token, is implemented today), and an optional `[email]` section for Gmail reporting.
+- **`config/cop/game.toml`** — private, per-peer settings never shared with or read by the thief process: `[game]` (team identity — `group_name`/`group_id` are the 8-character `"uoh-ay26"` code required by rule 45, plus `sub_game_number`/`members`/`repos` matching the rulebook's own private-file format; not currently read by any loader — the live match's identity comes from `NetworkMatchSettings` instead, see below), `[network]` (`my_port`, `opponent_url`, `turn_timeout_seconds`), an optional `[strategy] cop_class` dotted path to swap in a different `BrainBase` subclass (defaults to `ManhattanHeuristicBrain`), an optional `[trash_talk] provider` (only `template`, zero-token, is implemented today), and an optional `[email]` section for Gmail reporting.
 - **`config/network_match.json`** — pre-fills the two-computer GUI launcher's fields (team names, members, repo URLs, output directory, email defaults) so they don't need retyping every session; never put secrets here.
 - **`.env`** — `GEMINI_API_KEY`/`GEMINI_MODEL` for the optional advisor; never committed (`.gitignore`).
 - **`credentials.json` / `token.json`** — real Gmail OAuth artifacts; never committed.
-
-`group_name`/`group_id` in `config/cop/game.toml` are still the placeholder `"TBD"` — see [What's genuinely still outstanding](#whats-genuinely-still-outstanding).
 
 ## Testing & quality gates
 
@@ -181,7 +179,7 @@ src/police_thief/
   services/     # crypto, networking, reliability layer, Gmail/Gatekeeper
   gui/          # Tkinter Live GUI + Replay Viewer + interactive Play mode
   shared/       # config loading, constants, versioning
-  main.py       # CLI: serve / simulate / demo / play / replay
+  main.py       # CLI: peer / simulate / demo / play / replay
 config/
   game.json           # shared, signed match config (both sides must load byte-identical)
   cop/                # private per-role config (network port, strategy class, etc.)
@@ -230,6 +228,5 @@ Tracked in detail in `docs/TODO.md` and `ProgressDoc.md`'s Chapter 11 entry — 
 - A real Google Cloud OAuth consent flow (the code is ready; someone needs to create the project and run it once).
 - A real `ngrok`/tunnel session for cross-machine play.
 - Actual league matches against other teams' agents.
-- A real 8-character team identity code (currently placeholder `"TBD"` in `config/cop/game.toml`).
 - A deeper, multi-turn lookahead barrier-cornering strategy — the current heuristic reasons about the *immediate* effect of one placement (does it shrink the thief's reachable area right now), not a multi-turn plan to engineer a chokepoint that doesn't exist yet; it reliably produces a barrier-driven capture from favorable starting positions (proven in `tests/integration/test_network_match.py`), but not from every possible start.
 - One open rulebook-interpretation question found during the Chapter 11 sanity sweep (rule 47 — see `docs/TODO.md`).
