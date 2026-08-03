@@ -1,0 +1,29 @@
+version = "1.00"
+
+# Submission mirror of config/cop/game.toml. Keep only private/local values
+# here; shared game physics belong in the signed config/game.json.
+[game]
+group_name = "uoh-ay26"
+group_id = "uoh-ay26"
+sub_game_number = 1
+members = ["Aisha Abu Dahesh", "Yousef Asadi"]
+repos = { cop = "https://github.com/aishadahesh/uoh-ay26-final-project-cop", thief = "https://github.com/aishadahesh/uoh-ay26-final-project-thief" }
+
+[network]
+my_port = 8801
+opponent_url = "http://127.0.0.1:8802/mcp"
+turn_timeout_seconds = 30
+
+[strategy]
+# cop_class = "my_team.strategy:MyCopBrain"
+
+[trash_talk]
+provider = "template"
+
+[llm]
+model = "gemini-3.6-flash"
+step_deadline_seconds = 30
+
+[email]
+recipient = "rmisegal+uoh26finalgame@gmail.com"
+mode = "dry_run"

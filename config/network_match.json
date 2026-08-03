@@ -3,13 +3,13 @@
   "peer": {
     "role": "cop",
     "local_port": 8801,
-    "opponent_url": "https://opponent.example/mcp",
-    "public_url": "https://your-tunnel.example/mcp"
+    "opponent_url": "https://2e5d-2a06-c701-71af-2f00-199f-72dc-7965-f9f2.ngrok-free.app/mcp",
+    "public_url": "https://result-pamperer-nullify.ngrok-free.dev/mcp"
   },
   "match": {
     "game_id": "G001",
     "sub_game_number": 1,
-    "shared_match_secret": "",
+    "shared_match_secret": "50",
     "output_directory": "results/network"
   },
   "team_1": {
@@ -21,11 +21,11 @@
     }
   },
   "team_2": {
-    "name": "",
-    "members": ["", ""],
+    "name": "uoh-ay26",
+    "members": ["Aisha Abu Dahesh", "Yousef Asadi"],
     "repos": {
-      "cop": "",
-      "thief": ""
+      "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+      "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
     }
   },
   "email": {

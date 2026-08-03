@@ -16,7 +16,7 @@ repos = { cop = "https://github.com/aishadahesh/uoh-ay26-final-project-cop", thi
 
 [network]
 my_port = 8801
-opponent_url = "http://127.0.0.1:8802/mcp"
+opponent_url = "https://2e5d-2a06-c701-71af-2f00-199f-72dc-7965-f9f2.ngrok-free.app/mcp"
 turn_timeout_seconds = 30
 
 # [strategy] -- optional: point at YOUR brain subclass (else the shipped
