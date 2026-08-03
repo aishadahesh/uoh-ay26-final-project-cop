@@ -135,11 +135,11 @@ result_<game_id>_g<NN>.json
 result_<game_id>.json
 ```
 
-When `network_and_league.num_games` is greater than one, the numbered files
-are written once per sub-game and `result_<game_id>.json` is the aggregate
-series result. The two peers negotiate again and reset their board/audit state
-before every sub-game. Roles alternate automatically; this cop repository
-starts game 1 as police, then plays thief/police/thief for subsequent games.
+The numbered files are written once per each of the six required sub-games and
+`result_<game_id>.json` is the aggregate series result. The two peers negotiate
+again and reset their board/audit state before every sub-game. Roles alternate
+automatically; this cop repository plays police in games 1, 3, and 5 and thief
+in games 2, 4, and 6.
 
 Enable **Automatically email result JSON** to send the final JSON-only report. The assignment address `rmisegal+uoh26finalgame@gmail.com` is pre-filled, but the recipient field can be changed before starting. Install the email extra first, place Google OAuth `credentials.json` in the project root, and complete browser consent once; its reusable token is stored as `token.json`. Email is sent only after both computers agree on the result.
 
