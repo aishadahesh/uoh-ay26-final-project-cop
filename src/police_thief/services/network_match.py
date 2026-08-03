@@ -198,7 +198,11 @@ class NetworkMatchRunner:
                 message = TurnMessage.from_dict(self.transport.receive_turn(timeout))
                 expected_sender = WIRE_ROLES[active_role.value]
                 if message.step != step or message.sender != expected_sender:
-                    raise NetworkProtocolError("received an out-of-order or wrong-role turn")
+                    raise NetworkProtocolError(
+                        "received an out-of-order or wrong-role turn: "
+                        f"expected sender={expected_sender!r}, step={step}; "
+                        f"received sender={message.sender!r}, step={message.step}"
+                    )
                 peer_commits[step] = message.commit
                 belief.update_from_scent(_WireScent(message.smell_grid))
                 emit(f"Step {step}: received sealed {message.sender} turn")

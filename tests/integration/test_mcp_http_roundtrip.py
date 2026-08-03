@@ -55,6 +55,22 @@ def test_real_http_roundtrip_accepts_well_formed_move(running_server):
     assert inboxes.turns.get_nowait() == {"signed_move": "N", "signature": "abc123"}
 
 
+def test_real_http_retry_is_acknowledged_without_duplicate_delivery(running_server):
+    url, inboxes = running_server
+    payload = {"sender": "police", "step": 7, "commit": "a" * 64}
+
+    async def exercise() -> None:
+        async with Client(url) as client:
+            first = await client.call_tool("receive_turn", {"message": payload})
+            retry = await client.call_tool("receive_turn", {"message": payload})
+        assert first.data == {"ok": True}
+        assert retry.data == {"ok": True, "duplicate": True}
+
+    asyncio.run(exercise())
+    assert inboxes.turns.get_nowait() == payload
+    assert inboxes.turns.empty()
+
+
 def test_real_http_server_exposes_no_legacy_receive_move_tool(running_server):
     _url, inboxes = running_server
     assert inboxes.agreements.empty()

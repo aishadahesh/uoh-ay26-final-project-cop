@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import queue
 import threading
+from collections import OrderedDict
 
 import anyio
 import uvicorn
@@ -20,6 +23,29 @@ class PeerInboxes:
         self.turns: queue.Queue[dict] = queue.Queue()
         self.audits: queue.Queue[dict] = queue.Queue()
         self.controls: queue.Queue[dict] = queue.Queue()
+        self._delivery_lock = threading.Lock()
+        self._delivered: dict[str, OrderedDict[str, None]] = {
+            "agreements": OrderedDict(),
+            "turns": OrderedDict(),
+            "audits": OrderedDict(),
+        }
+
+    def enqueue_once(self, inbox_name: str, payload: dict) -> bool:
+        """Queue a retriable payload once, while acknowledging exact retries."""
+        canonical = json.dumps(
+            payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+        ).encode()
+        fingerprint = hashlib.sha256(canonical).hexdigest()
+        with self._delivery_lock:
+            delivered = self._delivered[inbox_name]
+            if fingerprint in delivered:
+                delivered.move_to_end(fingerprint)
+                return False
+            delivered[fingerprint] = None
+            if len(delivered) > 2048:
+                delivered.popitem(last=False)
+            getattr(self, inbox_name).put(payload)
+        return True
 
 
 def build_peer_server(role: str, inboxes: PeerInboxes) -> FastMCP:
@@ -29,20 +55,20 @@ def build_peer_server(role: str, inboxes: PeerInboxes) -> FastMCP:
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def negotiate(message: dict) -> dict:
         """Receive signed terms and the opponent's public identity."""
-        inboxes.agreements.put(message)
-        return {"ok": True}
+        queued = inboxes.enqueue_once("agreements", message)
+        return {"ok": True} if queued else {"ok": True, "duplicate": True}
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def receive_turn(message: dict) -> dict:
         """Receive one public sealed turn; private truth remains committed."""
-        inboxes.turns.put(message)
-        return {"ok": True}
+        queued = inboxes.enqueue_once("turns", message)
+        return {"ok": True} if queued else {"ok": True, "duplicate": True}
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def submit_audit(payload: dict) -> dict:
         """Receive end-of-game records and nonce reveals for verification."""
-        inboxes.audits.put(payload)
-        return {"ok": True}
+        queued = inboxes.enqueue_once("audits", payload)
+        return {"ok": True} if queued else {"ok": True, "duplicate": True}
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def receive_control(message: dict) -> dict:

@@ -38,6 +38,47 @@ async def test_each_tool_acknowledges_and_queues_payload(tool, argument, inbox_n
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("tool", "argument", "inbox_name"),
+    [
+        ("negotiate", "message", "agreements"),
+        ("receive_turn", "message", "turns"),
+        ("submit_audit", "payload", "audits"),
+    ],
+)
+async def test_retried_delivery_is_acknowledged_without_queueing_a_duplicate(
+    tool, argument, inbox_name,
+):
+    inboxes = PeerInboxes()
+    mcp = build_peer_server("thief", inboxes)
+    payload = {"sender": "police", "step": 7, "commit": "a" * 64}
+    async with Client(mcp) as client:
+        first = await client.call_tool(tool, {argument: payload})
+        retry = await client.call_tool(tool, {argument: payload})
+
+    assert first.data == {"ok": True}
+    assert retry.data == {"ok": True, "duplicate": True}
+    inbox = getattr(inboxes, inbox_name)
+    assert inbox.get_nowait() == payload
+    assert inbox.empty()
+
+
+@pytest.mark.asyncio
+async def test_distinct_turn_commit_is_not_mistaken_for_a_retry():
+    inboxes = PeerInboxes()
+    mcp = build_peer_server("thief", inboxes)
+    first = {"sender": "police", "step": 7, "commit": "a" * 64}
+    second = {"sender": "police", "step": 7, "commit": "b" * 64}
+    async with Client(mcp) as client:
+        await client.call_tool("receive_turn", {"message": first})
+        result = await client.call_tool("receive_turn", {"message": second})
+
+    assert result.data == {"ok": True}
+    assert inboxes.turns.get_nowait() == first
+    assert inboxes.turns.get_nowait() == second
+
+
+@pytest.mark.asyncio
 async def test_tool_schema_rejects_wrong_argument_name():
     mcp = build_peer_server("cop", PeerInboxes())
     async with Client(mcp) as client:
