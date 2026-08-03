@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import platform
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from threading import Event
 
@@ -29,6 +29,7 @@ from police_thief.services.match_reports import (
     save_config_snapshot,
     save_declaration,
     save_match_result,
+    save_series_result,
 )
 from police_thief.services.mcp_client import McpPeerTransport
 from police_thief.services.mcp_server import PeerInboxes
@@ -248,7 +249,7 @@ class NetworkMatchRunner:
             from police_thief.services.network_reporting import email_result_file
 
             email_result_file(path, params, self.settings, emit)
-        else:
+        elif self.settings.email_mode == "dry_run":
             emit("Email mode is dry_run; JSON created but not sent")
         return path
 
@@ -452,6 +453,105 @@ class NetworkMatchRunner:
                 str(team_b.get("group_name", "")), tuple(team_b.get("members", ())),
             ),
         )
-        path = save_match_result(result, s.output_dir)
+        path = save_match_result(
+            result, s.output_dir,
+            include_sub_game=params.network_league.num_games > 1,
+        )
         emit(f"Audit verified; result saved to {path}")
+        return path
+
+
+def role_for_subgame(natural_role: AgentRole, series_index: int) -> AgentRole:
+    """Alternate roles while each repository keeps its natural first-game role."""
+    if series_index < 0:
+        raise ValueError("series_index must be non-negative")
+    if series_index % 2 == 0:
+        return natural_role
+    return AgentRole.THIEF if natural_role is AgentRole.COP else AgentRole.COP
+
+
+class NetworkMatchSeriesRunner:
+    """Run an agreed multi-game series over one long-lived MCP connection."""
+
+    def __init__(
+        self, settings: NetworkMatchSettings, inboxes: PeerInboxes,
+        gemini_advisor: GeminiAgentAdvisor | None = None,
+        transport: McpPeerTransport | None = None,
+    ) -> None:
+        self.settings = settings
+        self.inboxes = inboxes
+        self.gemini_advisor = gemini_advisor
+        self.transport = transport or McpPeerTransport(settings.opponent_url, inboxes)
+
+    def run(self, stop: Event, emit: EventSink = lambda _message: None) -> Path:
+        params = load_match_parameters(self.settings.shared_config)
+        num_games = params.network_league.num_games
+        if num_games == 1:
+            return NetworkMatchRunner(
+                self.settings, self.inboxes, self.gemini_advisor, self.transport,
+            ).run(stop, emit)
+
+        subgames: list[dict] = []
+        totals: dict[str, int] = {
+            self.settings.team_name: 0,
+            self.settings.opponent_team_name: 0,
+        }
+        for series_index in range(num_games):
+            sub_game_number = self.settings.sub_game_number + series_index
+            role = role_for_subgame(self.settings.role, series_index)
+            emit(
+                f"Starting sub-game {series_index + 1}/{num_games} as "
+                f"{WIRE_ROLES[role.value].upper()}"
+            )
+            child_settings = replace(
+                self.settings,
+                role=role,
+                sub_game_number=sub_game_number,
+                email_mode="series_deferred",
+            )
+            path = NetworkMatchRunner(
+                child_settings, self.inboxes, self.gemini_advisor, self.transport,
+            ).run(stop, emit)
+            result = json.loads(path.read_text(encoding="utf-8"))
+            own_score_key = "cop_score" if role is AgentRole.COP else "thief_score"
+            peer_score_key = "thief_score" if role is AgentRole.COP else "cop_score"
+            totals[self.settings.team_name] += int(result[own_score_key])
+            totals[self.settings.opponent_team_name] += int(result[peer_score_key])
+            subgames.append({
+                "sub_game_number": sub_game_number,
+                "roles": {
+                    self.settings.team_name: role.value,
+                    self.settings.opponent_team_name: (
+                        AgentRole.THIEF.value if role is AgentRole.COP else AgentRole.COP.value
+                    ),
+                },
+                "outcome": result["outcome"],
+                "cop_score": result["cop_score"],
+                "thief_score": result["thief_score"],
+                "log_sha256": result["log_sha256"],
+                "result_file": path.name,
+            })
+            emit(f"Sub-game {series_index + 1}/{num_games} verified")
+
+        ordered_totals = dict(sorted(totals.items(), key=lambda item: item[0].casefold()))
+        highest = max(ordered_totals.values())
+        winners = [team for team, score in ordered_totals.items() if score == highest]
+        series_result = {
+            "schema_version": "1.00",
+            "game_id": self.settings.game_id,
+            "num_games": num_games,
+            "first_sub_game_number": self.settings.sub_game_number,
+            "mutual_sign_off": True,
+            "sub_games": subgames,
+            "team_scores": ordered_totals,
+            "winner": winners[0] if len(winners) == 1 else "tie",
+        }
+        path = save_series_result(series_result, self.settings.output_dir, self.settings.game_id)
+        emit(f"Series complete; aggregate result saved to {path}")
+        if self.settings.email_mode == "real":
+            from police_thief.services.network_reporting import email_result_file
+
+            email_result_file(path, params, self.settings, emit)
+        else:
+            emit("Email mode is dry_run; aggregate JSON created but not sent")
         return path

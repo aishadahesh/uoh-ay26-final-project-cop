@@ -98,7 +98,6 @@ def test_load_match_parameters_parses_a_valid_config(tmp_path):
 @pytest.mark.parametrize(
     ("field", "bad_value"),
     [
-        ("num_games", 2),
         ("diversity_reward", 5),
         ("min_games_to_pass", 1),
         ("max_games_per_team", 20),
@@ -109,6 +108,21 @@ def test_load_match_parameters_rejects_non_fixed_network_league_values(tmp_path,
     data = json.loads(json.dumps(VALID_CONFIG))
     data["network_and_league"][field] = bad_value
     with pytest.raises(GameConfigError, match="must be exactly"):
+        load_match_parameters(_write(tmp_path, data))
+
+
+@pytest.mark.parametrize("num_games", [1, 6, 10])
+def test_load_match_parameters_accepts_series_size_up_to_team_cap(tmp_path, num_games):
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data["network_and_league"]["num_games"] = num_games
+    assert load_match_parameters(_write(tmp_path, data)).network_league.num_games == num_games
+
+
+@pytest.mark.parametrize("num_games", [0, 11])
+def test_load_match_parameters_rejects_series_size_outside_team_cap(tmp_path, num_games):
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data["network_and_league"]["num_games"] = num_games
+    with pytest.raises(GameConfigError, match="num_games must be between"):
         load_match_parameters(_write(tmp_path, data))
 
 

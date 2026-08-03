@@ -12,7 +12,7 @@ from tkinter import messagebox, ttk
 from police_thief.gui.theme import COLORS, FONT, MONO_FONT, configure_window, install_styles
 from police_thief.services.gemini_agent import GeminiAgentAdvisor
 from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
-from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
+from police_thief.services.network_match import NetworkMatchSeriesRunner, NetworkMatchSettings
 
 
 class NetworkMatchApp:
@@ -25,10 +25,13 @@ class NetworkMatchApp:
         self.settings = settings
         self.on_new_game = on_new_game
         self.inboxes = PeerInboxes()
-        self.runner = NetworkMatchRunner(settings, self.inboxes, gemini_advisor)
+        self.runner = NetworkMatchSeriesRunner(settings, self.inboxes, gemini_advisor)
         self.stop_event = threading.Event()
         self.events: queue.Queue[tuple[str, str]] = queue.Queue()
         self.closed = False
+        self._started = False
+        self._server_thread: threading.Thread | None = None
+        self._match_thread: threading.Thread | None = None
         configure_window(master, title="ShadowGrid | MCP Network Arena", min_size=(900, 650))
         install_styles(master)
         self.shell = ttk.Frame(master, style="App.TFrame", padding=26)
@@ -42,9 +45,10 @@ class NetworkMatchApp:
         title.pack(side="left")
         ttk.Label(title, text="SHADOWGRID", style="Title.TLabel").pack(anchor="w")
         ttk.Label(title, text="DISTRIBUTED MCP ARENA", style="Subtitle.TLabel").pack(anchor="w")
-        ttk.Button(
+        self.new_game_button = ttk.Button(
             header, text="NEW GAME", style="Secondary.TButton", command=self._new_game,
-        ).pack(side="right")
+        )
+        self.new_game_button.pack(side="right")
 
         cards = ttk.Frame(self.shell, style="App.TFrame")
         cards.pack(fill="x")
@@ -86,15 +90,27 @@ class NetworkMatchApp:
         self.log.pack(fill="both", expand=True)
 
     def start(self) -> None:
-        threading.Thread(target=self._serve, daemon=True, name="mcp-peer-server").start()
-        threading.Thread(target=self._run_match, daemon=True, name="network-match").start()
+        if self._started:
+            return
+        self._started = True
+        self._server_thread = threading.Thread(
+            target=self._serve, daemon=True, name="mcp-peer-server",
+        )
+        self._match_thread = threading.Thread(
+            target=self._run_match, daemon=True, name="network-match",
+        )
+        self._server_thread.start()
+        self._match_thread.start()
         self.master.after(100, self._drain_events)
 
     def _serve(self) -> None:
         try:
             server = build_peer_server(self.settings.role.value, self.inboxes)
             self.events.put(("log", f"MCP server listening on port {self.settings.local_port}"))
-            run_peer_server(server, host="0.0.0.0", port=self.settings.local_port)
+            run_peer_server(
+                server, host="0.0.0.0", port=self.settings.local_port,
+                stop_event=self.stop_event,
+            )
         except Exception as exc:
             self.events.put(("error", f"MCP server failed: {exc}"))
 
@@ -127,11 +143,19 @@ class NetworkMatchApp:
         self.master.after(100, self._drain_events)
 
     def _new_game(self) -> None:
-        if self.on_new_game is not None:
-            self.on_new_game()
+        if self.on_new_game is None or self.closed:
+            return
+        self.new_game_button.configure(state="disabled")
+        changed = self.on_new_game()
+        if not changed and not self.closed:
+            self.new_game_button.configure(state="normal")
 
     def close(self) -> None:
+        if self.closed:
+            return
         self.closed = True
         self.stop_event.set()
+        if self._server_thread is not None and self._server_thread is not threading.current_thread():
+            self._server_thread.join(timeout=3)
         with suppress(tk.TclError):
             self.shell.destroy()

@@ -131,8 +131,15 @@ Both peers act as MCP server and client simultaneously, over the four-tool refer
 declaration_<game_id>.json
 config_<game_id>_g<NN>.json
 log_<game_id>_g<NN>.json
+result_<game_id>_g<NN>.json
 result_<game_id>.json
 ```
+
+When `network_and_league.num_games` is greater than one, the numbered files
+are written once per sub-game and `result_<game_id>.json` is the aggregate
+series result. The two peers negotiate again and reset their board/audit state
+before every sub-game. Roles alternate automatically; this cop repository
+starts game 1 as police, then plays thief/police/thief for subsequent games.
 
 Enable **Automatically email result JSON** to send the final JSON-only report. The assignment address `rmisegal+uoh26finalgame@gmail.com` is pre-filled, but the recipient field can be changed before starting. Install the email extra first, place Google OAuth `credentials.json` in the project root, and complete browser consent once; its reusable token is stored as `token.json`. Email is sent only after both computers agree on the result.
 
@@ -142,7 +149,7 @@ Enable **Automatically email result JSON** to send the final JSON-only report. T
 uv run python -m police_thief peer --role police
 ```
 
-Connection details (port, opponent URL) come from `config/cop/game.toml`'s `[network]` section; match/team details (game ID, teams, repos, shared secret, email) come from `config/network_match.json` — the same file the two-computer GUI setup screen reads. Edit both files before running: placeholder URLs, an empty secret, or incomplete team metadata now fail before a server port opens. The terminal peer also requires `GEMINI_API_KEY` in `.env`; it uses that configured Gemini model for tactical choices and advertises the exact model in its identity and step-0 declaration. `--role` accepts only `police` — this repository ships no thief config and no way to run this process as the thief. Run the sibling thief repo's own `peer --role thief` in a second terminal or on a second computer.
+Connection details (port, opponent URL) come from `config/cop/game.toml`'s `[network]` section; match/team details (game ID, teams, repos, shared secret, email) come from `config/network_match.json` — the same file the two-computer GUI setup screen reads. Edit both files before running: placeholder URLs, an empty secret, or incomplete team metadata now fail before a server port opens. The terminal peer also requires `GEMINI_API_KEY` in `.env`; it uses that configured Gemini model for tactical choices and advertises the exact model in its identity and step-0 declaration. `--role police` selects this repository's natural role for the first sub-game; an agreed multi-game series alternates roles internally. Run the sibling thief repo's own `peer --role thief` in a second terminal or on a second computer, with the same `num_games` value.
 
 **Replay a saved, cryptographically-sealed match log:**
 

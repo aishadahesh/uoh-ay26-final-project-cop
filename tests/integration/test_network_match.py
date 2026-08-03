@@ -8,7 +8,11 @@ from pathlib import Path
 from threading import Event
 
 from police_thief.services.mcp_server import PeerInboxes
-from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
+from police_thief.services.network_match import (
+    NetworkMatchRunner,
+    NetworkMatchSeriesRunner,
+    NetworkMatchSettings,
+)
 from police_thief.shared.constants import AgentRole
 
 
@@ -41,7 +45,7 @@ class MemoryTransport:
             return None
 
 
-def test_two_peers_negotiate_play_and_mutually_audit(tmp_path):
+def test_two_peers_play_six_game_series_with_role_alternation(tmp_path):
     project_root = Path(__file__).parents[2]
     common = {
         "local_port": 8801,
@@ -50,7 +54,7 @@ def test_two_peers_negotiate_play_and_mutually_audit(tmp_path):
         "shared_key": b"integration-secret",
     }
     cop_inboxes, thief_inboxes = PeerInboxes(), PeerInboxes()
-    cop = NetworkMatchRunner(
+    cop = NetworkMatchSeriesRunner(
         NetworkMatchSettings(
             role=AgentRole.COP, opponent_url="https://thief.example/mcp",
             public_url="https://cop.example/mcp", output_dir=tmp_path / "cop",
@@ -63,7 +67,7 @@ def test_two_peers_negotiate_play_and_mutually_audit(tmp_path):
         ),
         cop_inboxes, transport=MemoryTransport(cop_inboxes, thief_inboxes),
     )
-    thief = NetworkMatchRunner(
+    thief = NetworkMatchSeriesRunner(
         NetworkMatchSettings(
             role=AgentRole.THIEF, opponent_url="https://cop.example/mcp",
             public_url="https://thief.example/mcp", output_dir=tmp_path / "thief",
@@ -81,11 +85,17 @@ def test_two_peers_negotiate_play_and_mutually_audit(tmp_path):
 
     results = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
     assert all(result["mutual_sign_off"] for result in results)
-    assert results[0]["log_sha256"] == results[1]["log_sha256"]
-    assert results[0]["team_a"] == results[1]["team_a"]
-    assert results[0]["repo_links"] == results[1]["repo_links"]
+    assert all(result["num_games"] == 6 for result in results)
+    assert results[0]["sub_games"] == results[1]["sub_games"]
+    assert results[0]["team_scores"] == results[1]["team_scores"]
+    assert [game["roles"]["alpha"] for game in results[0]["sub_games"]] == [
+        "cop", "thief", "cop", "thief", "cop", "thief",
+    ]
+    for number in range(1, 7):
+        assert (tmp_path / "cop" / f"log_NETWORK-TEST_g{number:02d}.json").is_file()
+        assert (tmp_path / "cop" / f"result_NETWORK-TEST_g{number:02d}.json").is_file()
+        assert (tmp_path / "thief" / f"config_NETWORK-TEST_g{number:02d}.json").is_file()
     assert (tmp_path / "cop" / "declaration_NETWORK-TEST.json").is_file()
-    assert (tmp_path / "thief" / "config_NETWORK-TEST_g01.json").is_file()
 
 
 def test_two_peers_synchronize_barriers_and_resolve_a_barrier_driven_capture(tmp_path):

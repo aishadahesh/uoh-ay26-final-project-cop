@@ -16,8 +16,8 @@ wire-role string) is unrelated to what you type in your own terminal, and
 is unchanged by this naming.
 
 Commands:
-  peer --role police       Play a complete, real match as the cop (not
-                           just an idle listener): starts this side's
+  peer --role police       Play a complete, real match series, starting as
+                           the cop (not just an idle listener): starts this side's
                            FastMCP server and drives a full
                            negotiate/turn/audit match against whatever
                            opponent config/network_match.json names --
@@ -29,7 +29,8 @@ Commands:
                            come from config/network_match.json (edit it
                            before running). Only "police" is accepted --
                            this repo has no thief config to run as the
-                           thief with.
+                           thief with. Multi-game series alternate the live
+                           wire role automatically after every sub-game.
   simulate                 Run a single-process local match with placeholder
                            policies and print the result (Chapter 3). No
                            live opponent config is read -- both sides are
@@ -81,7 +82,7 @@ from police_thief.domain.simulation import run_local_match
 from police_thief.gui.live_gui import LiveGUI
 from police_thief.gui.replay_gui import ReplayGUI
 from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
-from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
+from police_thief.services.network_match import NetworkMatchSeriesRunner, NetworkMatchSettings
 from police_thief.services.network_match_config import load_network_defaults, validate_peer_defaults
 from police_thief.shared.config import load_network_config
 from police_thief.shared.constants import AgentRole
@@ -175,10 +176,10 @@ def _peer(args: argparse.Namespace) -> None:
     )
     server_thread.start()
     print(f"MCP server listening on 0.0.0.0:{network.my_port}/mcp")
-    result_path = NetworkMatchRunner(
+    result_path = NetworkMatchSeriesRunner(
         settings, inboxes, gemini_advisor=gemini_advisor,
     ).run(threading.Event(), emit=print)
-    print(f"Match complete -- result saved to {result_path}")
+    print(f"Match series complete -- result saved to {result_path}")
 
 
 def _simulate(args: argparse.Namespace) -> None:

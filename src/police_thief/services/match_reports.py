@@ -43,8 +43,9 @@ def log_filename(game_id: str, sub_game_number: int) -> str:
     return f"log_{game_id}_g{sub_game_number:02d}.json"
 
 
-def result_filename(game_id: str) -> str:
-    return f"result_{game_id}.json"
+def result_filename(game_id: str, sub_game_number: int | None = None) -> str:
+    suffix = "" if sub_game_number is None else f"_g{sub_game_number:02d}"
+    return f"result_{game_id}{suffix}.json"
 
 
 def _write_json(data: dict, path: Path) -> None:
@@ -225,9 +226,19 @@ def build_match_result(
     )
 
 
-def save_match_result(result: MatchResult, directory: Path) -> Path:
-    path = directory / result_filename(result.game_id)
+def save_match_result(
+    result: MatchResult, directory: Path, *, include_sub_game: bool = False,
+) -> Path:
+    sub_game = result.sub_game_number if include_sub_game else None
+    path = directory / result_filename(result.game_id, sub_game)
     _write_json(asdict(result), path)
+    return path
+
+
+def save_series_result(result: dict, directory: Path, game_id: str) -> Path:
+    """Write the aggregate result after every subgame has been verified."""
+    path = directory / result_filename(game_id)
+    _write_json(result, path)
     return path
 
 

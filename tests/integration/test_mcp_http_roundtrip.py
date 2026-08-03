@@ -23,6 +23,17 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+def _wait_for_port(port: int, *, open_: bool, timeout: float = 5.0) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            is_open = probe.connect_ex(("127.0.0.1", port)) == 0
+        if is_open is open_:
+            return
+        time.sleep(0.05)
+    pytest.fail(f"port {port} did not become {'open' if open_ else 'closed'}")
+
+
 @pytest.fixture
 def running_server():
     port = _free_port()
@@ -72,3 +83,22 @@ def test_real_http_server_routes_all_four_reference_tools(running_server):
     assert inboxes.turns.get_nowait() == {"step": 1}
     assert inboxes.audits.get_nowait() == {"records": []}
     assert inboxes.controls.get_nowait() == {"kind": "status"}
+
+
+def test_gui_server_can_stop_and_restart_on_the_same_port():
+    port = _free_port()
+
+    for _ in range(2):
+        stop_event = threading.Event()
+        mcp = build_peer_server("cop", PeerInboxes())
+        thread = threading.Thread(
+            target=run_peer_server,
+            args=(mcp, "127.0.0.1", port, stop_event),
+            daemon=True,
+        )
+        thread.start()
+        _wait_for_port(port, open_=True)
+        stop_event.set()
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+        _wait_for_port(port, open_=False)
