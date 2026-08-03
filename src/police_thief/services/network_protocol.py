@@ -35,7 +35,8 @@ def seal_payload(payload: dict) -> dict:
 def verify_record(record: dict) -> bool:
     try:
         return secrets.compare_digest(
-            str(record["commit"]), _digest(record["payload"], str(record["nonce"])),
+            str(record["commit"]),
+            _digest(record["payload"], str(record["nonce"])),
         )
     except (KeyError, TypeError):
         return False
@@ -60,7 +61,16 @@ def verify_agreement(message: dict, expected_terms: dict) -> dict:
     except (KeyError, TypeError, ValueError) as exc:
         raise NetworkProtocolError(f"malformed negotiation message: {exc}") from exc
     if terms != expected_terms:
-        raise NetworkProtocolError("opponent game terms do not match local signed terms")
+        differing = sorted(
+            key
+            for key in set(terms) | set(expected_terms)
+            if terms.get(key) != expected_terms.get(key)
+        )
+        details = ", ".join(
+            f"{key}: local={expected_terms.get(key)!r}, opponent={terms.get(key)!r}"
+            for key in differing
+        )
+        raise NetworkProtocolError(f"opponent game terms do not match: {details}")
     if not secrets.compare_digest(signature, _digest(terms, nonce)):
         raise NetworkProtocolError("opponent negotiation signature is invalid")
     return identity
@@ -144,7 +154,10 @@ def now_iso() -> str:
 
 
 def audit_records(
-    records: list[dict], expected_commits: dict[int, str], *, require_step0: bool = False,
+    records: list[dict],
+    expected_commits: dict[int, str],
+    *,
+    require_step0: bool = False,
 ) -> tuple[bool, list[int]]:
     """Verify revealed records against the commitments seen during play.
 

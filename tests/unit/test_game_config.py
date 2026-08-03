@@ -46,7 +46,7 @@ VALID_CONFIG: dict = {
     "network_and_league": {
         "response_timeout_sec": 30,
         "watchdog_timeout_sec": 60,
-        "num_games": 1,
+        "num_games": 6,
         "diversity_reward": 10,
         "min_games_to_pass": 2,
         "max_games_per_team": 10,
@@ -111,18 +111,17 @@ def test_load_match_parameters_rejects_non_fixed_network_league_values(tmp_path,
         load_match_parameters(_write(tmp_path, data))
 
 
-@pytest.mark.parametrize("num_games", [1, 6, 10])
-def test_load_match_parameters_accepts_series_size_up_to_team_cap(tmp_path, num_games):
+def test_load_match_parameters_accepts_required_six_game_series(tmp_path):
     data = json.loads(json.dumps(VALID_CONFIG))
-    data["network_and_league"]["num_games"] = num_games
-    assert load_match_parameters(_write(tmp_path, data)).network_league.num_games == num_games
+    data["network_and_league"]["num_games"] = 6
+    assert load_match_parameters(_write(tmp_path, data)).network_league.num_games == 6
 
 
-@pytest.mark.parametrize("num_games", [0, 11])
-def test_load_match_parameters_rejects_series_size_outside_team_cap(tmp_path, num_games):
+@pytest.mark.parametrize("num_games", [0, 1, 5, 7, 10])
+def test_load_match_parameters_rejects_non_six_game_series(tmp_path, num_games):
     data = json.loads(json.dumps(VALID_CONFIG))
     data["network_and_league"]["num_games"] = num_games
-    with pytest.raises(GameConfigError, match="num_games must be between"):
+    with pytest.raises(GameConfigError, match="num_games must be exactly 6"):
         load_match_parameters(_write(tmp_path, data))
 
 
@@ -136,7 +135,9 @@ def test_load_match_parameters_rejects_series_size_outside_team_cap(tmp_path, nu
         ("queue_depth", 10, "queue_depth"),
     ],
 )
-def test_load_match_parameters_rejects_rate_limiter_values_below_floor(tmp_path, field, bad_value, floor_name):
+def test_load_match_parameters_rejects_rate_limiter_values_below_floor(
+    tmp_path, field, bad_value, floor_name
+):
     """App. F Table 19: every rate-limiter field is a MINIMUM, never lowered."""
     data = json.loads(json.dumps(VALID_CONFIG))
     data["rate_limiter_gatekeeper"][field] = bad_value
