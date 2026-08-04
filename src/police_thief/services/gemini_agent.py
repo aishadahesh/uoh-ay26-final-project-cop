@@ -15,9 +15,10 @@ from typing import Any
 from police_thief.domain.board import Move, Position
 from police_thief.shared.constants import AgentRole
 
-DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
 DEFAULT_GEMINI_TIMEOUT_SECONDS = 8.0
-MAX_GEMINI_OUTPUT_TOKENS = 24
+MIN_GEMINI_HTTP_TIMEOUT_SECONDS = 10.0
+MAX_GEMINI_OUTPUT_TOKENS = 64
 _FALLBACK_MODELS = ("gemini-flash-latest", "gemini-2.5-flash")
 
 
@@ -55,7 +56,14 @@ class GeminiAgentAdvisor:
     ) -> None:
         self.model = model or os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
         self.timeout_seconds = self._timeout_seconds()
-        self.timeout_milliseconds = max(1, round(self.timeout_seconds * 1000))
+        # The per-turn budget (GEMINI_TIMEOUT_SECONDS) may legitimately be set
+        # tighter than a single HTTP call needs to plausibly succeed, and is
+        # also the deadline other callers race against (the network turn
+        # timeout). Bounding the raw HTTP client timeout to a separate, more
+        # forgiving floor means a tight per-turn budget doesn't by itself
+        # guarantee every call fails before the provider even replies.
+        self.http_timeout_seconds = max(self.timeout_seconds, MIN_GEMINI_HTTP_TIMEOUT_SECONDS)
+        self.timeout_milliseconds = max(1, round(self.http_timeout_seconds * 1000))
         self.enable_model_fallbacks = self._env_flag("GEMINI_ENABLE_MODEL_FALLBACKS")
         if client is not None:
             self._client = client
@@ -144,7 +152,7 @@ class GeminiAgentAdvisor:
     @staticmethod
     def _prompt(context: TacticalContext) -> str:
         objective = "close distance to the believed thief" if context.role is AgentRole.COP else "increase distance from the believed cop"
-        legal = ", ".join(move.name for move in context.legal_moves)
+        legal = ", ".join(f"{move.name} ({move.value})" for move in context.legal_moves)
         return (
             "You are the tactical reasoning layer in a partially observable police-thief grid game. "
             "Opponent coordinates are unavailable; reason only from the belief map. "
@@ -157,14 +165,19 @@ class GeminiAgentAdvisor:
             f"Remaining barrier budget: {context.remaining_barriers}\n"
             f"Legal moves: {legal}\n"
             "Reply on one line only as MOVE|brief tactical reason. "
-            "MOVE must exactly match one legal move name."
+            "MOVE must exactly match one legal move name or code."
         )
 
     @staticmethod
     def _parse_response(text: str, legal_moves: tuple[Move, ...], fallback: Move) -> GeminiDecision:
         move_text, separator, reason = text.strip().partition("|")
+        cleaned = move_text.strip().upper()
+        for prefix in ("MOVE:", "MOVE=", "MOVE "):
+            if cleaned.startswith(prefix):
+                cleaned = cleaned.removeprefix(prefix).strip()
         legal_by_name = {move.name: move for move in legal_moves}
-        selected = legal_by_name.get(move_text.strip().upper())
+        legal_by_name.update({move.value: move for move in legal_moves})
+        selected = legal_by_name.get(cleaned)
         if selected is None:
             return GeminiDecision(
                 move=fallback,
