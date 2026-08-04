@@ -7,6 +7,7 @@ errors, and network failures fall back to the caller's validated heuristic.
 
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -15,6 +16,8 @@ from police_thief.domain.board import Move, Position
 from police_thief.shared.constants import AgentRole
 
 DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
+DEFAULT_GEMINI_TIMEOUT_SECONDS = 8.0
+MAX_GEMINI_OUTPUT_TOKENS = 24
 _FALLBACK_MODELS = ("gemini-flash-latest", "gemini-2.5-flash")
 
 
@@ -51,6 +54,9 @@ class GeminiAgentAdvisor:
         client: Any | None = None,
     ) -> None:
         self.model = model or os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+        self.timeout_seconds = self._timeout_seconds()
+        self.timeout_milliseconds = max(1, round(self.timeout_seconds * 1000))
+        self.enable_model_fallbacks = self._env_flag("GEMINI_ENABLE_MODEL_FALLBACKS")
         if client is not None:
             self._client = client
             return
@@ -61,18 +67,33 @@ class GeminiAgentAdvisor:
             )
         from google import genai
 
-        self._client = genai.Client(api_key=key)
+        self._client = genai.Client(
+            api_key=key,
+            http_options=self._http_options(),
+        )
 
     def choose_move(self, context: TacticalContext, fallback: Move) -> GeminiDecision:
         """Return Gemini's legal move, or the deterministic fallback on any failure."""
         prompt = self._prompt(context)
         last_error: Exception | None = None
-        candidates = dict.fromkeys((self.model, *_FALLBACK_MODELS))
+        candidates = (
+            tuple(dict.fromkeys((self.model, *_FALLBACK_MODELS)))
+            if self.enable_model_fallbacks
+            else (self.model,)
+        )
         for model in candidates:
             try:
-                response = self._client.models.generate_content(model=model, contents=prompt)
+                response = self._client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config={
+                        "temperature": 0,
+                        "max_output_tokens": MAX_GEMINI_OUTPUT_TOKENS,
+                        "http_options": self._http_options(),
+                    },
+                )
                 return self._parse_response(response.text or "", context.legal_moves, fallback)
-            except Exception as exc:  # noqa: BLE001 - try next model before safe fallback
+            except Exception as exc:  # noqa: BLE001 - provider errors must not end a match
                 last_error = exc
         assert last_error is not None
         return GeminiDecision(
@@ -83,6 +104,31 @@ class GeminiAgentAdvisor:
             ),
             used_fallback=True,
         )
+
+    @staticmethod
+    def _timeout_seconds() -> float:
+        """Load a positive per-request timeout, falling back safely on bad input."""
+        raw_value = os.getenv("GEMINI_TIMEOUT_SECONDS", str(DEFAULT_GEMINI_TIMEOUT_SECONDS))
+        try:
+            timeout = float(raw_value)
+        except ValueError:
+            return DEFAULT_GEMINI_TIMEOUT_SECONDS
+        return (
+            timeout
+            if math.isfinite(timeout) and timeout > 0
+            else DEFAULT_GEMINI_TIMEOUT_SECONDS
+        )
+
+    def _http_options(self) -> dict[str, object]:
+        """Bound one provider attempt and disable SDK-level retry delays."""
+        return {
+            "timeout": self.timeout_milliseconds,
+            "retry_options": {"attempts": 1},
+        }
+
+    @staticmethod
+    def _env_flag(name: str) -> bool:
+        return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
     @staticmethod
     def _safe_error(exc: Exception) -> str:
