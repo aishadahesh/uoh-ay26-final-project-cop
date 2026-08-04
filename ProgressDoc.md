@@ -663,4 +663,29 @@ ruff check: All checks passed!
 
 **Tasks updated:** `docs/TODO.md` T0837 rewritten to describe the full gap (both the original Gatekeeper/reporting piece and the larger, previously-unnoticed turn-loop duplication), rather than the narrower framing it had before.
 
+**Status:** committed.
+
+---
+
+### Live-Match Fixes — Gemini Always Falling Back, and a Mid-Match Crash on Disconnect
+
+**Context:** substantial work happened to this codebase between sessions -- the reference v3 four-tool protocol alignment, peer-identity validation at negotiation, and the six-game series runner (`NetworkMatchSeriesRunner`) -- none of it documented here as it landed, so this entry does not attempt to reconstruct that history; it only covers the two real bugs found and fixed in this pass, against the codebase as it stood.
+
+**Bug #1 -- Gemini always falling back, reported 0 tokens used:** a real two-computer match kept using the deterministic heuristic every turn despite a configured `GEMINI_API_KEY`. Compared against the sibling thief repo, which had already hit and fixed the identical symptom (`db699bf Bound Gemini turn latency`, `e7edcd2 Use faster Gemini model for turns`): the cop's `.env` and `services/gemini_agent.py` both still used `DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"`, a model the thief team found too slow/unreliable under a bounded per-turn deadline. Ported their fix: `gemini-3.1-flash-lite` as the default model, `MIN_GEMINI_HTTP_TIMEOUT_SECONDS = 10.0` decoupling the raw HTTP client timeout from the (possibly tighter) per-turn budget so a short `GEMINI_TIMEOUT_SECONDS` can't itself guarantee a call is cut off before the provider replies, a larger `max_output_tokens` (64, was 24), and a more lenient `_parse_response` that also matches a move's short wire code (not just its full name) and strips a `"MOVE:"`-style prefix some models add despite the prompt's instructions. The user's actual local `.env` (`GEMINI_MODEL=gemini-3.6-flash`, `GEMINI_TIMEOUT_SECONDS= 30`) was updated to match. Separately clarified for the user, not fixed here: the "0 tokens" in match results is not evidence either way about whether Gemini ran -- `TokenUsage()` is constructed with all-zero defaults everywhere in this codebase; no code path has ever tracked real per-call token counts (a genuine, still-open Rule 54 gap).
+
+**Bug #2 -- an unhandled `PeerClientError` crashed the whole process on a mid-match disconnect:** reported twice with real tracebacks from live matches over ngrok -- once from `send_turn` (a 502 from a dead tunnel), once from `receive_turn` (a plain timeout). `NetworkMatchRunner.run()` had no handling for either; the exception propagated all the way through `main.py::_peer` and killed the process, including every remaining sub-game of a `NetworkMatchSeriesRunner` series. Checked the thief repo for an existing fix first (this project's own repeated pattern of the same bug) -- it has the identical gap, unfixed there too, so this isn't a port, it's the actual first fix.
+
+Restructured `run()` (a pure extraction to make this catchable without re-indenting the whole turn loop): everything after a successful negotiation now lives in `_play_turns_and_report`, called from inside a `try/except PeerClientError` in `run()`. On catch, `_write_technical_loss_result` records the match as a technical loss (Sec. 9.2, 0/0) using whatever this side sealed before the opponent went dark, with `mutual_sign_off=False` -- honestly reflecting that the opponent never confirmed anything past that point, unlike a normal cross-verified result. `_send_control("quit", "STOPPED")` is attempted (best-effort; already safely swallows its own `PeerClientError` via `McpPeerTransport.send_control`'s existing `contextlib.suppress`).
+
+**Verified with a real integration test reproducing the actual failure, not just a unit stub:** `test_a_mid_match_disconnect_resolves_to_technical_loss_on_both_sides` wraps a real `MemoryTransport` in a small `_DisconnectingTransport` that starts raising `PeerClientError` on `send_turn` after one successful turn, runs two real `NetworkMatchRunner`s concurrently, and confirms *both* sides -- the one that saw the failure directly, and the other side via its own `receive_turn` timing out -- resolve to `technical_loss`/`0`/`0`/`mutual_sign_off: False` instead of raising. Also fixed the test file's own `MemoryTransport.receive_turn`, which propagated a raw `queue.Empty` instead of `PeerClientError` the way the real `McpPeerTransport` does -- a test double drifting from production behavior, caught while writing this exact test.
+
+**Known, intentionally out-of-scope remainder:** this only catches `PeerClientError` *after* negotiation succeeds. If the opponent is gone before negotiation even starts (e.g., every sub-game after the first one in a series where the opponent has fully disappeared), that call site is still unguarded and will still crash. Not fixed now -- flagged honestly rather than expanded into an open-ended resilience pass beyond what was actually reported.
+
+**Quality gate results:**
+```
+481 passed, 1 skipped
+TOTAL coverage: 85.84% (required: 85.0%)
+ruff check: All checks passed!
+```
+
 **Status:** awaiting review before committing.
