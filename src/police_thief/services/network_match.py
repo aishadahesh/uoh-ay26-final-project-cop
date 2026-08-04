@@ -32,7 +32,7 @@ from police_thief.services.match_reports import (
     save_match_result,
     save_series_result,
 )
-from police_thief.services.mcp_client import McpPeerTransport
+from police_thief.services.mcp_client import McpPeerTransport, PeerClientError
 from police_thief.services.mcp_server import PeerInboxes
 from police_thief.services.network_protocol import (
     WIRE_ROLES,
@@ -118,6 +118,23 @@ class NetworkMatchRunner:
         self._write_pregame_files(params)
         self._send_control("enable", "READY")
 
+        own_records: list[dict] = [self._sealed_system_spec()]
+        try:
+            return self._play_turns_and_report(params, timeout, peer_identity, own_records, stop, emit)
+        except PeerClientError as exc:
+            # The opponent stopped responding mid-match (crashed, tunnel
+            # dropped, etc.) -- resolve as a technical loss (Sec. 9.2, 0/0)
+            # with whatever this side can prove on its own, rather than
+            # crashing the whole process (and, inside a multi-game series,
+            # every remaining sub-game) with an unhandled traceback.
+            emit(f"Opponent unreachable mid-match -- resolving as technical loss: {exc}")
+            self._send_control("quit", "STOPPED")
+            return self._write_technical_loss_result(params, own_records, peer_identity, emit)
+
+    def _play_turns_and_report(
+        self, params, timeout: float, peer_identity: dict, own_records: list[dict],
+        stop: Event, emit: EventSink,
+    ) -> Path:
         board = Board(params.board)
         own_position = (
             params.cop_start if self.settings.role is AgentRole.COP else params.thief_start
@@ -126,7 +143,6 @@ class NetworkMatchRunner:
         belief = BeliefMap(board)
         brain = ManhattanHeuristicBrain(self.settings.role)
         hint_provider = TemplateHintProvider(params.world.hint_max_words)
-        own_records: list[dict] = [self._sealed_system_spec()]
         peer_commits: dict[int, str] = {}
         pending_claim_response: dict | None = None
         thief_boxed_in = False
@@ -465,6 +481,57 @@ class NetworkMatchRunner:
             include_sub_game=params.network_league.num_games > 1,
         )
         emit(f"Audit verified; result saved to {path}")
+        return path
+
+    def _write_technical_loss_result(
+        self, params, own_records: list[dict], peer_identity: dict, emit: EventSink,
+    ) -> Path:
+        """Best-effort result when the opponent stops responding mid-match
+        (Sec. 9.2's technical-loss score, 0/0): records what this side can
+        prove on its own. `mutual_sign_off` is False -- the opponent never
+        confirmed anything past whatever it acknowledged before going dark,
+        so this is honestly not the same as a normal, cross-verified result.
+        """
+        s = self.settings
+        entries = [
+            LogEntry(
+                state=record["payload"]["state"], move=record["payload"]["move"],
+                intent=record["payload"]["intent"], nonce=record["nonce"],
+                h_commit=record["commit"], payload=record["payload"],
+            )
+            for record in own_records if record["payload"]["step"] > 0
+        ]
+        save_log(entries, s.output_dir / f"log_{s.game_id}_g{s.sub_game_number:02d}.json")
+        cop_score, thief_score = score_for(MatchOutcome.TECHNICAL_LOSS, params.scoring)
+        own_identity = self._identity()
+        teams = sorted(
+            (own_identity, peer_identity),
+            key=lambda identity: str(
+                identity.get("group_id") or identity.get("group_name") or ""
+            ).casefold(),
+        )
+        team_a, team_b = teams
+        repos_a = team_a.get("repos", {})
+        repos_b = team_b.get("repos", {})
+        result = build_match_result(
+            s.game_id, s.sub_game_number, cop_score, thief_score,
+            MatchOutcome.TECHNICAL_LOSS.value, False,
+            entries, TokenUsage(), RepoCrossLinks(
+                str(repos_a.get("cop", "")), str(repos_a.get("thief", "")),
+                str(repos_b.get("cop", "")), str(repos_b.get("thief", "")),
+            ),
+            ResultTeamIdentity(
+                str(team_a.get("group_name", "")), tuple(team_a.get("members", ())),
+            ),
+            ResultTeamIdentity(
+                str(team_b.get("group_name", "")), tuple(team_b.get("members", ())),
+            ),
+        )
+        path = save_match_result(
+            result, s.output_dir,
+            include_sub_game=params.network_league.num_games > 1,
+        )
+        emit(f"Technical loss recorded (opponent unreachable); result saved to {path}")
         return path
 
 

@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event
 
+from police_thief.services.mcp_client import PeerClientError
 from police_thief.services.mcp_server import PeerInboxes
 from police_thief.services.network_match import (
     NetworkMatchRunner,
@@ -29,7 +30,14 @@ class MemoryTransport:
         self.peer.turns.put(message)
 
     def receive_turn(self, timeout):
-        return self.own.turns.get(timeout=timeout)
+        try:
+            return self.own.turns.get(timeout=timeout)
+        except queue.Empty as exc:
+            # Matches McpPeerTransport.receive_turn's real behavior, so a
+            # peer that stops sending turns fails the same way in tests as
+            # it does in a real live match (PeerClientError, not a raw
+            # queue.Empty NetworkMatchRunner.run() has no reason to expect).
+            raise PeerClientError("opponent turn timed out") from exc
 
     def exchange_audit(self, payload, timeout):
         self.peer.audits.put(payload)
@@ -43,6 +51,40 @@ class MemoryTransport:
             return self.own.controls.get_nowait()
         except queue.Empty:
             return None
+
+
+class _DisconnectingTransport:
+    """Wraps a working transport but starts raising PeerClientError on
+    send_turn after `fail_after` successful sends -- simulating an
+    opponent's tunnel/process dropping mid-match, a real failure a live
+    match hit (a 502 from a dead ngrok tunnel; a queue.Empty timeout on the
+    receiving side) that used to crash the whole process."""
+
+    def __init__(self, inner, fail_after: int) -> None:
+        self._inner = inner
+        self._fail_after = fail_after
+        self._sends = 0
+
+    def exchange_agreement(self, message, timeout):
+        return self._inner.exchange_agreement(message, timeout)
+
+    def send_turn(self, message, timeout):
+        self._sends += 1
+        if self._sends > self._fail_after:
+            raise PeerClientError("simulated opponent disconnect")
+        self._inner.send_turn(message, timeout)
+
+    def receive_turn(self, timeout):
+        return self._inner.receive_turn(timeout)
+
+    def exchange_audit(self, payload, timeout):
+        return self._inner.exchange_audit(payload, timeout)
+
+    def send_control(self, message, timeout=2.0):
+        self._inner.send_control(message, timeout)
+
+    def poll_control(self):
+        return self._inner.poll_control()
 
 
 def test_two_peers_play_six_game_series_with_role_alternation(tmp_path):
@@ -178,3 +220,69 @@ def test_two_peers_synchronize_barriers_and_resolve_a_barrier_driven_capture(tmp
     assert results[0]["log_sha256"] == results[1]["log_sha256"]
     cop_score, thief_score = results[0]["cop_score"], results[0]["thief_score"]
     assert cop_score > thief_score
+
+
+def test_a_mid_match_disconnect_resolves_to_technical_loss_on_both_sides(tmp_path):
+    """Reproduces a real failure: the cop's transport starts raising
+    PeerClientError after one successful turn (the opponent's tunnel
+    dropping mid-match). Both sides used to crash the whole process with an
+    unhandled traceback; NetworkMatchRunner.run() now catches this and
+    writes a technical-loss result (Sec. 9.2, 0/0) instead, on both sides:
+    the cop directly (it saw the failure), and the thief indirectly (it
+    stops receiving turns and its own receive_turn call times out).
+    """
+    project_root = Path(__file__).parents[2]
+    shared_config = json.loads((project_root / "config" / "game.json").read_text(encoding="utf-8"))
+    # A short timeout keeps the thief's inevitable receive_turn timeout (it
+    # never learns the cop disconnected) fast rather than the real 30s floor.
+    shared_config["network_and_league"]["response_timeout_sec"] = 2
+    scratch_dir = project_root / "tests" / "integration" / "_scratch_disconnect_test"
+    scratch_dir.mkdir(exist_ok=True)
+    config_path = scratch_dir / "game.json"
+    config_path.write_text(json.dumps(shared_config), encoding="utf-8")
+
+    common = {
+        "local_port": 8802,
+        "game_id": "DISCONNECT-TEST", "sub_game_number": 1,
+        "shared_config": config_path,
+        "shared_key": b"integration-secret",
+    }
+    try:
+        cop_inboxes, thief_inboxes = PeerInboxes(), PeerInboxes()
+        cop = NetworkMatchRunner(
+            NetworkMatchSettings(
+                role=AgentRole.COP, opponent_url="https://thief.example/mcp",
+                public_url="https://cop.example/mcp", output_dir=tmp_path / "cop",
+                team_name="alpha", members=("Ada", "Grace"),
+                opponent_team_name="beta", opponent_members=("Linus", "Margaret"),
+                own_cop_repo="https://example.test/a-cop",
+                own_thief_repo="https://example.test/a-thief",
+                opponent_cop_repo="https://example.test/b-cop",
+                opponent_thief_repo="https://example.test/b-thief", **common,
+            ),
+            cop_inboxes,
+            transport=_DisconnectingTransport(MemoryTransport(cop_inboxes, thief_inboxes), fail_after=1),
+        )
+        thief = NetworkMatchRunner(
+            NetworkMatchSettings(
+                role=AgentRole.THIEF, opponent_url="https://cop.example/mcp",
+                public_url="https://thief.example/mcp", output_dir=tmp_path / "thief",
+                team_name="beta", members=("Linus", "Margaret"),
+                opponent_team_name="alpha", opponent_members=("Ada", "Grace"),
+                own_cop_repo="https://example.test/b-cop",
+                own_thief_repo="https://example.test/b-thief",
+                opponent_cop_repo="https://example.test/a-cop",
+                opponent_thief_repo="https://example.test/a-thief", **common,
+            ),
+            thief_inboxes, transport=MemoryTransport(thief_inboxes, cop_inboxes),
+        )
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            paths = list(executor.map(lambda runner: runner.run(Event()), (cop, thief)))
+    finally:
+        shutil.rmtree(scratch_dir, ignore_errors=True)
+
+    results = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
+    assert all(result["outcome"] == "technical_loss" for result in results)
+    assert all(result["cop_score"] == 0 for result in results)
+    assert all(result["thief_score"] == 0 for result in results)
+    assert all(result["mutual_sign_off"] is False for result in results)
