@@ -1,4 +1,4 @@
-﻿# Police–Thief P2P · Cop Agent
+# Police–Thief P2P · Cop Agent
 
 > A decentralized pursuit agent that hunts under uncertainty, engineers the board with barriers, proves every move cryptographically, and completes matches without a central referee.
 
@@ -30,6 +30,7 @@ The result is part game agent, part distributed system, and part cryptographic a
 - [Trust and protocol design](#trust-and-protocol-design)
 - [Installation](#installation)
 - [Run modes](#run-modes)
+- [Animated game replay for the README](#animated-game-replay-for-the-readme)
 - [Two-computer match guide](#two-computer-match-guide)
 - [Configuration](#configuration)
 - [Results and automatic email](#results-and-automatic-email)
@@ -220,6 +221,57 @@ uv run python -m police_thief replay --log results/network/log_G001_g01.json
 
 The replay viewer recomputes commitments and clearly distinguishes verified from tampered logs.
 
+## Animated game replay for the README
+
+Turn a saved game-result log into a polished, cryptographically annotated animation with `scripts/visualize_game_log.py`. The renderer discovers the recorded schema, reconstructs both agents step by step, highlights the latest movement, displays optional barriers/items/scores when present, and pauses on important events and the final state.
+
+Generate the project demonstration GIF with a shell-independent single-line command:
+
+```powershell
+uv run python scripts/visualize_game_log.py --input "results/network/log_G001_g01.json" --output "docs/demo/cop_game_G001.gif"
+```
+
+For a readable multiline command in **PowerShell**, use the backtick (`` ` ``) continuation character—not a backslash:
+
+```powershell
+uv run python scripts/visualize_game_log.py `
+  --input "results/network/log_G001_g01.json" `
+  --output "docs/demo/cop_game_G001.gif"
+```
+
+Control timing and resolution:
+
+```powershell
+uv run python scripts/visualize_game_log.py `
+  --input "results/network/log_G001_g01.json" `
+  --output "docs/demo/cop_game_G001.gif" `
+  --format gif `
+  --duration 650 `
+  --resolution 1280x720 `
+  --scale 1.0
+```
+
+Optional MP4 export provides higher quality when `imageio`, `imageio-ffmpeg`, and `numpy` are installed:
+
+```powershell
+uv run python scripts/visualize_game_log.py `
+  --input "results/network/log_G001_g01.json" `
+  --output "docs/demo/cop_game_G001.mp4" `
+  --format mp4 `
+  --fps 2
+```
+
+Embed the generated GIF directly in GitHub Markdown:
+
+```markdown
+![Cop game demonstration](docs/demo/cop_game_G001.gif)
+```
+
+### Replay demonstration
+
+![Cop game demonstration](docs/demo/cop_game_G001.gif)
+
+The included renderer accepts raw log arrays and common wrapped forms such as `steps`, `turns`, `records`, or `replay`. Missing optional entities are omitted rather than invented. Unsupported schemas fail with a specific error describing the missing structure.
 ## Two-computer match guide
 
 ### Before launching

@@ -8,10 +8,13 @@ dependencies = [
     "fastmcp>=3.4.4",
     "google-genai>=1.0.0",
     "python-dotenv>=1.0.0",
-]
-
-[project.optional-dependencies]
-email = [
+    "Pillow>=10.0",
+    # Gmail reporting (Sec. 9.3, Rule 32) is a mandatory part of every real
+    # match, not an optional add-on -- these used to live under
+    # [project.optional-dependencies] "email", but a plain `uv sync` (no
+    # `--extra email`) silently uninstalled them again on every sync,
+    # breaking automatic email reporting without any code change. Promoted
+    # to a normal dependency so `uv sync` alone always keeps them present.
     "google-api-python-client>=2.130.0",
     "google-auth-oauthlib>=1.2.0",
 ]
