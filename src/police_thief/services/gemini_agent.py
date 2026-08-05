@@ -40,6 +40,7 @@ class TacticalContext:
     recent_positions: tuple[Position, ...] = ()
     recent_actions: tuple[Move, ...] = ()
     repeated_state_warning: str = ""
+    sub_game_number: int = 1
 
 
 @dataclass(frozen=True)
@@ -75,6 +76,8 @@ class GeminiAgentAdvisor:
             if allow_fallback_models is not None
             else _truthy_env("GEMINI_ENABLE_MODEL_FALLBACKS")
         )
+        self._input_tokens = 0
+        self._output_tokens = 0
         if client is not None:
             self._client = client
             return
@@ -127,6 +130,7 @@ class GeminiAgentAdvisor:
                             },
                         },
                     )
+                    self._record_usage(response)
                     text = response.text or ""
                     parsed, rejection = self._parse_response(text, legal)
                     if parsed is not None:
@@ -167,6 +171,21 @@ class GeminiAgentAdvisor:
         concise = message[:120].rstrip()
         return f"{type(exc).__name__} - {concise}" if concise else type(exc).__name__
 
+    def usage_snapshot(self) -> tuple[int, int]:
+        """Cumulative successfully reported Gemini input/output tokens."""
+        return self._input_tokens, self._output_tokens
+
+    def _record_usage(self, response: Any) -> None:
+        metadata = getattr(response, "usage_metadata", None)
+        if metadata is None:
+            return
+        self._input_tokens += _usage_value(
+            metadata, "prompt_token_count", "input_token_count"
+        )
+        self._output_tokens += _usage_value(
+            metadata, "candidates_token_count", "output_token_count"
+        )
+
     @staticmethod
     def _prompt(context: TacticalContext) -> str:
         destinations = dict(context.legal_destinations)
@@ -198,6 +217,7 @@ class GeminiAgentAdvisor:
             f"RECENT_POSITIONS={_positions(context.recent_positions)}\n"
             f"RECENT_ACTIONS={[move.name for move in context.recent_actions]}\n"
             f"REPEATED_STATE_WARNING={context.repeated_state_warning or 'none'}\n"
+            f"SUB_GAME={context.sub_game_number}\n"
             f"TURN={context.turn_number}/{context.max_turns}\nREMAINING_BARRIERS={context.remaining_barriers}\n"
             f"ALLOWED_ACTIONS={'; '.join(actions)}\n"
             'Return strict JSON only: {"action":"EXACT_NAME","reason":"brief tactical reason"}.'
@@ -278,6 +298,14 @@ def _float_env(name: str, default: float) -> float:
 
 def _truthy_env(name: str) -> bool:
     return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _usage_value(metadata: Any, *names: str) -> int:
+    for name in names:
+        value = metadata.get(name) if isinstance(metadata, dict) else getattr(metadata, name, None)
+        if isinstance(value, int) and value >= 0:
+            return value
+    return 0
 
 
 def _positions(values: tuple[Position, ...]) -> list[tuple[int, int]]:

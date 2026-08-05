@@ -21,9 +21,9 @@ from police_thief.shared.constants import AgentRole
 class ManhattanHeuristicBrain(BrainBase):
     """Chases the belief peak if `role` is COP, flees it if THIEF."""
 
-    def __init__(self, role: AgentRole) -> None:
+    def __init__(self, role: AgentRole, strategy_seed: int = 0) -> None:
         self.role = role
-        self.planner = TacticalPlanner(role)
+        self.planner = TacticalPlanner(role, strategy_seed=strategy_seed)
         self.last_plan: StrategyPlan | None = None
 
     def _decide_move(self, board: Board, own: Position, belief: BeliefMap) -> Move:

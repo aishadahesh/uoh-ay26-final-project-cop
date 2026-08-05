@@ -53,3 +53,27 @@ def test_every_currently_legal_move_receives_an_explainable_score():
     )
     assert {item.move for item in plan.evaluations} == set(board.legal_moves(own))
     assert all("total=" in item.summary() and "path=" in item.summary() for item in plan.evaluations)
+
+
+def test_gemini_allowed_moves_exclude_materially_worse_legal_actions():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    plan = TacticalPlanner(AgentRole.COP).evaluate(
+        board, Position(0, 0), _belief_at(board, Position(6, 6))
+    )
+    assert set(plan.allowed_moves) == {Move.EAST, Move.SOUTH}
+    assert Move.STAY not in plan.allowed_moves
+
+
+def test_subgame_seed_varies_only_equally_strong_opening_routes():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = _belief_at(board, Position(5, 5))
+    first = TacticalPlanner(AgentRole.COP, strategy_seed=1).evaluate(
+        board, Position(0, 0), belief
+    )
+    second = TacticalPlanner(AgentRole.COP, strategy_seed=2).evaluate(
+        board, Position(0, 0), belief
+    )
+    assert {first.selected, second.selected} == {Move.EAST, Move.SOUTH}
+    assert next(item for item in first.evaluations if item.move is first.selected).path_distance == next(
+        item for item in second.evaluations if item.move is second.selected
+    ).path_distance

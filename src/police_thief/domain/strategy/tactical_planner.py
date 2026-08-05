@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections import Counter, deque
 from dataclasses import dataclass
 
@@ -21,13 +22,14 @@ class ActionEvaluation:
     revisit_penalty: float
     loop_penalty: float
     dead_end_penalty: float
+    variation_bonus: float
 
     def summary(self) -> str:
         return (
             f"total={self.total:.2f}, path={self.path_distance:.2f}, "
             f"mobility={self.mobility}, future={self.future_value:.2f}, "
             f"revisit={self.revisit_penalty:.2f}, loop={self.loop_penalty:.2f}, "
-            f"dead_end={self.dead_end_penalty:.2f}"
+            f"dead_end={self.dead_end_penalty:.2f}, variation={self.variation_bonus:.2f}"
         )
 
 
@@ -46,8 +48,13 @@ class StrategyPlan:
 class TacticalPlanner:
     """Score legal moves and suppress actions that continue a detected loop."""
 
-    def __init__(self, role: AgentRole, history_limit: int = 12) -> None:
+    STRATEGIC_SCORE_MARGIN = 1.0
+
+    def __init__(
+        self, role: AgentRole, history_limit: int = 12, strategy_seed: int = 0
+    ) -> None:
         self.role = role
+        self.strategy_seed = strategy_seed
         self._positions: deque[Position] = deque(maxlen=history_limit)
         self._moves: deque[Move] = deque(maxlen=history_limit)
 
@@ -88,11 +95,20 @@ class TacticalPlanner:
                 # Never manufacture an impossible choice: retain the best legal move.
                 excluded.remove(max(evaluations, key=self._rank_key).move)
         admissible = tuple(item for item in evaluations if item.move not in excluded)
-        selected = max(admissible or evaluations, key=self._rank_key).move
+        candidates = admissible or evaluations
+        best_score = max(item.total for item in candidates)
+        strategic = tuple(
+            item
+            for item in candidates
+            if item.total >= best_score - self.STRATEGIC_SCORE_MARGIN
+        )
+        selected = max(strategic, key=self._rank_key).move
         return StrategyPlan(
             selected=selected,
             evaluations=tuple(sorted(evaluations, key=self._rank_key, reverse=True)),
-            allowed_moves=tuple(item.move for item in (admissible or evaluations)),
+            # Gemini may choose among genuinely close alternatives, but cannot
+            # override the planner with a legal yet strategically poor action.
+            allowed_moves=tuple(item.move for item in strategic),
             loop_detected=loop_detected,
             loop_reason=loop_reason,
             excluded_moves=tuple(move for move in legal if move in excluded),
@@ -144,6 +160,7 @@ class TacticalPlanner:
         if loop_detected and (move is Move.STAY or destination in set(tuple(self._positions)[-2:])):
             loop_penalty += 25.0
         dead_end_penalty = 14.0 if mobility <= 1 else (4.0 if mobility == 2 else 0.0)
+        variation_bonus = self._variation_bonus(own, move)
 
         if self.role is AgentRole.COP:
             current_distance = _expected_distance(board, own, targets)
@@ -156,6 +173,7 @@ class TacticalPlanner:
                 - revisit_penalty
                 - loop_penalty
                 - 0.4 * dead_end_penalty
+                + variation_bonus
             )
         else:
             # Assume the believed cop takes its best one-step approach, then value
@@ -168,6 +186,7 @@ class TacticalPlanner:
                 - revisit_penalty
                 - loop_penalty
                 - dead_end_penalty
+                + variation_bonus
             )
         return ActionEvaluation(
             move=move,
@@ -179,7 +198,25 @@ class TacticalPlanner:
             revisit_penalty=revisit_penalty,
             loop_penalty=loop_penalty,
             dead_end_penalty=dead_end_penalty,
+            variation_bonus=variation_bonus,
         )
+
+    def _variation_bonus(self, own: Position, move: Move) -> float:
+        """Small stable preference that varies only strategically close choices.
+
+        A league sub-game seed prevents six fresh planners from replaying the
+        same symmetric opening. The bonus is deliberately below 0.5, far less
+        than the objective terms, so it cannot rescue a materially worse move.
+        Seed zero preserves the historical deterministic unit-test baseline.
+        """
+        if self.strategy_seed == 0:
+            return 0.0
+        material = (
+            f"{self.strategy_seed}:{self.role.value}:{len(self._moves) + 1}:"
+            f"{own.row}:{own.col}:{move.value}"
+        ).encode()
+        value = int.from_bytes(hashlib.sha256(material).digest()[:4], "big")
+        return (value / 0xFFFFFFFF) * 0.49
 
     def _future_value(
         self,

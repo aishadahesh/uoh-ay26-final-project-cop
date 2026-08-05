@@ -8,16 +8,17 @@ from police_thief.shared.constants import AgentRole
 
 
 class _FakeModels:
-    def __init__(self, text: str = "EAST|Closing on the strongest scent signal.", error=None):
+    def __init__(self, text: str = "EAST|Closing on the strongest scent signal.", error=None, usage=None):
         self.text = text
         self.error = error
+        self.usage = usage
         self.calls = []
 
     def generate_content(self, **kwargs):
         self.calls.append(kwargs)
         if self.error:
             raise self.error
-        return SimpleNamespace(text=self.text)
+        return SimpleNamespace(text=self.text, usage_metadata=self.usage)
 
 
 def _context() -> TacticalContext:
@@ -57,6 +58,15 @@ def test_gemini_selects_a_supplied_legal_move_and_returns_its_reason():
             "retry_options": {"attempts": 1},
         },
     }
+
+
+def test_gemini_records_provider_token_usage():
+    usage = SimpleNamespace(prompt_token_count=41, candidates_token_count=7)
+    advisor = GeminiAgentAdvisor(
+        client=SimpleNamespace(models=_FakeModels(usage=usage)), model="test-model"
+    )
+    advisor.choose_move(_context(), Move.STAY)
+    assert advisor.usage_snapshot() == (41, 7)
 
 
 def test_timeout_env_is_converted_to_milliseconds_in_request_config(monkeypatch):

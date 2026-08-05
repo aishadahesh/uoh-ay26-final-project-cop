@@ -139,6 +139,34 @@ def test_two_peers_play_six_game_series_with_role_alternation(tmp_path):
         assert (tmp_path / "thief" / f"config_NETWORK-TEST_g{number:02d}.json").is_file()
     assert (tmp_path / "cop" / "declaration_NETWORK-TEST.json").is_file()
 
+    trajectories = set()
+    for number in range(1, 7):
+        records = json.loads(
+            (tmp_path / "cop" / f"log_NETWORK-TEST_g{number:02d}.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        moves = [
+            record["payload"]
+            for record in records
+            if record.get("payload", {}).get("move")
+        ]
+        trajectories.add(
+            tuple((move["role"], move["move"], tuple(move["position"])) for move in moves)
+        )
+        latest: dict[str, tuple[int, int]] = {}
+        collision_index = None
+        for index, move in enumerate(moves):
+            latest[move["role"]] = tuple(move["position"])
+            if latest.get("police") == latest.get("thief"):
+                collision_index = index
+        # A collision is terminal only when it remains the final audited
+        # state. Earlier crossings can be hidden by commit-reveal, and a
+        # capture can also be established by the separate boxed-in rule.
+        if latest.get("police") == latest.get("thief"):
+            assert collision_index == len(moves) - 1, "no move may occur after capture"
+    assert len(trajectories) >= 2, "sub-games must not replay one identical trajectory"
+
 
 def test_two_peers_synchronize_barriers_and_resolve_a_barrier_driven_capture(tmp_path):
     """Sec. 3.3.3/3.3.5/3.3.6 end-to-end: the cop's declared barriers reach
