@@ -1,239 +1,394 @@
-# Police-Thief P2P — Cop Agent (Distributed Cops-and-Robbers over a Peer-to-Peer Network)
+﻿# Police–Thief P2P · Cop Agent
 
-Final project for the University of Haifa "Orchestration of AI Agents" course (AY26). Two autonomous agents — a **cop** and a **thief** — play a partial-information pursuit game over a decentralized peer-to-peer network, with no central server, no shared memory between sides, and a cryptographic commit-reveal protocol standing in for a referee.
+> A decentralized pursuit agent that hunts under uncertainty, engineers the board with barriers, proves every move cryptographically, and completes matches without a central referee.
 
-> **This is the COP repo.** It implements and runs the cop side only, and is designed to work fully independently of the thief side — the only thing the two sides must agree on is the shared, byte-identical `config/game.json` (Sec. 3.2.2) and the wire protocol described below. Sibling (thief) repo: https://github.com/aishadahesh/uoh-ay26-final-project-thief
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![uv](https://img.shields.io/badge/package_manager-uv-DE5FE9)](https://docs.astral.sh/uv/)
+[![FastMCP](https://img.shields.io/badge/network-FastMCP-2F80ED)](https://gofastmcp.com/)
+[![Ruff](https://img.shields.io/badge/style-Ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 
-> **Status: practical overview.** This README describes the current state of the codebase and how to run it. The full academic report required for submission (Dec-POMDP model discussion, design-decision justification, learning curves, mandatory screenshots) is a separate, later pass — see `docs/TODO.md` Section O.6 / rule 42 for what's still outstanding there.
+This is the **cop-side repository** for the University of Haifa **Orchestration of AI Agents** final project (AY26). Its companion is the [thief repository](https://github.com/aishadahesh/uoh-ay26-final-project-thief).
 
-## Table of contents
+The two applications are deliberately separate. Each process owns its private state, exposes a FastMCP endpoint, calls the opponent as an MCP client, validates the same signed rules, and independently derives the final result. There is no game server with privileged truth and no shared memory between agents.
 
-- [What's built](#whats-built)
-- [The cop's strategy](#the-cops-strategy)
-- [Installation instructions](#installation-instructions)
-- [Usage instructions](#usage-instructions)
-- [Configuration guide](#configuration-guide)
-- [Testing & quality gates](#testing--quality-gates)
-- [Project layout](#project-layout)
-- [Contribution guidelines](#contribution-guidelines)
-- [License & credits](#license--credits)
-- [What's genuinely still outstanding](#whats-genuinely-still-outstanding)
+## Why this project is interesting
 
-## What's built
+A normal board game can ask a referee whether a move is legal. This project cannot. The cop must simultaneously solve four problems:
 
-The project follows `docs/tasks.md` (the full rulebook extraction) chapter by chapter. All 11 numbered chapters are implemented, tested, and documented:
+- **Reason under partial observability:** infer the thief from scent evidence rather than reading its coordinates.
+- **Pursue intelligently:** close distance while placing barriers only when they reduce escape space.
+- **Coordinate without trust:** exchange turns over a peer-to-peer protocol while preventing retroactive move changes.
+- **Produce auditable evidence:** save declarations, configuration snapshots, sealed logs, scores, and optional Gmail reports.
 
-| Chapter | What it built |
+The result is part game agent, part distributed system, and part cryptographic audit pipeline.
+
+## Contents
+
+- [System at a glance](#system-at-a-glance)
+- [Cop intelligence](#cop-intelligence)
+- [Gemini integration](#gemini-integration)
+- [Trust and protocol design](#trust-and-protocol-design)
+- [Installation](#installation)
+- [Run modes](#run-modes)
+- [Two-computer match guide](#two-computer-match-guide)
+- [Configuration](#configuration)
+- [Results and automatic email](#results-and-automatic-email)
+- [Testing and quality](#testing-and-quality)
+- [Project map](#project-map)
+- [Troubleshooting](#troubleshooting)
+- [Academic design notes](#academic-design-notes)
+
+## System at a glance
+
+```text
+┌──────────────────────── COP PROCESS ────────────────────────┐
+│ local board + belief map + cop strategy + private nonce     │
+│                                                             │
+│  observe scent → update belief → choose legal move          │
+│       ↓                          ↓                           │
+│  barrier analysis          commit SHA-256                   │
+│       ↓                          ↓                           │
+│  local audit log   ← FastMCP P2P →   opponent peer          │
+└─────────────────────────────────────────────────────────────┘
+              ↓ final mutual audit and sign-off
+       result JSON → optional Gmail gatekeeper → recipient
+```
+
+The implementation is divided into four layers:
+
+| Layer | Responsibility |
 |---|---|
-| 1 | Dec-POMDP formal model (`domain/dec_pomdp.py`) |
-| 2 | P2P networking over FastMCP — every peer is simultaneously server and client (`services/mcp_server.py`, `mcp_client.py`) |
-| 3 | Board physics: movement, barriers, capture, scoring (`domain/board.py`, `capture.py`, `scoring.py`) |
-| 4 | Pheromone scent trails — mandatory emission/decay formula (`domain/scent.py`) |
-| 5 | Commit-reveal cryptographic protocol (SHA-256) + Step-0 hardware fairness declaration (`services/commit_reveal.py`, `step0.py`) |
-| 6 | Strategy module: Bayesian belief map + Manhattan-heuristic brain + natural-language hints/bluff detection (`domain/belief.py`, `strategy/`, `hints.py`) |
-| 7 | Live GUI (local-truth-only) + Replay Viewer with cryptographic verification (`domain/live_view_model.py`, `replay.py`, `gui/`) |
-| 8 | Reliability layer: legal state machine, Deadline Tracker, Watchdog, Orchestrator (`services/state_machine.py`, `deadline_tracker.py`, `watchdog.py`, `orchestrator.py`) |
-| 9 | League scoring, Gatekeeper (rate limiter + quota + anomaly detector), Gmail JSON reporting (`domain/league.py`, `services/gatekeeper.py`, `match_reports.py`, `gmail_report_sender.py`) |
-| 10 | Milestone reconciliation against the rulebook's own recommended build order |
-| 11 | Full 55-mandatory-rule compliance sweep |
+| `domain/` | Board physics, scent, beliefs, capture, scoring, replay, strategy |
+| `services/` | MCP transport, wire protocol, commit–reveal, reliability, reporting |
+| `gui/` | Interactive game, live board, setup flow, replay viewer |
+| `shared/` | Configuration loading, constants, validation, versioning |
 
-After Chapter 11, four more things were added, each prompted by direct user requests:
-- **A richer GUI** (`gui/board_canvas.py`): agent markers, a visited-cell trail, and a Replay Viewer that now actually renders the board with Play/Pause and jump-to-step — inspired by, but not copied from, the course's reference example repo.
-- **Real Gmail OAuth** (`services/gmail_oauth.py`): a working `send`-scope-only OAuth transport, ported from a proven pattern in a separate prior project and plugged directly into the existing reporting pipeline.
-- **Interactive Play Mode** (`domain/interactive_match.py`, `gui/play_app.py`, `gui/mode_select.py`): a mode-select screen offering Human vs Human, Human vs Gemini, Agent vs Agent (same process), and Agent vs Agent across two computers over the real MCP network — with click-to-move and a move-pad on a shared board, not just a text log.
-- **The four-tool reference wire protocol** (`services/network_protocol.py`, `mcp_server.py`, `mcp_client.py`): `negotiate` / `receive_turn` / `submit_audit` / `receive_control`, replacing an earlier placeholder single-tool design, so this cop's server interoperates with any peer built against the same course rulebook (see `docs/PRD_fastmcp_networking.md`).
+## Cop intelligence
 
-Most recently, this session **wired the cop's barrier-placement mechanic into the live two-computer match loop** (it previously existed only as a tested-in-isolation `Board`/`ManhattanHeuristicBrain` capability, never actually exercised during a real match) — see [The cop's strategy](#the-cops-strategy) below, and `tests/integration/test_network_match.py::test_two_peers_synchronize_barriers_and_resolve_a_boxed_in_capture` for an end-to-end proof of a genuine barrier-driven capture.
+### 1. Belief before movement
 
-Every chapter's design rationale, constraints, and test evidence lives in its own `docs/PRD_<mechanism>.md`. The full chapter-by-chapter build log — what was implemented, what broke and how it was fixed, what was deliberately deferred and why — is in **`ProgressDoc.md`**.
+The cop never reads the thief’s real position. `BeliefMap` maintains a probability distribution over open cells and updates it from the thief’s decaying scent field. Blocked cells receive no probability mass, and the posterior is normalized after every update.
 
-## The cop's strategy
+The strongest cell, `belief.arg_max()`, is a hypothesis—not privileged truth.
 
-The cop's decision-making lives in `domain/strategy/manhattan_brain.py::ManhattanHeuristicBrain(role=AgentRole.COP)` — one of three algorithmically-equal tracks the rulebook allows (heuristic / custom / optional RL); per `docs/PLAN.md` ADR-010, this project's chosen baseline is the Manhattan-distance heuristic combined with a Bayesian belief map (`domain/belief.py`). RL is explicitly out of scope (`docs/PRD_strategy_module.md` §3: "the course does not require RL at all").
+### 2. Pursuit policy
 
-The cop never sees the thief's true position. Every decision is made from its own local belief:
+`ManhattanHeuristicBrain` evaluates legal orthogonal moves and chooses one that decreases the Manhattan distance to the current belief peak:
 
-1. **Chase the belief peak, not the truth.** Each turn, `BeliefMap.arg_max()` returns the board cell the cop currently believes is most likely to hold the thief — a posterior built only from the thief's own scent trail (`domain/scent.py`), updated Bayesian-style and renormalized after every observation. `_decide_move` then picks the orthogonal move (`greedy_manhattan_move`) that most reduces the Manhattan distance to that believed peak.
-2. **Barrier the cell that actually shrinks the thief's escape space — the cop's "spatial-engineering" advantage (Sec. 3.3.3/3.3.8).** After moving, `_pick_move` considers both its own (post-move) current cell and its open neighbors — both legal targets per Sec. 3.3.3/3.3.4 — and scores each by how much blocking it would shrink the *reachable area* reachable from the believed peak (`Board.reachable_area`, a flood fill that treats the candidate as one more blocked cell). A candidate that only removes itself from the board (no real chokepoint yet) isn't worth the budget; only a candidate that disconnects a genuinely larger pocket is placed. In practice this means the cop holds its barriers in open play and spends them exactly when they matter — including sealing its *own* current cell behind it once that cell becomes the sole doorway into wherever the thief is believed to be hiding.
-3. **Declare every barrier live, in the clear.** Per Sec. 3.3.6, a barrier placement — unlike a move — is never sealed inside the commit-reveal envelope. `services/network_match.py` broadcasts it immediately as a plaintext field on that turn's `TurnMessage`, and the opponent applies it to its own board the same turn (`Board.apply_declared_barrier`), so both sides' local board state stays in sync in real time without waiting for the end-of-match reveal.
-4. **Two ways to win.** A cop wins either by moving onto the thief's true cell, or by a barrier landing exactly on it, or by barricading it into a corner with zero legal moves left (`domain/capture.py::is_boxed_in`, Sec. 3.3.5) — all resolve identically through the same `MatchOutcome.CAPTURE` path, verified independently by both peers via the end-of-match mutual audit before either side commits to reporting the result.
+```text
+D(cop, target) = |row_cop - row_target| + |col_cop - col_target|
+```
 
-**A real, empirically-found bug and its fix** (documented here rather than hidden, per this project's own testing discipline): an earlier version of `_pick_move` didn't exclude already-blocked neighbors from consideration, so once the closest candidate cell was blocked, the heuristic kept re-targeting *that same cell* every subsequent turn — spending the entire barrier budget on placements `Board.place_barrier` should have rejected as redundant. Found by hand-driving a real two-peer match with `MemoryTransport` before writing any formal assertions, and fixed in three places: `_pick_move` now filters out blocked neighbors, `Board.place_barrier` defensively rejects an already-blocked target, and `Board.apply_declared_barrier` (the receiving peer's own board-sync path) is now idempotent against a redundant re-declaration.
+The deterministic board engine remains authoritative. Out-of-bounds moves and movement into blocked cells are rejected before execution.
 
-**Enhancement over the original design:** the barrier heuristic originally picked "whichever open neighbor is closest to the belief peak" — a distance-only nudge with no sense of whether blocking that cell actually mattered, and no budget discipline (it spent a barrier every single turn it could, regardless of usefulness). It has since been rewritten around `Board.reachable_area`'s chokepoint detection (point 2 above), which directly addresses both gaps: it only spends the budget on a placement that provably shrinks the thief's escape space, and it can now consider the cop's own current cell as a target — the "seal the door behind you" move the distance-only version had no way to express, since it never considered any cell besides its neighbors.
+### 3. Spatial engineering with barriers
 
-**Known, honestly-documented limitation, still true after the enhancement:** this is still a single-turn greedy choice, not a multi-turn lookahead plan — it asks "does this one placement help *right now*," never "should I hold this barrier two turns for a better chokepoint that hasn't appeared yet." Empirically, the more disciplined budget use tends to produce a fast capture once the cop closes in (often via a barrier landing directly on the thief's cell rather than a full boxed-in encirclement — see the integration test referenced above), rather than the multi-turn cornering sequences a lookahead-based "flanking" strategy (`docs/TODO.md` T0253/T0256) could in principle pull off from a wider range of starting positions. That deeper strategy remains a natural future refinement, not built here.
+Movement catches up; barriers change the future. The cop can place a public barrier on an allowed nearby cell after moving. The strategy examines candidates and favors placements that shrink the reachable region around the believed thief rather than spending the finite budget every turn.
 
-An optional Gemini-backed tactical advisor (`services/gemini_agent.py::GeminiAgentAdvisor`) can additionally narrate/select among the moves the deterministic rules engine already approves, in the local `play` GUI only — it never controls barrier placement, always falls back to the deterministic heuristic on invalid output or an API failure, and is architecturally prevented from ever making the actual move decision (`BrainBase` never accepts an LLM handle or hint text) per Sec. 6.4.1.
+This gives the cop several tactical modes:
 
-## Installation instructions
+- direct interception when belief confidence is strong;
+- chokepoint closure when a barrier disconnects meaningful space;
+- escape-route compression near borders and corners;
+- boxed-in capture when no legal escape remains;
+- budget preservation when a barrier has no immediate strategic value.
 
-Requires Python 3.12+ and [`uv`](https://docs.astral.sh/uv/) (this project uses `uv` exclusively — never `pip`/`venv` directly, per the course's software-quality guidelines).
+Barrier declarations are intentionally public. Both peers apply the same placement immediately, keeping their independent board models synchronized.
+
+### 4. Capture resolution
+
+Capture can be established through direct contact, a valid capture claim confirmed by the thief, or a boxed-in state. Both peers must agree on the audited outcome before the result receives mutual sign-off.
+
+## Gemini integration
+
+Gemini is a tactical advisor, not a replacement for the rules engine.
+
+For agent-driven modes, Gemini receives only local, permitted context:
+
+- role and current turn;
+- the cop’s own position;
+- the belief-map peak;
+- the exact set of legal moves;
+- barrier budget and match horizon;
+- a strict expected response format.
+
+The response is parsed and checked against the legal action set. Invalid output, timeouts, unavailable models, or malformed responses activate the deterministic strategy. Gemini never gets permission to bypass `Board.apply_move`, fabricate diagonal movement, or mutate hidden opponent state.
+
+Configure it in `.env`:
+
+```env
+GEMINI_API_KEY=your_google_ai_studio_key
+GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_TIMEOUT_SECONDS=8
+GEMINI_ENABLE_MODEL_FALLBACKS=false
+```
+
+Human-vs-human mode does not require an API key.
+
+## Trust and protocol design
+
+### Peer-to-peer FastMCP
+
+Every participant is both server and client. The reference protocol exposes four operations:
+
+1. `negotiate` — exchange signed terms and peer identity;
+2. `receive_turn` — deliver sealed turn data and public declarations;
+3. `submit_audit` — exchange complete reveal records at match end;
+4. `receive_control` — communicate readiness, state, and completion.
+
+### Commit–reveal
+
+A turn is sealed with a private nonce:
+
+```text
+commit = SHA256(state || move || intent || nonce)
+```
+
+The nonce is withheld during play. At final audit, each peer reveals its records and the opponent recomputes every commitment. Changed moves, intents, state snapshots, or nonces fail verification.
+
+### Step-0 fairness declaration
+
+Before gameplay, each side seals a system declaration containing identity, code/config evidence, hardware information, and model metadata. This makes the match environment part of the evidence rather than an unverifiable afterthought.
+
+### Reliability boundaries
+
+Timeouts, state transitions, peer messages, and reporting are explicitly bounded. The game state machine rejects illegal transitions; malformed wire messages fail validation; completed result files are preserved even when a later reporting operation fails.
+
+## Installation
+
+Requirements:
+
+- Python 3.11 or newer;
+- [`uv`](https://docs.astral.sh/uv/);
+- Tk support for GUI modes;
+- a Gemini key for agent modes;
+- Google OAuth credentials only when Gmail reporting is enabled.
 
 ```bash
 git clone https://github.com/aishadahesh/uoh-ay26-final-project-cop.git
 cd uoh-ay26-final-project-cop
-uv sync                    # install dependencies
-uv sync --extra email      # optional: adds the real Gmail OAuth transport
+uv sync
 ```
 
-To enable the optional Gemini-powered advisor, copy `.env-example` to `.env` and set your own key:
+Create local environment settings:
 
-```env
-GEMINI_API_KEY=your_key_here
-GEMINI_MODEL=gemini-3.6-flash
+```powershell
+Copy-Item .env-example .env
 ```
 
-Nothing else needs installing to run a local match, the GUI, or the two-process networked match over `localhost`.
+Never commit `.env`, `credentials.json`, or `token.json`.
 
-## Usage instructions
+## Run modes
 
-**See the belief-map GUI live** (no networking, just the scent/belief mechanics driving a chase):
-
-```bash
-uv run python -m police_thief demo
-```
-
-**Run a full local match** (single process, placeholder policies, prints the result):
-
-```bash
-uv run python -m police_thief simulate
-```
-
-**Play interactively, with the mode-select launcher:**
+### Interactive command center
 
 ```bash
 uv run python -m police_thief play
 ```
 
-This opens a mode-select screen offering:
-- **Human vs Human** — fully offline, click-to-move or the move-pad on a shared board.
-- **Human vs Gemini** — Gemini selects among the moves already approved by the deterministic rules engine; its tactical rationale appears in the sidebar. Invalid model output or an API failure safely falls back to the Manhattan heuristic.
-- **Agent vs Agent (same process)** — both roles run the shipped heuristic locally, useful for quickly observing the cop's strategy end to end.
-- **Agent vs Agent (Two Computers)** — a real networked match over MCP; see below.
+Available modes include human-vs-human, human-vs-agent, local agent-vs-agent, and two-computer MCP play.
 
-### Agent vs Agent on two computers (MCP)
+### Standalone visualization
 
-Choose **Agent vs Agent (Two Computers)** from the same `play` launcher on both computers, and run an ngrok or Localtonet HTTP tunnel to the local port shown in the setup screen on each. This repo's setup screen locks **This computer's role** to `cop` — it has no thief config to run as the thief with; the other computer runs the sibling thief repo's own `play` launcher, whose equivalent screen is locked to `thief`.
-
-The launcher pre-fills every other field from `config/network_match.json`. Edit that file before launching to set your own tunnel URL, game ID, both teams and members, four repository URLs, output directory, and email defaults. Do not put Gemini keys or Gmail OAuth tokens in this file; those remain in `.env`, `credentials.json`, and `token.json`.
-
-- Put the **other computer's public URL** in **Opponent public URL**. It must include the FastMCP route, for example `https://abc123.ngrok.app/mcp`.
-- Put your own tunnel address in **This peer's public tunnel URL** and give it to the opponent.
-- Use the same game ID, sub-game number, shared `config/game.json`, and shared match secret on both computers.
-- Enter Team 1 and Team 2 names, both individual member fields for each team, plus all four repository URLs; they are recorded in the final result schema.
-
-For the lower-level `peer` command, the same opponent address belongs in `[network].opponent_url` inside the private role file `config/cop/game.toml`; never put it in the shared `config/game.json`.
-
-Both peers act as MCP server and client simultaneously, over the four-tool reference protocol (`negotiate` / `receive_turn` / `submit_audit` / `receive_control` — see `docs/PRD_fastmcp_networking.md`). Turn numbers are local to each peer (`1..max_steps`), every move is commit-verified, the mandatory sealed step-0 system record is audited, and every barrier placement is publicly declared in real time. Both peers must return the same audited outcome before `mutual_sign_off` becomes `true`. Each peer writes:
-
-```text
-declaration_<game_id>.json
-config_<game_id>_g<NN>.json
-log_<game_id>_g<NN>.json
-result_<game_id>_g<NN>.json
-result_<game_id>.json
+```bash
+uv run python -m police_thief demo
 ```
 
-The numbered files are written once per each of the six required sub-games and
-`result_<game_id>.json` is the aggregate series result. The two peers negotiate
-again and reset their board/audit state before every sub-game. Roles alternate
-automatically; this cop repository plays police in games 1, 3, and 5 and thief
-in games 2, 4, and 6.
+Opens the belief/scent visualization without requiring a network opponent.
 
-Enable **Automatically email result JSON** to send the final JSON-only report. The assignment address `rmisegal+uoh26finalgame@gmail.com` is pre-filled, but the recipient field can be changed before starting. Install the email extra first, place Google OAuth `credentials.json` in the project root, and complete browser consent once; its reusable token is stored as `token.json`. Email is sent only after both computers agree on the result.
+### Local simulation
 
-**Play a complete, real match from the terminal** — no GUI, always the cop. This matches the naming used by `docs/tasks.md` Appendix D's illustrative (non-mandatory) example runner; the naming choice itself has no effect on cross-team compatibility (see [The cop's strategy](#the-cops-strategy) and `services/network_protocol.py::WIRE_ROLES` for what actually governs that), but unlike a bare listener, this command genuinely negotiates, plays every turn, and completes the end-of-match audit:
+```bash
+uv run python -m police_thief simulate
+```
+
+Runs the board, movement, scent, capture, and scoring pipeline in one process.
+
+### Real peer
 
 ```bash
 uv run python -m police_thief peer --role police
 ```
 
-Connection details (port, opponent URL) come from `config/cop/game.toml`'s `[network]` section; match/team details (game ID, teams, repos, shared secret, email) come from `config/network_match.json` — the same file the two-computer GUI setup screen reads. Edit both files before running: placeholder URLs, an empty secret, or incomplete team metadata now fail before a server port opens. The terminal peer also requires `GEMINI_API_KEY` in `.env`; it uses that configured Gemini model for tactical choices and advertises the exact model in its identity and step-0 declaration. `--role police` selects this repository's natural role for the first sub-game; an agreed multi-game series alternates roles internally. Run the sibling thief repo's own `peer --role thief` in a second terminal or on a second computer, with the same `num_games` value.
+Starts this repository in its natural role for the first sub-game, opens the local FastMCP server, negotiates with the thief, and runs the agreed match or series.
 
-**Replay a saved, cryptographically-sealed match log:**
-
-```bash
-uv run python -m police_thief replay --log path/to/log.json
-```
-
-The Replay Viewer independently recomputes every step's commit hash from the revealed nonce and flags `TAMPERED` in red the instant a saved log has been altered — it trusts nothing it wasn't shown proof of.
-
-## Configuration guide
-
-Two distinct configuration layers, deliberately kept separate (`docs/tasks.md` Chapter 2, "Total Separation of Working Environments"):
-
-- **`config/game.json`** — the shared, signed match config. Both sides must negotiate identical public terms; nothing in here may be team-specific. Its fixed scent values include emission intensity `0.9` and minimum center intensity `0.5`; `world.map_area` is the agreed setting (currently `New York`); and `max_moves` is interpreted per peer, matching reference v3. `shared/game_config.py::load_match_parameters` validates every field and rejects invalid mandatory values or positions.
-- **`config/cop/game.toml`** — private, per-peer settings never shared with or read by the thief process: `[game]` (team identity — `group_name`/`group_id` are the 8-character `"uoh-ay26"` code required by rule 45, plus `sub_game_number`/`members`/`repos` matching the rulebook's own private-file format; not currently read by any loader — the live match's identity comes from `NetworkMatchSettings` instead, see below), `[network]` (`my_port`, `opponent_url`, `turn_timeout_seconds`), an optional `[strategy] cop_class` dotted path to swap in a different `BrainBase` subclass (defaults to `ManhattanHeuristicBrain`), an optional `[trash_talk] provider` (only `template`, zero-token, is implemented today), and an optional `[email]` section for Gmail reporting.
-- **`config/network_match.json`** — pre-fills the two-computer GUI launcher's fields (team names, members, repo URLs, output directory, email defaults) so they don't need retyping every session; never put secrets here.
-- **`.env`** — `GEMINI_API_KEY`/`GEMINI_MODEL`; required for terminal and GUI network-agent play, never committed (`.gitignore`).
-- **`credentials.json` / `token.json`** — real Gmail OAuth artifacts; never committed.
-
-## Testing & quality gates
+### Replay an audited log
 
 ```bash
-uv run pytest --cov     # 447 tests, 85%+ coverage required (pyproject.toml)
-uv run ruff check .     # zero violations required
+uv run python -m police_thief replay --log results/network/log_G001_g01.json
 ```
 
-Tests favor real behavior over mocks wherever feasible: real local FastMCP HTTP servers in background threads, real Tkinter widgets, real file round-trips, real `google-api-python-client` objects against hand-built fake services, and real two-peer network matches (in-memory transport, real threads, real commit-reveal sealing) rather than a single mocked side. The one consistent, honest exception is the true external boundary — a real Gmail send, a real OAuth browser consent, a real `ngrok` tunnel — which cannot happen inside an automated session and is documented as a manual step wherever it applies.
+The replay viewer recomputes commitments and clearly distinguishes verified from tampered logs.
 
-## Project layout
+## Two-computer match guide
 
+### Before launching
+
+On both machines:
+
+1. Run `uv sync`.
+2. Copy `.env-example` to `.env` and configure Gemini.
+3. Ensure both repositories use byte-identical `config/game.json` files.
+4. Configure team identities, repository links, match ID, secret, output directory, and email preference in `config/network_match.json`.
+5. Set the cop’s opponent URL in `config/cop/game.toml`.
+6. Start the project's **Cloudflare Tunnel (cloudflared)** for the local cop MCP port.
+
+### Cloudflare Tunnel
+
+This project uses **Cloudflare Tunnel (`cloudflared`)** to expose each local FastMCP server securely over HTTPS without opening an inbound router port. Start the cop application first, then open another terminal and publish port `8801`:
+
+```bash
+cloudflared tunnel --url http://localhost:8801
 ```
+
+For a quick tunnel, `cloudflared` prints a temporary `https://<random>.trycloudflare.com` address. The MCP endpoint shared with the thief must append `/mcp`:
+
+```text
+https://<random>.trycloudflare.com/mcp
+```
+
+Put that full address in the thief peer's **Opponent public URL**. Put the thief's corresponding Cloudflare URL in this cop repository's opponent configuration. Keep the `cloudflared` process running for the entire match; restarting a quick tunnel generates a new URL that must be updated on the other peer.
+
+A named Cloudflare Tunnel and custom hostname may also be used for a stable URL. In either mode, Cloudflare carries the public HTTPS connection while FastMCP continues listening locally on `localhost:8801`.
+
+### Launch order
+
+Either peer may start first. Each waits at the negotiation boundary until the opponent is reachable:
+
+```bash
+# Cop computer
+uv run python -m police_thief peer --role police
+
+# Thief computer
+uv run python -m police_thief peer --role thief
+```
+
+### Values that must agree
+
+- shared `config/game.json` fingerprint;
+- game and series identifiers;
+- shared match secret;
+- number of games and scoring rules;
+- declared team/repository identities;
+- each side’s expectation of the opponent.
+
+Private API keys and OAuth tokens must never be shared.
+
+## Configuration
+
+| File | Visibility | Purpose |
+|---|---|---|
+| `config/game.json` | Shared | Board, scent, scoring, league, timing, and protocol parameters |
+| `config/cop/game.toml` | Private | Cop port, opponent URL, role strategy, timeouts |
+| `config/network_match.json` | Local launcher defaults | Teams, repositories, output, game identity, email switch |
+| `.env` | Secret/local | Gemini and provider settings |
+| `credentials.json` | Secret/local | Google OAuth client configuration |
+| `token.json` | Secret/local | Reusable Gmail authorization token |
+
+Treat the shared JSON as match law. Treat role TOML and secrets as local operational state.
+
+## Results and automatic email
+
+A completed series produces auditable artifacts such as:
+
+```text
+results/network/
+├── declaration_G001.json
+├── config_G001_g01.json
+├── log_G001_g01.json
+├── result_G001_g01.json
+└── result_G001.json
+```
+
+Per-game files preserve the exact evidence for each sub-game; the aggregate result summarizes the complete series.
+
+When automatic email is enabled, the final JSON is sent only after audit and mutual agreement. Delivery passes through:
+
+- a quota manager;
+- a token bucket;
+- an anomaly detector;
+- HTTP 429 retry/backoff;
+- Gmail OAuth restricted to `gmail.send`.
+
+The report is attached as JSON rather than rewritten as free text.
+
+## Testing and quality
+
+```bash
+uv run pytest --cov
+uv run ruff check .
+uv run ruff format --check .
+```
+
+The suite covers pure domain behavior, configuration failures, cryptographic tampering, protocol validation, in-memory two-peer matches, real file round-trips, GUI state, Gemini boundaries, OAuth construction, rate limiting, and report schemas. External Gmail delivery and public tunnels remain manual integration boundaries.
+
+Coverage is enforced at **85% minimum** in `pyproject.toml`.
+
+## Project map
+
+```text
 src/police_thief/
-  domain/       # pure game logic: board, scent, belief, replay, league, strategy
-  services/     # crypto, networking, reliability layer, Gmail/Gatekeeper
-  gui/          # Tkinter Live GUI + Replay Viewer + interactive Play mode
-  shared/       # config loading, constants, versioning
-  main.py       # CLI: peer / simulate / demo / play / replay
-config/
-  game.json           # shared, signed match config (both sides must load byte-identical)
-  cop/                # private per-role config (network port, strategy class, etc.)
-  network_match.json  # GUI launcher field defaults for two-computer matches
-docs/
-  tasks.md            # full rulebook extraction (single source of truth for requirements)
-  PRD.md, PLAN.md      # master design documents
-  PRD_<mechanism>.md   # one focused design doc per subsystem
-  TODO.md              # ~900 granular tasks, honestly checked off chapter by chapter
-tests/
-  unit/, integration/
-ref/
-  police_thief_p2p.pdf                 # the course's project rulebook (source of `docs/tasks.md`)
-  software_submission_guidelines-V3.pdf  # the course's software-quality submission guidelines
-ProgressDoc.md    # the chapter-by-chapter development log
-LICENSE           # educational-use license (see below)
+├── domain/
+│   ├── board.py              # movement and barriers
+│   ├── belief.py             # probabilistic opponent model
+│   ├── scent.py              # emission and decay
+│   ├── capture.py            # capture and boxed-in rules
+│   └── strategy/             # cop/thief decision policies
+├── services/
+│   ├── network_match.py      # full peer match orchestration
+│   ├── network_protocol.py   # signed wire messages
+│   ├── commit_reveal.py      # sealed turns and verification
+│   ├── mcp_server.py         # inbound FastMCP tools
+│   ├── mcp_client.py         # opponent calls
+│   ├── gemini_agent.py       # bounded tactical advisor
+│   └── network_reporting.py  # audited Gmail delivery
+├── gui/                      # play, setup, board, replay
+├── shared/                   # validated configuration
+└── main.py                   # CLI entry point
 ```
 
-## Contribution guidelines
+Deeper engineering rationale lives in `docs/PRD_*.md`; the chronological build record is `ProgressDoc.md`.
 
-This is a single-author academic submission for the cop side of the project (the thief side is deliberately a separate, independently-maintained repository — see the link at the top of this file). There is no external contribution workflow to describe beyond the practices actually followed while building it:
+## Troubleshooting
 
-- **Branching:** feature work happens on short-lived branches off `main`; `main` is kept in a runnable, test-passing state.
-- **Commits:** small, behavior-scoped commits with messages describing *why* a change was made, not just what changed; every commit reflects the actual author, never a fabricated co-author to simulate collaboration that didn't happen.
-- **Before every commit:** `uv run pytest --cov` and `uv run ruff check .` must both pass — the same two commands in [Testing & quality gates](#testing--quality-gates) above.
-- **Code style:** no code duplication beyond a 50/50 similarity threshold before extracting a shared helper (`docs/tasks.md` §3.2); pure functions in `domain/`, I/O and networking isolated to `services/`; a new module always ships with its own test module (TDD: red → green → refactor).
-- **Docs stay in sync with code:** every mechanism has a matching `docs/PRD_<mechanism>.md`, and `docs/TODO.md`/`ProgressDoc.md` are updated in the same pass as the code that resolves an item — including honestly documenting *why* an item stays unchecked, rather than silently leaving it stale.
+### Gemini key missing
 
-If you are a future student reusing parts of this repository for your own coursework, see [License & credits](#license--credits) below for the terms.
+Agent modes require `GEMINI_API_KEY` in `.env`. Human-vs-human remains available without it.
 
-## License & credits
+### Opponent is unreachable
 
-This repository is released under an **educational-use license** — see [`LICENSE`](LICENSE) for the full terms. In short: reuse and adaptation for your own coursework is welcome and consistent with the course's own reuse terms for its reference example repo (`docs/tasks.md` Appendix D, Sec. 15.5.1), but this repository is a learning artifact, not a submission template, and any reused portion should retain attribution.
+Confirm `cloudflared` is running, the public URL ends with `/mcp`, port `8801` is the tunnel target, and the remote FastMCP server is listening. Quick-tunnel URLs change whenever `cloudflared` restarts.
 
-Credits:
-- Course rulebook, Mandatory Parameters Table, and the four-tool reference wire protocol: the "Orchestration of AI Agents" course staff, University of Haifa (`ref/police_thief_p2p.pdf`).
-- Software-quality guidelines this repository follows (`uv`-only tooling, Ruff linting, 85% coverage floor, TDD workflow, mandatory README sections): `ref/software_submission_guidelines-V3.pdf`, Dr. Yoram Segal.
-- GUI interaction model (shared board, click-to-move): inspired by, but not copied from, a course reference example repository shared with all students.
-- Gmail OAuth transport pattern: adapted from the author's own prior, separate project for the same course track.
+### Negotiation rejects the match
 
-## What's genuinely still outstanding
+Compare both `config/game.json` files byte-for-byte and verify team identities, shared secret, game number, and repository URLs.
 
-Tracked in detail in `docs/TODO.md` and `ProgressDoc.md`'s Chapter 11 entry — the short version:
+### Tkinter cannot find `init.tcl`
 
-- The full academic report in this README (Rule 42) — the next planned pass.
-- A real Google Cloud OAuth consent flow (the code is ready; someone needs to create the project and run it once).
-- A real `ngrok`/tunnel session for cross-machine play.
-- Actual league matches against other teams' agents.
-- A deeper, multi-turn lookahead barrier-cornering strategy — the current heuristic reasons about the *immediate* effect of one placement (does it shrink the thief's reachable area right now), not a multi-turn plan to engineer a chokepoint that doesn't exist yet; it reliably produces a barrier-driven capture from favorable starting positions (proven in `tests/integration/test_network_match.py`), but not from every possible start.
-- One open rulebook-interpretation question found during the Chapter 11 sanity sweep (rule 47 — see `docs/TODO.md`).
+Install a Python distribution containing Tcl/Tk or repair the Tcl environment. CLI simulations and non-GUI tests can still run independently.
+
+### Gmail dependencies or authorization fail
+
+Run `uv sync`, verify `credentials.json` and `token.json` paths, and repeat browser consent if the cached token is invalid. The required scope is `https://www.googleapis.com/auth/gmail.send`.
+
+### Result exists but email failed
+
+The result is written before reporting. Inspect the emitted Gmail error and the saved JSON; do not replay the match merely to regenerate evidence.
+
+## Academic design notes
+
+The game is modeled as a decentralized partially observable Markov decision process:
+
+```text
+⟨agents, states, actions, transition, rewards, observations, observation model, γ⟩
+```
+
+The full state contains both positions and barriers, but neither peer observes it globally. Each agent acts from local state and evidence. Deterministic physics plus signed configuration keep transitions consistent; scent and messages form the observation channels; asymmetric scores encode pursuit versus survival incentives.
+
+Reinforcement learning is not required by the selected design. The project favors an interpretable, testable Bayesian/heuristic policy whose decisions can be reconstructed during audit. Gemini adds bounded tactical reasoning while deterministic validation preserves safety and reproducibility.
+
+## Credits and license
+
+Built by **Aisha Abu Dahesh** and **Yousef Asadi** for the University of Haifa Orchestration of AI Agents course.
+
+See [`LICENSE`](LICENSE) for educational-use terms. Course specifications and submission guidance remain the intellectual work of their respective authors.
