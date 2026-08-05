@@ -66,4 +66,7 @@ def test_move_selection_emits_source_duration_and_reason(monkeypatch):
     )
 
     assert move is Move.EAST
-    assert messages == ["Step 3: Gemini (1.2s) - Closing on the belief peak."]
+    assert messages == [
+        "Step 3: Gemini selected EAST (E); valid=True; attempts=1",
+        "Step 3: Gemini (1.2s) - Closing on the belief peak.",
+    ]

@@ -12,8 +12,9 @@ from __future__ import annotations
 
 from police_thief.domain.belief import BeliefMap
 from police_thief.domain.board import Board, Move, Position
-from police_thief.domain.heuristics import greedy_manhattan_move, manhattan_distance
+from police_thief.domain.heuristics import manhattan_distance
 from police_thief.domain.strategy.brain_base import BrainBase
+from police_thief.domain.strategy.tactical_planner import StrategyPlan, TacticalPlanner
 from police_thief.shared.constants import AgentRole
 
 
@@ -22,10 +23,16 @@ class ManhattanHeuristicBrain(BrainBase):
 
     def __init__(self, role: AgentRole) -> None:
         self.role = role
+        self.planner = TacticalPlanner(role)
+        self.last_plan: StrategyPlan | None = None
 
     def _decide_move(self, board: Board, own: Position, belief: BeliefMap) -> Move:
-        target = belief.arg_max()
-        return greedy_manhattan_move(board, own, target, chase=self.role is AgentRole.COP)
+        self.last_plan = self.planner.evaluate(board, own, belief)
+        return self.last_plan.selected
+
+    def record_move(self, before: Position, move: Move, after: Position) -> None:
+        """Record the action actually executed (Gemini may override the plan)."""
+        self.planner.record_move(before, move, after)
 
     def _pick_move(self, board: Board, own: Position, belief: BeliefMap) -> Position | None:
         """Cop-only: choose the barrier target that most shrinks the

@@ -11,7 +11,7 @@ from pathlib import Path
 from threading import Event
 
 from police_thief.domain.belief import BeliefMap
-from police_thief.domain.board import Board, Position
+from police_thief.domain.board import Board, Move, Position
 from police_thief.domain.capture import is_boxed_in
 from police_thief.domain.hints import TemplateHintProvider
 from police_thief.domain.replay import save_log
@@ -163,12 +163,14 @@ class NetworkMatchRunner:
                 fallback = brain._decide_move(board, own_position, belief)
                 move, _private_reason = self._choose_move(
                     board, belief, own_position, fallback, step, params.max_moves, emit,
+                    plan=brain.last_plan,
                 )
                 # Gemini's rationale is private reasoning and may mention local
                 # truth.  Only a bounded direction claim crosses the wire.
                 hint = hint_provider.generate(move, tell_truth=True).text
                 state_before = own_position
                 own_position = board.apply_move(own_position, move)
+                brain.record_move(state_before, move, own_position)
                 own_scent.decay()
                 own_scent.emit(own_position)
                 barrier_placed = self._maybe_place_barrier(board, own_position, belief, brain, emit, step)
@@ -267,26 +269,72 @@ class NetworkMatchRunner:
         path = self._write_result(params, entries, outcome, peer_identity, emit)
         self._send_control("status", "COMPLETE")
         if self.settings.email_mode == "real":
-            from police_thief.services.network_reporting import email_result_file
-
-            email_result_file(path, params, self.settings, emit)
+            _try_email_result(path, params, self.settings, emit)
         elif self.settings.email_mode == "dry_run":
             emit("Email mode is dry_run; JSON created but not sent")
         return path
 
-    def _choose_move(self, board, belief, own, fallback, step, max_steps, emit):
+    def _choose_move(self, board, belief, own, fallback, step, max_steps, emit, plan=None):
+        legal_now = board.legal_moves(own)
+        if plan is not None:
+            for item in plan.evaluations:
+                emit(f"Step {step}: candidate {item.move.name} ({item.move.value}) - {item.summary()}")
+            if plan.loop_detected:
+                excluded = ", ".join(move.name for move in plan.excluded_moves) or "none"
+                emit(
+                    f"Step {step}: repeated loop detected ({plan.loop_reason}); "
+                    f"forcing reconsideration; excluded={excluded}"
+                )
+            allowed = tuple(move for move in plan.allowed_moves if move in legal_now)
+        else:
+            allowed = tuple(legal_now)
+        if not allowed:
+            allowed = tuple(legal_now)
+        if fallback not in allowed:
+            fallback = Move.STAY if Move.STAY in allowed else allowed[0]
         if self.gemini_advisor is None:
+            emit(f"Step {step}: planner selected {fallback.name} ({fallback.value}); valid=True")
             return fallback, "Deterministic local-truth move"
         started_at = time.monotonic()
+        size = board.config.grid_size
+        blocked = tuple(
+            Position(row, col)
+            for row in range(size)
+            for col in range(size)
+            if board.is_blocked(Position(row, col))
+        )
+        evaluations = {item.move: item.summary() for item in plan.evaluations} if plan else {}
         decision = self.gemini_advisor.choose_move(
             TacticalContext(
                 role=self.settings.role, own_position=own, belief_peak=belief.arg_max(),
-                legal_moves=tuple(board.legal_moves(own)), turn_number=step,
+                legal_moves=allowed,
+                legal_destinations=tuple((move, legal_now[move]) for move in allowed),
+                action_scores=tuple((move, evaluations.get(move, "not scored")) for move in allowed),
+                board_size=size,
+                blocked_cells=blocked,
+                belief_candidates=belief.top_positions(5),
+                recent_positions=plan.recent_positions if plan else (),
+                recent_actions=plan.recent_actions if plan else (),
+                repeated_state_warning=plan.loop_reason if plan and plan.loop_detected else "",
+                turn_number=step,
                 max_turns=max_steps, remaining_barriers=board.remaining_barrier_budget,
             ),
             fallback,
         )
         elapsed = time.monotonic() - started_at
+        legal_now = board.legal_moves(own)
+        if decision.move not in legal_now or decision.move not in allowed:
+            reason = "not legal now" if decision.move not in legal_now else "excluded because it continues a loop"
+            emit(f"Step {step}: rejected Gemini action {decision.move!r}: {reason}")
+            emit(f"Step {step}: fallback activated; selected {fallback.name} ({fallback.value})")
+            return fallback, reason
+        for rejection in decision.rejected:
+            emit(f"Step {step}: Gemini response rejected - {rejection}")
+        if decision.used_fallback:
+            emit(f"Step {step}: fallback activated after {decision.attempts} Gemini attempt(s)")
+            emit(f"Step {step}: fallback selected {decision.move.name} ({decision.move.value})")
+        else:
+            emit(f"Step {step}: Gemini selected {decision.move.name} ({decision.move.value}); valid=True; attempts={decision.attempts}")
         source = "fallback" if decision.used_fallback else "Gemini"
         emit(f"Step {step}: {source} ({elapsed:.1f}s) - {decision.rationale}")
         return decision.move, decision.rationale
@@ -623,9 +671,20 @@ class NetworkMatchSeriesRunner:
         path = save_series_result(series_result, self.settings.output_dir, self.settings.game_id)
         emit(f"Series complete; aggregate result saved to {path}")
         if self.settings.email_mode == "real":
-            from police_thief.services.network_reporting import email_result_file
-
-            email_result_file(path, params, self.settings, emit)
+            _try_email_result(path, params, self.settings, emit)
         else:
             emit("Email mode is dry_run; aggregate JSON created but not sent")
         return path
+
+
+def _try_email_result(path: Path, params, settings: NetworkMatchSettings, emit: EventSink) -> None:
+    """Email delivery is best-effort: by the time this runs, the match is
+    already audited and the result already saved -- a missing dependency,
+    missing OAuth setup, or a transient Gmail failure must not crash an
+    already-successful, already-recorded match."""
+    from police_thief.services.network_reporting import email_result_file
+
+    try:
+        email_result_file(path, params, settings, emit)
+    except RuntimeError as exc:
+        emit(f"Email delivery failed (result already saved to {path}): {exc}")

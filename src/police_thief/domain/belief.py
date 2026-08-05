@@ -56,8 +56,20 @@ class BeliefMap:
         to 1 across only the cells that could possibly be true.
         """
         open_cells = self._open_cells()
+        # First apply the legal one-turn motion model (stay or move to one
+        # orthogonal open neighbor). Without this prediction step, repeated
+        # multiplication can permanently lock the peak onto an old scent cell
+        # even after the hidden opponent has moved away.
+        predicted = dict.fromkeys(open_cells, 0.0)
+        for source, probability in self._belief.items():
+            destinations = tuple(self._board.legal_moves(source).values())
+            share = probability / len(destinations)
+            for destination in destinations:
+                if destination in predicted:
+                    predicted[destination] += share
         unnormalized = {
-            pos: self._belief.get(pos, 0.0) * (scent_field.intensity_at(pos) + _LIKELIHOOD_EPSILON)
+            pos: predicted.get(pos, 0.0)
+            * (scent_field.intensity_at(pos) + _LIKELIHOOD_EPSILON)
             for pos in open_cells
         }
         total = sum(unnormalized.values())
@@ -69,3 +81,11 @@ class BeliefMap:
     def arg_max(self) -> Position:
         """The current best guess -- a peak, never a certainty (Sec. 6.3.5)."""
         return max(self._belief, key=self._belief.get)
+
+    def top_positions(self, limit: int = 5) -> tuple[tuple[Position, float], ...]:
+        """Highest-probability legal cells for uncertainty-aware planning."""
+        if limit <= 0:
+            return ()
+        return tuple(
+            sorted(self._belief.items(), key=lambda item: item[1], reverse=True)[:limit]
+        )

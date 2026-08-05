@@ -48,7 +48,7 @@ def test_gemini_selects_a_supplied_legal_move_and_returns_its_reason():
     assert models.calls[0]["model"] == "test-model"
     assert models.calls[0]["config"] == {
         "temperature": 0,
-        "max_output_tokens": 64,
+            "max_output_tokens": 128,
         "http_options": {
             # 8s per-turn budget floored up to the 10s minimum HTTP timeout
             # (MIN_GEMINI_HTTP_TIMEOUT_SECONDS) so a tight turn deadline
@@ -106,7 +106,7 @@ def test_provider_failure_uses_fallback_without_crashing_the_match():
     assert decision.used_fallback is True
     assert "TimeoutError" in decision.rationale
     assert "offline" in decision.rationale
-    assert "after 1 models" in decision.rationale
+    assert "after 1 Gemini attempt(s)" in decision.rationale
     assert len(models.calls) == 1
 
 
@@ -123,7 +123,7 @@ def test_fallback_models_are_tried_only_when_explicitly_enabled(monkeypatch):
         "gemini-flash-latest",
         "gemini-2.5-flash",
     ]
-    assert "after 3 models" in decision.rationale
+    assert "after 3 Gemini attempt(s)" in decision.rationale
 
 
 def test_provider_error_redacts_api_keys(monkeypatch):
@@ -135,8 +135,8 @@ def test_provider_error_redacts_api_keys(monkeypatch):
 
 def test_prompt_contains_local_belief_but_not_an_opponent_true_position():
     prompt = GeminiAgentAdvisor._prompt(_context())
-    assert "Belief-map peak: (0, 6)" in prompt
-    assert "Legal moves: SOUTH (S), EAST (E), STAY (STAY)" in prompt
+    assert "BELIEVED_OPPONENT=(0,6)" in prompt
+    assert "ALLOWED_ACTIONS=SOUTH [S]; EAST [E]; STAY [STAY]" in prompt
     assert "true position" not in prompt.lower()
 
 
@@ -144,8 +144,9 @@ def test_parse_response_accepts_a_move_code_and_a_move_prefix():
     """Real-world Gemini output isn't always the exact move.name -- accept
     the short wire code too, and a "MOVE:"/"MOVE="-style prefix some models
     add despite the prompt's instructions."""
-    decision = GeminiAgentAdvisor._parse_response(
-        "MOVE: E|Closing the gap", (Move.SOUTH, Move.EAST, Move.STAY), Move.STAY,
+    parsed, rejection = GeminiAgentAdvisor._parse_response(
+        "MOVE: E|Closing the gap", (Move.SOUTH, Move.EAST, Move.STAY),
     )
-    assert decision.move is Move.EAST
-    assert decision.used_fallback is False
+    assert rejection == ""
+    assert parsed is not None
+    assert parsed[0] is Move.EAST

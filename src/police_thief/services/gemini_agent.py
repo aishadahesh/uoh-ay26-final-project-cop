@@ -1,14 +1,10 @@
-"""Gemini-backed tactical move selection for interactive agent modes.
-
-Gemini receives local truth only and may select only from moves already
-declared legal by the deterministic board engine. Invalid output, quota
-errors, and network failures fall back to the caller's validated heuristic.
-"""
+"""Validated Gemini tactical move selection with one corrective retry."""
 
 from __future__ import annotations
 
-import math
+import json
 import os
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,10 +12,11 @@ from police_thief.domain.board import Move, Position
 from police_thief.shared.constants import AgentRole
 
 DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
+_FALLBACK_MODELS = ("gemini-flash-latest", "gemini-2.5-flash")
 DEFAULT_GEMINI_TIMEOUT_SECONDS = 8.0
 MIN_GEMINI_HTTP_TIMEOUT_SECONDS = 10.0
-MAX_GEMINI_OUTPUT_TOKENS = 64
-_FALLBACK_MODELS = ("gemini-flash-latest", "gemini-2.5-flash")
+DEFAULT_GEMINI_MAX_OUTPUT_TOKENS = 128
+MAX_ACTION_ATTEMPTS = 2
 
 
 class GeminiConfigurationError(RuntimeError):
@@ -35,6 +32,14 @@ class TacticalContext:
     turn_number: int
     max_turns: int
     remaining_barriers: int
+    legal_destinations: tuple[tuple[Move, Position], ...] = ()
+    action_scores: tuple[tuple[Move, object], ...] = ()
+    board_size: int = 7
+    blocked_cells: tuple[Position, ...] = ()
+    belief_candidates: tuple[tuple[Position, float], ...] = ()
+    recent_positions: tuple[Position, ...] = ()
+    recent_actions: tuple[Move, ...] = ()
+    repeated_state_warning: str = ""
 
 
 @dataclass(frozen=True)
@@ -42,29 +47,34 @@ class GeminiDecision:
     move: Move
     rationale: str
     used_fallback: bool = False
+    attempts: int = 1
+    rejected: tuple[str, ...] = ()
 
 
 class GeminiAgentAdvisor:
-    """Ask Gemini for a legal tactical move and retain a human-readable reason."""
+    """Ask Gemini for a move, repair bad output, and execute only legal actions."""
 
     def __init__(
         self,
         *,
         api_key: str | None = None,
         model: str | None = None,
+        timeout_seconds: float | None = None,
+        allow_fallback_models: bool | None = None,
         client: Any | None = None,
     ) -> None:
         self.model = model or os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-        self.timeout_seconds = self._timeout_seconds()
-        # The per-turn budget (GEMINI_TIMEOUT_SECONDS) may legitimately be set
-        # tighter than a single HTTP call needs to plausibly succeed, and is
-        # also the deadline other callers race against (the network turn
-        # timeout). Bounding the raw HTTP client timeout to a separate, more
-        # forgiving floor means a tight per-turn budget doesn't by itself
-        # guarantee every call fails before the provider even replies.
+        self.timeout_seconds = (
+            timeout_seconds
+            if timeout_seconds is not None
+            else _float_env("GEMINI_TIMEOUT_SECONDS", DEFAULT_GEMINI_TIMEOUT_SECONDS)
+        )
         self.http_timeout_seconds = max(self.timeout_seconds, MIN_GEMINI_HTTP_TIMEOUT_SECONDS)
-        self.timeout_milliseconds = max(1, round(self.http_timeout_seconds * 1000))
-        self.enable_model_fallbacks = self._env_flag("GEMINI_ENABLE_MODEL_FALLBACKS")
+        self.allow_fallback_models = (
+            allow_fallback_models
+            if allow_fallback_models is not None
+            else _truthy_env("GEMINI_ENABLE_MODEL_FALLBACKS")
+        )
         if client is not None:
             self._client = client
             return
@@ -77,70 +87,78 @@ class GeminiAgentAdvisor:
 
         self._client = genai.Client(
             api_key=key,
-            http_options=self._http_options(),
+            http_options={
+                "timeout": int(self.http_timeout_seconds * 1000),
+                "retry_options": {"attempts": 1},
+            },
         )
 
     def choose_move(self, context: TacticalContext, fallback: Move) -> GeminiDecision:
-        """Return Gemini's legal move, or the deterministic fallback on any failure."""
-        prompt = self._prompt(context)
+        legal = tuple(dict.fromkeys(context.legal_moves))
+        if not legal:
+            raise ValueError(
+                "Gemini cannot choose an action because no legal actions were supplied"
+            )
+        safe_fallback = (
+            fallback if fallback in legal else (Move.STAY if Move.STAY in legal else legal[0])
+        )
+        models = tuple(
+            dict.fromkeys(
+                (self.model, *_FALLBACK_MODELS) if self.allow_fallback_models else (self.model,)
+            )
+        )
+        rejected: list[str] = []
         last_error: Exception | None = None
-        candidates = (
-            tuple(dict.fromkeys((self.model, *_FALLBACK_MODELS)))
-            if self.enable_model_fallbacks
-            else (self.model,)
-        )
-        for model in candidates:
-            try:
-                response = self._client.models.generate_content(
-                    model=model,
-                    contents=prompt,
-                    config={
-                        "temperature": 0,
-                        "max_output_tokens": MAX_GEMINI_OUTPUT_TOKENS,
-                        "http_options": self._http_options(),
-                    },
-                )
-                return self._parse_response(response.text or "", context.legal_moves, fallback)
-            except Exception as exc:  # noqa: BLE001 - provider errors must not end a match
-                last_error = exc
-        assert last_error is not None
+        total_attempts = 0
+        for model in models:
+            prompt = self._prompt(context)
+            for attempt in range(1, MAX_ACTION_ATTEMPTS + 1):
+                total_attempts += 1
+                try:
+                    response = self._client.models.generate_content(
+                        model=model,
+                        contents=prompt,
+                        config={
+                            "temperature": 0,
+                            "max_output_tokens": DEFAULT_GEMINI_MAX_OUTPUT_TOKENS,
+                            "http_options": {
+                                "timeout": int(self.http_timeout_seconds * 1000),
+                                "retry_options": {"attempts": 1},
+                            },
+                        },
+                    )
+                    text = response.text or ""
+                    parsed, rejection = self._parse_response(text, legal)
+                    if parsed is not None:
+                        move, reason = parsed
+                        return GeminiDecision(
+                            move,
+                            reason,
+                            attempts=total_attempts,
+                            rejected=tuple(rejected),
+                        )
+                    rejected.append(rejection)
+                    if attempt < MAX_ACTION_ATTEMPTS:
+                        prompt = self._repair_prompt(context, text, rejection)
+                except Exception as exc:  # provider/model failure; another model may recover
+                    last_error = exc
+                    break
+        if rejected:
+            cause = rejected[-1]
+        elif last_error is not None:
+            cause = f"provider unavailable: {self._safe_error(last_error)}"
+        else:
+            cause = "Gemini returned no usable response"
         return GeminiDecision(
-            move=fallback,
-            rationale=(
-                f"Gemini unavailable after {len(candidates)} models: "
-                f"{self._safe_error(last_error)} Heuristic fallback used."
-            ),
+            safe_fallback,
+            f"Fallback activated after {total_attempts} Gemini attempt(s): {cause}. Selected {safe_fallback.name} ({safe_fallback.value}).",
             used_fallback=True,
+            attempts=total_attempts,
+            rejected=tuple(rejected),
         )
-
-    @staticmethod
-    def _timeout_seconds() -> float:
-        """Load a positive per-request timeout, falling back safely on bad input."""
-        raw_value = os.getenv("GEMINI_TIMEOUT_SECONDS", str(DEFAULT_GEMINI_TIMEOUT_SECONDS))
-        try:
-            timeout = float(raw_value)
-        except ValueError:
-            return DEFAULT_GEMINI_TIMEOUT_SECONDS
-        return (
-            timeout
-            if math.isfinite(timeout) and timeout > 0
-            else DEFAULT_GEMINI_TIMEOUT_SECONDS
-        )
-
-    def _http_options(self) -> dict[str, object]:
-        """Bound one provider attempt and disable SDK-level retry delays."""
-        return {
-            "timeout": self.timeout_milliseconds,
-            "retry_options": {"attempts": 1},
-        }
-
-    @staticmethod
-    def _env_flag(name: str) -> bool:
-        return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
     @staticmethod
     def _safe_error(exc: Exception) -> str:
-        """Expose a useful provider error without ever leaking configured keys."""
         message = " ".join(str(exc).split())
         for variable in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
             secret = os.getenv(variable)
@@ -151,38 +169,122 @@ class GeminiAgentAdvisor:
 
     @staticmethod
     def _prompt(context: TacticalContext) -> str:
-        objective = "close distance to the believed thief" if context.role is AgentRole.COP else "increase distance from the believed cop"
-        legal = ", ".join(f"{move.name} ({move.value})" for move in context.legal_moves)
+        destinations = dict(context.legal_destinations)
+        scores = dict(context.action_scores)
+        actions = []
+        for move in context.legal_moves:
+            destination = destinations.get(move)
+            location = f" -> ({destination.row},{destination.col})" if destination else ""
+            score = scores.get(move)
+            safety = f"; planner_score={score}" if score is not None else ""
+            actions.append(f"{move.name} [{move.value}]{location}{safety}")
+        objective = (
+            "intercept the believed thief"
+            if context.role is AgentRole.COP
+            else (
+                "survive: maximize distance from the believed cop, preserve multiple future exits, avoid dead ends, and avoid STAY unless safer"
+            )
+        )
         return (
-            "You are the tactical reasoning layer in a partially observable police-thief grid game. "
-            "Opponent coordinates are unavailable; reason only from the belief map. "
-            "Choose exactly one supplied legal move.\n"
-            f"Role: {context.role.value}\n"
-            f"Objective: {objective}\n"
-            f"Own position: ({context.own_position.row}, {context.own_position.col})\n"
-            f"Belief-map peak: ({context.belief_peak.row}, {context.belief_peak.col})\n"
-            f"Turn: {context.turn_number}/{context.max_turns}\n"
-            f"Remaining barrier budget: {context.remaining_barriers}\n"
-            f"Legal moves: {legal}\n"
-            "Reply on one line only as MOVE|brief tactical reason. "
-            "MOVE must exactly match one legal move name or code."
+            "You are the primary tactical policy for a partially observable grid game.\n"
+            "Choose ONLY one action from ALLOWED_ACTIONS. Every omitted direction is illegal now (off-board or blocked). "
+            "Never invent a direction, coordinate, diagonal, barrier action, or prose-only answer.\n"
+            f"ROLE={context.role.value}\nOBJECTIVE={objective}\n"
+            f"OWN_POSITION=({context.own_position.row},{context.own_position.col})\n"
+            f"BELIEVED_OPPONENT=({context.belief_peak.row},{context.belief_peak.col}) (estimate, not truth)\n"
+            f"BELIEF_CANDIDATES={_positions_with_weights(context.belief_candidates)}\n"
+            f"BOARD_SIZE={context.board_size}x{context.board_size}\n"
+            f"BLOCKED_CELLS={_positions(context.blocked_cells)}\n"
+            f"RECENT_POSITIONS={_positions(context.recent_positions)}\n"
+            f"RECENT_ACTIONS={[move.name for move in context.recent_actions]}\n"
+            f"REPEATED_STATE_WARNING={context.repeated_state_warning or 'none'}\n"
+            f"TURN={context.turn_number}/{context.max_turns}\nREMAINING_BARRIERS={context.remaining_barriers}\n"
+            f"ALLOWED_ACTIONS={'; '.join(actions)}\n"
+            'Return strict JSON only: {"action":"EXACT_NAME","reason":"brief tactical reason"}.'
+        )
+
+    @classmethod
+    def _repair_prompt(cls, context: TacticalContext, rejected_text: str, rejection: str) -> str:
+        clipped = " ".join(rejected_text.split())[:160]
+        return (
+            cls._prompt(context)
+            + f"\nYour previous response was rejected: {rejection}. PREVIOUS={clipped!r}. "
+            "Correct it now. Copy exactly one action NAME from ALLOWED_ACTIONS and return JSON only."
         )
 
     @staticmethod
-    def _parse_response(text: str, legal_moves: tuple[Move, ...], fallback: Move) -> GeminiDecision:
-        move_text, separator, reason = text.strip().partition("|")
-        cleaned = move_text.strip().upper()
-        for prefix in ("MOVE:", "MOVE=", "MOVE "):
+    def _parse_response(
+        text: str, legal_moves: tuple[Move, ...]
+    ) -> tuple[tuple[Move, str] | None, str]:
+        raw = text.strip()
+        if not raw:
+            return None, "empty response"
+        action = ""
+        reason = ""
+        try:
+            candidate = raw
+            if "```" in candidate:
+                candidate = re.sub(
+                    r"^.*?```(?:json)?\s*|\s*```.*$", "", candidate, flags=re.I | re.S
+                )
+            data = json.loads(candidate)
+            if not isinstance(data, dict):
+                return None, "JSON response is not an object"
+            action = str(data.get("action") or data.get("move") or "")
+            reason = str(data.get("reason") or data.get("rationale") or "")
+        except (json.JSONDecodeError, TypeError):
+            move_text, separator, trailing = raw.partition("|")
+            action = move_text
+            reason = trailing if separator else ""
+        cleaned = action.strip().upper()
+        for prefix in ("MOVE:", "MOVE=", "MOVE ", "ACTION:", "ACTION=", "ACTION "):
             if cleaned.startswith(prefix):
                 cleaned = cleaned.removeprefix(prefix).strip()
-        legal_by_name = {move.name: move for move in legal_moves}
-        legal_by_name.update({move.value: move for move in legal_moves})
-        selected = legal_by_name.get(cleaned)
-        if selected is None:
-            return GeminiDecision(
-                move=fallback,
-                rationale="Gemini returned an invalid move; heuristic fallback used.",
-                used_fallback=True,
+        aliases = {move.name: move for move in legal_moves}
+        aliases.update({move.value: move for move in legal_moves})
+        aliases.update(
+            {
+                "UP": Move.NORTH,
+                "DOWN": Move.SOUTH,
+                "LEFT": Move.WEST,
+                "RIGHT": Move.EAST,
+                "WAIT": Move.STAY,
+            }
+        )
+        selected = aliases.get(cleaned)
+        if selected not in legal_moves:
+            allowed = ", ".join(move.name for move in legal_moves)
+            shown = cleaned[:40] or "<missing>"
+            return (
+                None,
+                f"action {shown!r} is unavailable or malformed; allowed actions: {allowed}",
             )
-        rationale = reason.strip() if separator and reason.strip() else "Gemini selected this legal tactical move."
-        return GeminiDecision(move=selected, rationale=rationale[:180])
+        return (
+            selected,
+            reason.strip()[:180] or "Gemini selected a validated legal tactical move.",
+        ), ""
+
+
+def _float_env(name: str, default: float) -> float:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        parsed = float(value)
+    except ValueError:
+        return default
+    return parsed if parsed > 0 else default
+
+
+def _truthy_env(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _positions(values: tuple[Position, ...]) -> list[tuple[int, int]]:
+    return [(position.row, position.col) for position in values]
+
+
+def _positions_with_weights(
+    values: tuple[tuple[Position, float], ...],
+) -> list[tuple[int, int, float]]:
+    return [(position.row, position.col, round(weight, 4)) for position, weight in values]
