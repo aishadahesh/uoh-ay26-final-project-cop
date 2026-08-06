@@ -23,13 +23,17 @@ class ActionEvaluation:
     loop_penalty: float
     dead_end_penalty: float
     variation_bonus: float
+    direct_capture_risk: float = 0.0
+    proximity_risk: float = 0.0
 
     def summary(self) -> str:
         return (
             f"total={self.total:.2f}, path={self.path_distance:.2f}, "
             f"mobility={self.mobility}, future={self.future_value:.2f}, "
             f"revisit={self.revisit_penalty:.2f}, loop={self.loop_penalty:.2f}, "
-            f"dead_end={self.dead_end_penalty:.2f}, variation={self.variation_bonus:.2f}"
+            f"dead_end={self.dead_end_penalty:.2f}, variation={self.variation_bonus:.2f}, "
+            f"direct_capture_risk={self.direct_capture_risk:.3f}, "
+            f"proximity_risk={self.proximity_risk:.3f}"
         )
 
 
@@ -67,9 +71,7 @@ class TacticalPlanner:
         return tuple(self._moves)
 
     def record_move(self, before: Position, move: Move, after: Position) -> None:
-        if not self._positions:
-            self._positions.append(before)
-        elif self._positions[-1] != before:
+        if not self._positions or self._positions[-1] != before:
             self._positions.append(before)
         self._moves.append(move)
         self._positions.append(after)
@@ -147,6 +149,12 @@ class TacticalPlanner:
         distances = [(_shortest_distance(board, destination, target), probability) for target, probability in targets]
         weight = sum(probability for _, probability in distances) or 1.0
         expected_distance = sum(distance * probability for distance, probability in distances) / weight
+        direct_capture_risk = sum(
+            probability for distance, probability in distances if distance == 0
+        ) / weight
+        proximity_risk = sum(
+            probability for distance, probability in distances if distance <= 1
+        ) / weight
         mobility = sum(candidate is not Move.STAY for candidate in board.legal_moves(destination))
         future_value = self._future_value(board, destination, targets)
         revisit_penalty = 4.0 * visits[destination]
@@ -187,6 +195,8 @@ class TacticalPlanner:
                 - loop_penalty
                 - dead_end_penalty
                 + variation_bonus
+                - 200.0 * direct_capture_risk
+                - 45.0 * proximity_risk
             )
         return ActionEvaluation(
             move=move,
@@ -199,6 +209,8 @@ class TacticalPlanner:
             loop_penalty=loop_penalty,
             dead_end_penalty=dead_end_penalty,
             variation_bonus=variation_bonus,
+            direct_capture_risk=direct_capture_risk,
+            proximity_risk=proximity_risk,
         )
 
     def _variation_bonus(self, own: Position, move: Move) -> float:

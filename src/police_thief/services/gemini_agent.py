@@ -41,6 +41,7 @@ class TacticalContext:
     recent_actions: tuple[Move, ...] = ()
     repeated_state_warning: str = ""
     sub_game_number: int = 1
+    known_opponent_position: Position | None = None
 
 
 @dataclass(frozen=True)
@@ -204,12 +205,19 @@ class GeminiAgentAdvisor:
                 "survive: maximize distance from the believed cop, preserve multiple future exits, avoid dead ends, and avoid STAY unless safer"
             )
         )
+        confirmed = (
+            f"({context.known_opponent_position.row},{context.known_opponent_position.col})"
+            if context.known_opponent_position is not None else "UNKNOWN"
+        )
         return (
             "You are the primary tactical policy for a partially observable grid game.\n"
             "Choose ONLY one action from ALLOWED_ACTIONS. Every omitted direction is illegal now (off-board or blocked). "
             "Never invent a direction, coordinate, diagonal, barrier action, or prose-only answer.\n"
             f"ROLE={context.role.value}\nOBJECTIVE={objective}\n"
             f"OWN_POSITION=({context.own_position.row},{context.own_position.col})\n"
+            f"CONFIRMED_OPPONENT_POSITION={confirmed}\n"
+            "If CONFIRMED_OPPONENT_POSITION is known, never enter that cell. "
+            "Such an action is immediate capture and is omitted from ALLOWED_ACTIONS.\n"
             f"BELIEVED_OPPONENT=({context.belief_peak.row},{context.belief_peak.col}) (estimate, not truth)\n"
             f"BELIEF_CANDIDATES={_positions_with_weights(context.belief_candidates)}\n"
             f"BOARD_SIZE={context.board_size}x{context.board_size}\n"

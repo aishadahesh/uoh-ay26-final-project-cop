@@ -19,6 +19,20 @@ def test_signed_negotiation_round_trip():
     assert verify_agreement(message, terms) == {"group_name": "Alpha"}
 
 
+def test_signed_negotiation_carries_public_conformance_manifest():
+    terms = {"board_size": 7}
+    manifest = {"game_config_sha256": "a" * 64}
+    message = create_agreement(terms, {"group_name": "Alpha"}, manifest)
+    assert message["conformance"] == manifest
+    assert verify_agreement(message, terms) == {"group_name": "Alpha"}
+
+
+def test_negotiation_rejects_non_object_terms():
+    message = {"terms": [], "nonce": "x", "signature": "y", "identity": {}}
+    with pytest.raises(NetworkProtocolError, match="terms must be an object"):
+        verify_agreement(message, {})
+
+
 def test_negotiation_rejects_different_terms():
     message = create_agreement({"board_size": 7}, {})
     with pytest.raises(NetworkProtocolError, match="do not match"):

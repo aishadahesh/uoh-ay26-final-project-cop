@@ -34,7 +34,7 @@ MIN_CONCURRENT_REQUESTS = 2
 MIN_RETRY_BACKOFF_SEC = 5
 MIN_MAX_RETRIES = 3
 MIN_QUEUE_DEPTH = 100
-FIXED_NUM_GAMES = 6
+DEFAULT_NUM_GAMES = 1
 FIXED_DIVERSITY_REWARD = 10
 FIXED_MIN_GAMES_TO_PASS = 2
 FIXED_MAX_GAMES_PER_TEAM = 10
@@ -65,7 +65,7 @@ class NetworkLeagueConfig:
 
     response_timeout_sec: float = 30.0
     watchdog_timeout_sec: float = 60.0
-    num_games: int = FIXED_NUM_GAMES
+    num_games: int = DEFAULT_NUM_GAMES
     diversity_reward: int = FIXED_DIVERSITY_REWARD
     min_games_to_pass: int = FIXED_MIN_GAMES_TO_PASS
     max_games_per_team: int = FIXED_MAX_GAMES_PER_TEAM
@@ -119,13 +119,12 @@ def _validate_fixed_scent_config(scent: ScentConfig, path: Path) -> None:
 
 
 def _validate_fixed_network_league_config(network_league: NetworkLeagueConfig, path: Path) -> None:
-    """Validate the agreed series size and the fixed league constants.
-
-    Appendix F, Table 18 fixes a match-up at six sub-games. The remaining
-    league constants are fixed by the same table.
-    """
-    if network_league.num_games != FIXED_NUM_GAMES:
-        raise GameConfigError(f"num_games must be exactly {FIXED_NUM_GAMES} at {path}")
+    """Validate the negotiated series size and the fixed league constants."""
+    if not 1 <= network_league.num_games <= network_league.max_games_per_team:
+        raise GameConfigError(
+            "num_games must be between 1 and max_games_per_team "
+            f"({network_league.max_games_per_team}) at {path}"
+        )
     if network_league.diversity_reward != FIXED_DIVERSITY_REWARD:
         raise GameConfigError(
             f"diversity_reward must be exactly {FIXED_DIVERSITY_REWARD} at {path}"

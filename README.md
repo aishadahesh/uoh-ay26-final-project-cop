@@ -128,6 +128,14 @@ Human-vs-human mode does not require an API key.
 
 ## Trust and protocol design
 
+### Fail-closed pre-game rules gate
+
+Before either peer sends `READY` or executes a move, both sides now exchange and validate a redacted conformance manifest. The validator uses the official project definition as its canonical policy, not merely the opponent's copy. It strictly checks the complete `config/game.json` schema, types, allowed fields, protected board and scoring values, legal actions, initial positions, six-game series size, checksums, role pairing, sub-game number, and the shared timeout agreement.
+
+The opponent's active public GitHub repository is pinned to its announced 40-character commit. At that immutable revision the gate verifies `config/game.json`, confirms that `config/game.toml` and the required project documentation exist, and checks protected rule values. Only a redacted public TOML projection crosses the wire: team identity, repository links, sub-game number, and shared timeout. Strategy settings, prompts, Gemini configuration, credentials, email details, ports, and opponent URLs remain private and are never inspected or transmitted.
+
+Every attempt creates `results/network/validation_<game-id>_gNN.json`. A passing report records policy and file checksums plus repository checks. A failure records the exact file and field, error code, expected value, and received value; the process stops before declarations, `READY`, turns, or result generation.
+
 ### Peer-to-peer FastMCP
 
 Every participant is both server and client. The reference protocol exposes four operations:

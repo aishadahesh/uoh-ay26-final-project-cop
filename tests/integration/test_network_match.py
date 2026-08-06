@@ -7,6 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event
 
+import pytest
+
 from police_thief.services.mcp_client import PeerClientError
 from police_thief.services.mcp_server import PeerInboxes
 from police_thief.services.network_match import (
@@ -14,6 +16,7 @@ from police_thief.services.network_match import (
     NetworkMatchSeriesRunner,
     NetworkMatchSettings,
 )
+from police_thief.services.network_protocol import NetworkProtocolError
 from police_thief.shared.constants import AgentRole
 
 
@@ -87,12 +90,59 @@ class _DisconnectingTransport:
         return self._inner.poll_control()
 
 
-def test_two_peers_play_six_game_series_with_role_alternation(tmp_path):
+def _team_config(tmp_path, source, name, group_id, members, repos, num_games=6):
+    target = tmp_path / name / "game.json"
+    target.parent.mkdir(parents=True)
+    game = json.loads(source.read_text(encoding="utf-8"))
+    game["network_and_league"]["num_games"] = num_games
+    target.write_text(json.dumps(game), encoding="utf-8")
+    timeout = game["network_and_league"]["response_timeout_sec"]
+    target.with_suffix(".toml").write_text(
+        f'version = "1.00"\n[game]\ngroup_name = "{name}"\n'
+        f'group_id = "{group_id}"\nsub_game_number = 1\n'
+        f'members = {json.dumps(list(members))}\nrepos = {json.dumps(repos)}\n'
+        f'[network]\nmy_port = 8801\nopponent_url = "https://peer.example/mcp"\n'
+        f'turn_timeout_seconds = {timeout}\n',
+        encoding="utf-8",
+    )
+    # JSON inline tables are valid TOML except for ':' separators; normalize.
+    text = target.with_suffix(".toml").read_text(encoding="utf-8")
+    text = text.replace('"cop":', 'cop =').replace('"thief":', 'thief =')
+    target.with_suffix(".toml").write_text(text, encoding="utf-8")
+    return target
+
+
+@pytest.mark.parametrize("num_games", [1, 6])
+def test_two_peers_play_agreed_series_with_role_alternation(
+    tmp_path, monkeypatch, num_games,
+):
     project_root = Path(__file__).parents[2]
+    monkeypatch.setattr(
+        "police_thief.services.pregame_validation.inspect_public_repository",
+        lambda *_args: ([], [{"status": "verified-test-double"}]),
+    )
+    monkeypatch.setattr(
+        "police_thief.services.network_match.get_git_commit_hash", lambda _path: "a" * 40,
+    )
+    alpha_repos = {
+        "cop": "https://github.com/example/a-cop",
+        "thief": "https://github.com/example/a-thief",
+    }
+    beta_repos = {
+        "cop": "https://github.com/example/b-cop",
+        "thief": "https://github.com/example/b-thief",
+    }
+    alpha_config = _team_config(
+        tmp_path, project_root / "config" / "game.json", "alpha", "alpha",
+        ("Ada", "Grace"), alpha_repos, num_games,
+    )
+    beta_config = _team_config(
+        tmp_path, project_root / "config" / "game.json", "beta", "beta",
+        ("Linus", "Margaret"), beta_repos, num_games,
+    )
     common = {
         "local_port": 8801,
         "game_id": "NETWORK-TEST", "sub_game_number": 1,
-        "shared_config": project_root / "config" / "game.json",
         "shared_key": b"integration-secret",
     }
     cop_inboxes, thief_inboxes = PeerInboxes(), PeerInboxes()
@@ -102,10 +152,9 @@ def test_two_peers_play_six_game_series_with_role_alternation(tmp_path):
             public_url="https://cop.example/mcp", output_dir=tmp_path / "cop",
             team_name="alpha", members=("Ada", "Grace"),
             opponent_team_name="beta", opponent_members=("Linus", "Margaret"),
-            own_cop_repo="https://example.test/a-cop",
-            own_thief_repo="https://example.test/a-thief",
-            opponent_cop_repo="https://example.test/b-cop",
-            opponent_thief_repo="https://example.test/b-thief", **common,
+            own_cop_repo=alpha_repos["cop"], own_thief_repo=alpha_repos["thief"],
+            opponent_cop_repo=beta_repos["cop"], opponent_thief_repo=beta_repos["thief"],
+            shared_config=alpha_config, **common,
         ),
         cop_inboxes, transport=MemoryTransport(cop_inboxes, thief_inboxes),
     )
@@ -115,10 +164,9 @@ def test_two_peers_play_six_game_series_with_role_alternation(tmp_path):
             public_url="https://thief.example/mcp", output_dir=tmp_path / "thief",
             team_name="beta", members=("Linus", "Margaret"),
             opponent_team_name="alpha", opponent_members=("Ada", "Grace"),
-            own_cop_repo="https://example.test/b-cop",
-            own_thief_repo="https://example.test/b-thief",
-            opponent_cop_repo="https://example.test/a-cop",
-            opponent_thief_repo="https://example.test/a-thief", **common,
+            own_cop_repo=beta_repos["cop"], own_thief_repo=beta_repos["thief"],
+            opponent_cop_repo=alpha_repos["cop"], opponent_thief_repo=alpha_repos["thief"],
+            shared_config=beta_config, **common,
         ),
         thief_inboxes, transport=MemoryTransport(thief_inboxes, cop_inboxes),
     )
@@ -126,26 +174,27 @@ def test_two_peers_play_six_game_series_with_role_alternation(tmp_path):
         paths = list(executor.map(lambda runner: runner.run(Event()), (cop, thief)))
 
     results = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
-    assert all(result["mutual_sign_off"] for result in results)
-    assert all(result["num_games"] == 6 for result in results)
-    assert results[0]["sub_games"] == results[1]["sub_games"]
-    assert results[0]["team_scores"] == results[1]["team_scores"]
+    assert all(result["mutual_agreement"]["confirmed"] for result in results)
+    assert all(result["num_sub_games"] == num_games for result in results)
+    assert results[0]["game_uid"] == results[1]["game_uid"]
+    assert results[0]["final_result"]["total_score"] == results[1]["final_result"]["total_score"]
     assert [game["roles"]["alpha"] for game in results[0]["sub_games"]] == [
-        "cop", "thief", "cop", "thief", "cop", "thief",
+        "police" if index % 2 == 0 else "thief" for index in range(num_games)
     ]
-    for number in range(1, 7):
+    for number in range(1, num_games + 1):
         assert (tmp_path / "cop" / f"log_NETWORK-TEST_g{number:02d}.json").is_file()
-        assert (tmp_path / "cop" / f"result_NETWORK-TEST_g{number:02d}.json").is_file()
         assert (tmp_path / "thief" / f"config_NETWORK-TEST_g{number:02d}.json").is_file()
     assert (tmp_path / "cop" / "declaration_NETWORK-TEST.json").is_file()
+    assert (tmp_path / "cop" / "result_NETWORK-TEST.json").is_file()
 
     trajectories = set()
-    for number in range(1, 7):
-        records = json.loads(
+    for number in range(1, num_games + 1):
+        log_document = json.loads(
             (tmp_path / "cop" / f"log_NETWORK-TEST_g{number:02d}.json").read_text(
                 encoding="utf-8"
             )
         )
+        records = log_document["records"]
         moves = [
             record["payload"]
             for record in records
@@ -163,38 +212,19 @@ def test_two_peers_play_six_game_series_with_role_alternation(tmp_path):
         # A collision is terminal only when it remains the final audited
         # state. Earlier crossings can be hidden by commit-reveal, and a
         # capture can also be established by the separate boxed-in rule.
-        if latest.get("police") == latest.get("thief"):
+        if collision_index is not None:
             assert collision_index == len(moves) - 1, "no move may occur after capture"
-    assert len(trajectories) >= 2, "sub-games must not replay one identical trajectory"
+    assert len(trajectories) >= min(2, num_games), (
+        "multi-game series must not replay one identical trajectory"
+    )
 
 
-def test_two_peers_synchronize_barriers_and_resolve_a_barrier_driven_capture(tmp_path):
-    """Sec. 3.3.3/3.3.5/3.3.6 end-to-end: the cop's declared barriers reach
-    the thief's own board copy in real time (never sealed like a move), and
-    a barrier landing exactly on the thief's true cell (Sec. 3.3.5's other
-    capture rule, alongside boxed-in) is independently agreed by both
-    peers -- with no external judge -- to end the match in capture.
-
-    cop_start=[2, 0] / thief_start=[0, 0] is an empirically-verified close
-    corner scenario. Since the reachable-area-based barrier heuristic
-    (domain/strategy/manhattan_brain.py) only spends its budget on a
-    genuine chokepoint, it now converges to a capture very quickly here --
-    one barrier placement, landing on the thief's actual cell, rather than
-    the slower multi-turn boxed-in scenario the pre-enhancement heuristic
-    needed several barriers to (unreliably) reach from the same start.
-    is_boxed_in's own detection is separately proven at the unit level
-    (tests/unit/test_capture.py, test_strategy.py's chokepoint tests) --
-    this test's job is proving cross-peer synchronization and the mutual
-    audit, not which of Sec. 3.3.5's two capture conditions fires. There is
-    no randomness in the deterministic heuristic pipeline (Chapter 6), so
-    this is not a flaky timing race -- both peers reach identical local
-    truth.
-    """
+def test_modified_protected_start_positions_stop_before_any_move(tmp_path):
+    """A former strategy scenario changed protected starts; it must now fail closed."""
     project_root = Path(__file__).parents[2]
     shared_config = json.loads((project_root / "config" / "game.json").read_text(encoding="utf-8"))
     shared_config["board_and_agents"]["cop_start"] = [2, 0]
     shared_config["board_and_agents"]["thief_start"] = [0, 0]
-    shared_config["movement_and_barriers"]["max_moves"] = 30
     # get_git_commit_hash (Sec. 5.5.5) needs a real git working tree as cwd,
     # so this scratch config lives inside the repo rather than tmp_path --
     # cleaned up in the finally block below either way.
@@ -203,16 +233,12 @@ def test_two_peers_synchronize_barriers_and_resolve_a_barrier_driven_capture(tmp
     config_path = scratch_dir / "game.json"
     config_path.write_text(json.dumps(shared_config), encoding="utf-8")
 
-    common = {
-        "local_port": 8802,
-        "game_id": "BARRIER-TEST", "sub_game_number": 1,
-        "shared_config": config_path,
-        "shared_key": b"integration-secret",
-    }
     try:
         cop_inboxes, thief_inboxes = PeerInboxes(), PeerInboxes()
         cop = NetworkMatchRunner(
             NetworkMatchSettings(
+                local_port=8802, game_id="BARRIER-TEST", sub_game_number=1,
+                shared_config=config_path, shared_key=b"integration-secret",
                 role=AgentRole.COP, opponent_url="https://thief.example/mcp",
                 public_url="https://cop.example/mcp", output_dir=tmp_path / "cop",
                 team_name="alpha", members=("Ada", "Grace"),
@@ -220,37 +246,21 @@ def test_two_peers_synchronize_barriers_and_resolve_a_barrier_driven_capture(tmp
                 own_cop_repo="https://example.test/a-cop",
                 own_thief_repo="https://example.test/a-thief",
                 opponent_cop_repo="https://example.test/b-cop",
-                opponent_thief_repo="https://example.test/b-thief", **common,
+                opponent_thief_repo="https://example.test/b-thief",
             ),
             cop_inboxes, transport=MemoryTransport(cop_inboxes, thief_inboxes),
         )
-        thief = NetworkMatchRunner(
-            NetworkMatchSettings(
-                role=AgentRole.THIEF, opponent_url="https://cop.example/mcp",
-                public_url="https://thief.example/mcp", output_dir=tmp_path / "thief",
-                team_name="beta", members=("Linus", "Margaret"),
-                opponent_team_name="alpha", opponent_members=("Ada", "Grace"),
-                own_cop_repo="https://example.test/b-cop",
-                own_thief_repo="https://example.test/b-thief",
-                opponent_cop_repo="https://example.test/a-cop",
-                opponent_thief_repo="https://example.test/a-thief", **common,
-            ),
-            thief_inboxes, transport=MemoryTransport(thief_inboxes, cop_inboxes),
-        )
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            paths = list(executor.map(lambda runner: runner.run(Event()), (cop, thief)))
+        with pytest.raises(NetworkProtocolError, match="protected_value_mismatch"):
+            cop.run(Event())
     finally:
         shutil.rmtree(scratch_dir, ignore_errors=True)
-
-    results = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
-    assert all(result["outcome"] == "capture" for result in results)
-    assert all(result["mutual_sign_off"] for result in results)
-    assert results[0]["log_sha256"] == results[1]["log_sha256"]
-    cop_score, thief_score = results[0]["cop_score"], results[0]["thief_score"]
-    assert cop_score > thief_score
+    report = json.loads((tmp_path / "cop" / "validation_BARRIER-TEST_g01.json").read_text(encoding="utf-8"))
+    assert report["status"] == "failed"
+    assert thief_inboxes.turns.empty()
+    assert not list((tmp_path / "cop").glob("result_*.json"))
 
 
-def test_a_mid_match_disconnect_resolves_to_technical_loss_on_both_sides(tmp_path):
+def test_a_mid_match_disconnect_resolves_to_technical_loss_on_both_sides(tmp_path, monkeypatch):
     """Reproduces a real failure: the cop's transport starts raising
     PeerClientError after one successful turn (the opponent's tunnel
     dropping mid-match). Both sides used to crash the whole process with an
@@ -266,13 +276,23 @@ def test_a_mid_match_disconnect_resolves_to_technical_loss_on_both_sides(tmp_pat
     shared_config["network_and_league"]["response_timeout_sec"] = 2
     scratch_dir = project_root / "tests" / "integration" / "_scratch_disconnect_test"
     scratch_dir.mkdir(exist_ok=True)
-    config_path = scratch_dir / "game.json"
-    config_path.write_text(json.dumps(shared_config), encoding="utf-8")
+    source_path = scratch_dir / "source.json"
+    source_path.write_text(json.dumps(shared_config), encoding="utf-8")
+    monkeypatch.setattr(
+        "police_thief.services.pregame_validation.inspect_public_repository",
+        lambda *_args: ([], [{"status": "verified-test-double"}]),
+    )
+    monkeypatch.setattr(
+        "police_thief.services.network_match.get_git_commit_hash", lambda _path: "a" * 40,
+    )
+    alpha_repos = {"cop": "https://github.com/example/a-cop", "thief": "https://github.com/example/a-thief"}
+    beta_repos = {"cop": "https://github.com/example/b-cop", "thief": "https://github.com/example/b-thief"}
+    alpha_config = _team_config(scratch_dir, source_path, "alpha", "alpha", ("Ada", "Grace"), alpha_repos)
+    beta_config = _team_config(scratch_dir, source_path, "beta", "beta", ("Linus", "Margaret"), beta_repos)
 
     common = {
         "local_port": 8802,
         "game_id": "DISCONNECT-TEST", "sub_game_number": 1,
-        "shared_config": config_path,
         "shared_key": b"integration-secret",
     }
     try:
@@ -283,10 +303,9 @@ def test_a_mid_match_disconnect_resolves_to_technical_loss_on_both_sides(tmp_pat
                 public_url="https://cop.example/mcp", output_dir=tmp_path / "cop",
                 team_name="alpha", members=("Ada", "Grace"),
                 opponent_team_name="beta", opponent_members=("Linus", "Margaret"),
-                own_cop_repo="https://example.test/a-cop",
-                own_thief_repo="https://example.test/a-thief",
-                opponent_cop_repo="https://example.test/b-cop",
-                opponent_thief_repo="https://example.test/b-thief", **common,
+                own_cop_repo=alpha_repos["cop"], own_thief_repo=alpha_repos["thief"],
+                opponent_cop_repo=beta_repos["cop"], opponent_thief_repo=beta_repos["thief"],
+                shared_config=alpha_config, **common,
             ),
             cop_inboxes,
             transport=_DisconnectingTransport(MemoryTransport(cop_inboxes, thief_inboxes), fail_after=1),
@@ -297,10 +316,9 @@ def test_a_mid_match_disconnect_resolves_to_technical_loss_on_both_sides(tmp_pat
                 public_url="https://thief.example/mcp", output_dir=tmp_path / "thief",
                 team_name="beta", members=("Linus", "Margaret"),
                 opponent_team_name="alpha", opponent_members=("Ada", "Grace"),
-                own_cop_repo="https://example.test/b-cop",
-                own_thief_repo="https://example.test/b-thief",
-                opponent_cop_repo="https://example.test/a-cop",
-                opponent_thief_repo="https://example.test/a-thief", **common,
+                own_cop_repo=beta_repos["cop"], own_thief_repo=beta_repos["thief"],
+                opponent_cop_repo=alpha_repos["cop"], opponent_thief_repo=alpha_repos["thief"],
+                shared_config=beta_config, **common,
             ),
             thief_inboxes, transport=MemoryTransport(thief_inboxes, cop_inboxes),
         )

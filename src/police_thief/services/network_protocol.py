@@ -42,14 +42,19 @@ def verify_record(record: dict) -> bool:
         return False
 
 
-def create_agreement(terms: dict, identity: dict) -> dict:
+def create_agreement(
+    terms: dict, identity: dict, conformance: dict | None = None,
+) -> dict:
     nonce = secrets.token_hex(16)
-    return {
+    agreement = {
         "terms": terms,
         "nonce": nonce,
         "signature": _digest(terms, nonce),
         "identity": identity,
     }
+    if conformance is not None:
+        agreement["conformance"] = conformance
+    return agreement
 
 
 def verify_agreement(message: dict, expected_terms: dict) -> dict:
@@ -60,6 +65,10 @@ def verify_agreement(message: dict, expected_terms: dict) -> dict:
         identity = dict(message.get("identity", {}))
     except (KeyError, TypeError, ValueError) as exc:
         raise NetworkProtocolError(f"malformed negotiation message: {exc}") from exc
+    if not isinstance(terms, dict):
+        raise NetworkProtocolError(
+            f"malformed negotiation message: terms must be an object, got {type(terms).__name__}"
+        )
     if terms != expected_terms:
         differing = sorted(
             key
@@ -110,6 +119,7 @@ class AuditPayload:
     sender: str
     records: list[dict]
     result_claim: str
+    token_usage: dict | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)

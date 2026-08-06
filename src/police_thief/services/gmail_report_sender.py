@@ -72,6 +72,37 @@ def build_report_email(
     return message
 
 
+def build_submission_email(
+    to_addr: str, subject: str, attachments: list[tuple[str, dict | list]],
+) -> MIMEMultipart:
+    """Build the mandatory multi-JSON lifecycle report (PDF Sec. 9.3.3)."""
+    if not attachments:
+        raise ValueError("submission email requires at least one JSON attachment")
+    message = MIMEMultipart()
+    message["to"] = to_addr
+    message["subject"] = subject
+    message.attach(MIMEText(
+        "Automated signed match lifecycle report attached as JSON. See attachments.",
+        "plain",
+    ))
+    names: set[str] = set()
+    for filename, payload in attachments:
+        if filename in names:
+            raise ValueError(f"duplicate submission attachment filename: {filename}")
+        names.add(filename)
+        if not filename.endswith(".json") or not isinstance(payload, dict | list):
+            raise TypeError(
+                f"attachment {filename!r} must be a JSON filename with a dict/list payload"
+            )
+        part = MIMEApplication(
+            json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
+            _subtype="json",
+        )
+        part.add_header("Content-Disposition", "attachment", filename=filename)
+        message.attach(part)
+    return message
+
+
 def encode_for_gmail_api(message: MIMEMultipart) -> str:
     """Gmail API's `users.messages.send` requires the raw RFC 2822 message,
     base64url-encoded (T0453)."""
@@ -135,4 +166,34 @@ def send_match_report(
             attempts.append(SendAttempt(subject=subject, success=False, reason=str(exc)))
             return SendResult(sent=False, attempts=tuple(attempts))
 
+    return SendResult(sent=False, attempts=tuple(attempts))
+
+
+def send_submission_bundle(
+    gatekeeper: Gatekeeper,
+    transport: Transport,
+    backoff_policy: Http429BackoffPolicy,
+    to_addr: str,
+    subject: str,
+    attachments: list[tuple[str, dict | list]],
+    sleep: Callable[[float], None] = time.sleep,
+) -> SendResult:
+    """Send all mandatory lifecycle JSONs in one Gatekeeper-guarded email."""
+    decision = gatekeeper.submit()
+    if not decision.allowed:
+        return SendResult(sent=False, attempts=(), blocked_reason=decision.reason)
+    raw = encode_for_gmail_api(build_submission_email(to_addr, subject, attachments))
+    attempts: list[SendAttempt] = []
+    for wait_seconds in [0.0, *backoff_policy.backoff_schedule()]:
+        if wait_seconds:
+            sleep(wait_seconds)
+        try:
+            transport(raw)
+            attempts.append(SendAttempt(subject=subject, success=True))
+            return SendResult(sent=True, attempts=tuple(attempts))
+        except GmailRateLimitedError:
+            attempts.append(SendAttempt(subject=subject, success=False, reason="rate_limited_429"))
+        except GmailSendError as exc:
+            attempts.append(SendAttempt(subject=subject, success=False, reason=str(exc)))
+            return SendResult(sent=False, attempts=tuple(attempts))
     return SendResult(sent=False, attempts=tuple(attempts))

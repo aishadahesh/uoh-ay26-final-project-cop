@@ -104,24 +104,25 @@ def test_load_match_parameters_parses_a_valid_config(tmp_path):
     ],
 )
 def test_load_match_parameters_rejects_non_fixed_network_league_values(tmp_path, field, bad_value):
-    """App. F Table 18: these four fields are FIXED, not team-negotiable."""
+    """App. F Table 18: these league-policy fields remain fixed."""
     data = json.loads(json.dumps(VALID_CONFIG))
     data["network_and_league"][field] = bad_value
     with pytest.raises(GameConfigError, match="must be exactly"):
         load_match_parameters(_write(tmp_path, data))
 
 
-def test_load_match_parameters_accepts_required_six_game_series(tmp_path):
-    data = json.loads(json.dumps(VALID_CONFIG))
-    data["network_and_league"]["num_games"] = 6
-    assert load_match_parameters(_write(tmp_path, data)).network_league.num_games == 6
-
-
-@pytest.mark.parametrize("num_games", [0, 1, 5, 7, 10])
-def test_load_match_parameters_rejects_non_six_game_series(tmp_path, num_games):
+@pytest.mark.parametrize("num_games", [1, 2, 6, 10])
+def test_load_match_parameters_accepts_agreed_series_size(tmp_path, num_games):
     data = json.loads(json.dumps(VALID_CONFIG))
     data["network_and_league"]["num_games"] = num_games
-    with pytest.raises(GameConfigError, match="num_games must be exactly 6"):
+    assert load_match_parameters(_write(tmp_path, data)).network_league.num_games == num_games
+
+
+@pytest.mark.parametrize("num_games", [0, 11])
+def test_load_match_parameters_rejects_series_size_outside_allowed_range(tmp_path, num_games):
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data["network_and_league"]["num_games"] = num_games
+    with pytest.raises(GameConfigError, match="num_games must be between 1"):
         load_match_parameters(_write(tmp_path, data))
 
 
