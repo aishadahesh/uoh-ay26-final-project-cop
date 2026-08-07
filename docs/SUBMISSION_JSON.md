@@ -41,7 +41,7 @@ Optional: `_schema` explanatory text and `league` classification metadata. Priva
 
 Mandatory: `schema_version`, `game_id`, `game_uid`, `links`, integer `sub_game_number`, 14-key `terms`, and `config_sha256`. The checksum is lowercase SHA-256 over canonical UTF-8 JSON for `terms`.
 
-The 13 signed terms are: `board_size`, `smell_grid_size`, `decay_per_step`, `emit_intensity`, `max_steps`, `barriers_max`, `setting`, `hint_max_words`, `axis_origin_corner`, `axis_start_index`, `thief_start`, `cop_start`, and `num_games`.
+The 14 signed terms are: `board_size`, `smell_grid_size`, `decay_per_step`, `emit_intensity`, `min_center_intensity`, `max_steps`, `barriers_max`, `setting`, `hint_max_words`, `axis_origin_corner`, `axis_start_index`, `thief_start`, `cop_start`, and `num_games`.
 
 Optional: `_schema` and `league`.
 

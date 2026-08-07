@@ -565,6 +565,7 @@ class NetworkMatchRunner:
             "smell_grid_size": params.scent.field_size,
             "decay_per_step": params.scent.decay_rate,
             "emit_intensity": params.scent.center_intensity,
+            "min_center_intensity": params.scent.min_center_intensity,
             "max_steps": params.max_moves,
             "barriers_max": params.board.max_barriers,
             "setting": params.world.map_area,

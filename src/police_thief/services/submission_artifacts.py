@@ -24,6 +24,7 @@ GIT_RE = re.compile(r"^[0-9a-f]{40}$")
 GITHUB_RE = re.compile(r"^https://github\.com/[^/]+/[^/]+/?$")
 SIGNED_TERM_FIELDS = {
     "board_size", "smell_grid_size", "decay_per_step", "emit_intensity",
+    "min_center_intensity",
     "max_steps", "barriers_max", "setting", "hint_max_words",
     "axis_origin_corner", "axis_start_index", "thief_start", "cop_start",
     "num_games",
@@ -369,7 +370,7 @@ def validate_submission_directory(
             if config.get("sub_game_number") != number:
                 errors.append(_error(config_name, "sub_game_number", number, config.get("sub_game_number"), "filename_field_mismatch"))
             if not isinstance(config.get("terms"), dict) or set(config.get("terms", {})) != SIGNED_TERM_FIELDS:
-                errors.append(_error(config_name, "terms", "13-key signed terms object", config.get("terms"), "invalid_value"))
+                errors.append(_error(config_name, "terms", "14-key signed terms object", config.get("terms"), "invalid_value"))
             elif config.get("config_sha256") != canonical_hash(config["terms"]):
                 errors.append(_error(config_name, "config_sha256", canonical_hash(config["terms"]), config.get("config_sha256"), "checksum_mismatch"))
         if log:

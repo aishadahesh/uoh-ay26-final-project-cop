@@ -108,6 +108,11 @@ def _validate_fixed_scent_config(scent: ScentConfig, path: Path) -> None:
         raise GameConfigError(
             f"pheromone_center_intensity must be exactly {fixed.center_intensity} at {path}"
         )
+    if not math.isclose(scent.min_center_intensity, fixed.min_center_intensity):
+        raise GameConfigError(
+            "pheromone_min_center_intensity must be exactly "
+            f"{fixed.min_center_intensity} at {path}"
+        )
     if not math.isclose(scent.decay_rate, fixed.decay_rate):
         raise GameConfigError(f"pheromone_decay must be exactly {fixed.decay_rate} at {path}")
     if scent.field_size != fixed.field_size:
@@ -215,6 +220,7 @@ def load_match_parameters(path: Path) -> MatchParameters:
         )
         scent = ScentConfig(
             center_intensity=float(pheromones_section["pheromone_center_intensity"]),
+            min_center_intensity=float(pheromones_section["pheromone_min_center_intensity"]),
             decay_rate=float(pheromones_section["pheromone_decay"]),
             field_size=int(pheromones_section["pheromone_grid_size"]),
         )

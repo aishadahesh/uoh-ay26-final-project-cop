@@ -37,6 +37,7 @@ _SCHEMA: dict[str, dict[str, type | tuple[type, ...]]] = {
     },
     "pheromones": {
         "pheromone_center_intensity": (int, float),
+        "pheromone_min_center_intensity": (int, float),
         "pheromone_decay": (int, float), "pheromone_grid_size": int,
     },
     "world": {"map_area": str, "hint_max_words": int},
@@ -75,6 +76,7 @@ _PROTECTED: dict[str, Any] = {
     "scoring.survival_cop": 5, "scoring.survival_thief": 10,
     "scoring.tie_score": 2, "scoring.technical_loss": 0,
     "pheromones.pheromone_center_intensity": 0.9,
+    "pheromones.pheromone_min_center_intensity": 0.5,
     "pheromones.pheromone_decay": 0.1,
     "pheromones.pheromone_grid_size": 5,
     "world.hint_max_words": 15,

@@ -31,7 +31,7 @@ def _identity(group_id):
 def _terms():
     return {
         "board_size": 7, "smell_grid_size": 5, "decay_per_step": 0.1,
-        "emit_intensity": 0.9,
+        "emit_intensity": 0.9, "min_center_intensity": 0.5,
         "max_steps": 35, "barriers_max": 14, "setting": "New York",
         "hint_max_words": 15, "axis_origin_corner": "top-left",
         "axis_start_index": 0, "thief_start": [3, 3],

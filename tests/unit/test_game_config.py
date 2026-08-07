@@ -35,6 +35,7 @@ VALID_CONFIG: dict = {
     },
     "pheromones": {
         "pheromone_center_intensity": 0.9,
+        "pheromone_min_center_intensity": 0.5,
         "pheromone_decay": 0.10,
         "pheromone_grid_size": 5,
     },
@@ -82,6 +83,7 @@ def test_load_match_parameters_parses_a_valid_config(tmp_path):
     assert params.max_moves == 35
     assert params.survival_threshold == 35
     assert params.scent.center_intensity == 0.9
+    assert params.scent.min_center_intensity == 0.5
     assert params.scent.decay_rate == 0.10
     assert params.scent.field_size == 5
     assert params.world.map_area == "New York"
@@ -155,6 +157,7 @@ def test_load_match_parameters_allows_raising_rate_limiter_values_above_floor(tm
     ("field", "bad_value"),
     [
         ("pheromone_center_intensity", 0.5),
+        ("pheromone_min_center_intensity", 0.4),
         ("pheromone_decay", 0.20),
         ("pheromone_grid_size", 7),
     ],
