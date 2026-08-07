@@ -617,10 +617,18 @@ class NetworkMatchRunner:
         }
         for field, value in expected.items():
             configured = value not in ("", "TBD", [], {"cop": "TBD", "thief": "TBD"})
-            if configured and identity.get(field) != value:
+            received = identity.get(field)
+            matches = (
+                isinstance(value, str)
+                and isinstance(received, str)
+                and value.casefold() == received.casefold()
+                if field == "group_name"
+                else received == value
+            )
+            if configured and not matches:
                 raise NetworkProtocolError(
                     f"opponent identity mismatch for {field}: configured {value!r}, "
-                    f"negotiated {identity.get(field)!r}"
+                    f"negotiated {received!r}"
                 )
 
     def _sealed_system_spec(self) -> dict:
