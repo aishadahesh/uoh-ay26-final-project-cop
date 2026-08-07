@@ -37,14 +37,14 @@ def test_fingerprint_is_independent_of_key_order(tmp_path):
     assert original_fp == reordered_fp
 
 
-def test_fingerprint_changes_if_the_otherwise_fixed_scent_decay_rate_changes(tmp_path):
+def test_fingerprint_changes_if_the_fixed_pheromone_decay_changes(tmp_path):
     """The whole point of Sec. 4.2.6's "cryptographic locking": any change
     to scent parameters -- even ones the loader itself treats as fixed --
     is detectable via the fingerprint before load_match_parameters is
     even called.
     """
     tampered = json.loads(json.dumps(_BASE_CONFIG))
-    tampered["pheromones"]["scent_decay_rate"] = 0.20
+    tampered["pheromones"]["pheromone_decay"] = 0.20
     original_fp = config_fingerprint(_write(tmp_path / "a", _BASE_CONFIG))
     tampered_fp = config_fingerprint(_write(tmp_path / "b", tampered))
     assert original_fp != tampered_fp

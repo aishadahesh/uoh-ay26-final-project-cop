@@ -24,10 +24,9 @@
     "technical_loss": 0
   },
   "pheromones": {
-    "scent_center_intensity": 0.9,
-    "scent_min_center_intensity": 0.5,
-    "scent_decay_rate": 0.10,
-    "scent_field_size": 5
+    "pheromone_center_intensity": 0.9,
+    "pheromone_decay": 0.10,
+    "pheromone_grid_size": 5
   },
   "world": {
     "map_area": "New York",

@@ -34,10 +34,9 @@ VALID_CONFIG: dict = {
         "technical_loss": 0,
     },
     "pheromones": {
-        "scent_center_intensity": 0.9,
-        "scent_min_center_intensity": 0.5,
-        "scent_decay_rate": 0.10,
-        "scent_field_size": 5,
+        "pheromone_center_intensity": 0.9,
+        "pheromone_decay": 0.10,
+        "pheromone_grid_size": 5,
     },
     "world": {
         "map_area": "New York",
@@ -83,7 +82,6 @@ def test_load_match_parameters_parses_a_valid_config(tmp_path):
     assert params.max_moves == 35
     assert params.survival_threshold == 35
     assert params.scent.center_intensity == 0.9
-    assert params.scent.min_center_intensity == 0.5
     assert params.scent.decay_rate == 0.10
     assert params.scent.field_size == 5
     assert params.world.map_area == "New York"
@@ -156,10 +154,9 @@ def test_load_match_parameters_allows_raising_rate_limiter_values_above_floor(tm
 @pytest.mark.parametrize(
     ("field", "bad_value"),
     [
-        ("scent_center_intensity", 0.5),
-        ("scent_min_center_intensity", 0.4),
-        ("scent_decay_rate", 0.20),
-        ("scent_field_size", 7),
+        ("pheromone_center_intensity", 0.5),
+        ("pheromone_decay", 0.20),
+        ("pheromone_grid_size", 7),
     ],
 )
 def test_load_match_parameters_rejects_non_fixed_scent_values(tmp_path, field, bad_value):

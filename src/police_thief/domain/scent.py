@@ -29,7 +29,6 @@ class ScentConfig:
     """
 
     center_intensity: float = 0.9
-    min_center_intensity: float = 0.5
     decay_rate: float = 0.10
     field_size: int = 5
 

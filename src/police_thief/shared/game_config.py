@@ -106,16 +106,12 @@ def _validate_fixed_scent_config(scent: ScentConfig, path: Path) -> None:
     fixed = _FIXED_SCENT_CONFIG
     if not math.isclose(scent.center_intensity, fixed.center_intensity):
         raise GameConfigError(
-            f"scent_center_intensity must be exactly {fixed.center_intensity} at {path}"
-        )
-    if not math.isclose(scent.min_center_intensity, fixed.min_center_intensity):
-        raise GameConfigError(
-            f"scent_min_center_intensity must be exactly {fixed.min_center_intensity} at {path}"
+            f"pheromone_center_intensity must be exactly {fixed.center_intensity} at {path}"
         )
     if not math.isclose(scent.decay_rate, fixed.decay_rate):
-        raise GameConfigError(f"scent_decay_rate must be exactly {fixed.decay_rate} at {path}")
+        raise GameConfigError(f"pheromone_decay must be exactly {fixed.decay_rate} at {path}")
     if scent.field_size != fixed.field_size:
-        raise GameConfigError(f"scent_field_size must be exactly {fixed.field_size} at {path}")
+        raise GameConfigError(f"pheromone_grid_size must be exactly {fixed.field_size} at {path}")
 
 
 def _validate_fixed_network_league_config(network_league: NetworkLeagueConfig, path: Path) -> None:
@@ -218,10 +214,9 @@ def load_match_parameters(path: Path) -> MatchParameters:
             technical_loss=int(scoring_section["technical_loss"]),
         )
         scent = ScentConfig(
-            center_intensity=float(pheromones_section["scent_center_intensity"]),
-            min_center_intensity=float(pheromones_section["scent_min_center_intensity"]),
-            decay_rate=float(pheromones_section["scent_decay_rate"]),
-            field_size=int(pheromones_section["scent_field_size"]),
+            center_intensity=float(pheromones_section["pheromone_center_intensity"]),
+            decay_rate=float(pheromones_section["pheromone_decay"]),
+            field_size=int(pheromones_section["pheromone_grid_size"]),
         )
         _validate_fixed_scent_config(scent, path)
 
