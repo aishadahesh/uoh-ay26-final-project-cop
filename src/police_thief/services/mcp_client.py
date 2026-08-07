@@ -46,15 +46,19 @@ class McpPeerTransport:
     def __init__(
         self, opponent_url: str, inboxes: PeerInboxes,
         connect_timeout: float = 30.0, retry_interval: float = 1.0,
+        sender: str = "police-thief-peer",
     ) -> None:
         self.opponent_url = opponent_url
         self.inboxes = inboxes
         self.connect_timeout = connect_timeout
         self.retry_interval = retry_interval
+        self.sender = sender
 
     async def _call_async(self, tool: str, argument_name: str, payload: dict) -> dict:
         try:
-            async with Client(self.opponent_url, timeout=self.connect_timeout) as client:
+            async with Client(
+                self.opponent_url, name=self.sender, timeout=self.connect_timeout,
+            ) as client:
                 result = await client.call_tool(tool, {argument_name: payload})
         except Exception as exc:
             raise PeerClientError(
@@ -62,14 +66,14 @@ class McpPeerTransport:
             ) from exc
         return result.data
 
-    def _send(self, tool: str, argument_name: str, payload: dict, timeout: float) -> None:
+    def _send(self, tool: str, argument_name: str, payload: dict, timeout: float) -> dict:
         deadline = time.monotonic() + timeout
         last_error: Exception | None = None
         while time.monotonic() < deadline:
             try:
                 response = asyncio.run(self._call_async(tool, argument_name, payload))
-                if response.get("ok"):
-                    return
+                if response.get("ok") is True or response.get("accepted") is True:
+                    return response
                 raise PeerClientError(f"{tool} rejected by opponent: {response}")
             except PeerClientError as exc:
                 last_error = exc
@@ -77,7 +81,13 @@ class McpPeerTransport:
         raise PeerClientError(f"{tool} timed out: {last_error}")
 
     def exchange_agreement(self, message: dict, timeout: float) -> dict:
-        self._send("negotiate", "message", message, timeout)
+        response = self._send("negotiate", "message", message, timeout)
+        required = {"identity", "nonce", "signature", "terms"}
+        for candidate in (
+            response.get("agreement"), response.get("message"), response,
+        ):
+            if isinstance(candidate, dict) and required <= set(candidate):
+                return candidate
         try:
             return self.inboxes.agreements.get(timeout=timeout)
         except queue.Empty as exc:

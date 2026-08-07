@@ -312,6 +312,37 @@ def validate_peer_conformance(
 ) -> tuple[list[ValidationIssue], list[dict[str, Any]]]:
     issues: list[ValidationIssue] = []
     checks: list[dict[str, Any]] = []
+    if peer is None:
+        # The lecturer/reference envelope contains exactly identity, nonce,
+        # signature, and terms. Preserve the custom manifest when another
+        # copy of this project offers it, but do not require that extension.
+        expected_peer_role = "thief" if local_role == "cop" else "cop"
+        expected_commit = peer_identity.get("git_commit_hash")
+        if not isinstance(expected_commit, str) or not re.fullmatch(
+            r"[0-9a-fA-F]{40}", expected_commit,
+        ):
+            issues.append(_issue(
+                "opponent", "agreement.identity", "git_commit_hash",
+                "invalid_value", "40-character Git commit SHA", expected_commit,
+            ))
+        servers = peer_identity.get("mcp_servers")
+        if isinstance(servers, dict) and expected_peer_role not in servers:
+            issues.append(_issue(
+                "opponent", "agreement.identity", "mcp_servers",
+                "missing_role", expected_peer_role, sorted(servers),
+            ))
+        if inspect_repository and not issues:
+            repos = peer_identity.get("repos", {})
+            repo_url = repos.get(expected_peer_role) if isinstance(repos, dict) else None
+            repo_issues, checks = inspect_public_repository(
+                repo_url, expected_commit, local.get("game_config"),
+            )
+            issues.extend(repo_issues)
+        checks.insert(0, {
+            "status": "reference-envelope",
+            "detail": "custom conformance extension not supplied",
+        })
+        return issues, checks
     if not isinstance(peer, dict):
         return [_issue("opponent", "agreement.conformance", "$", "missing_or_wrong_type", "object", type(peer).__name__)], checks
     required = {

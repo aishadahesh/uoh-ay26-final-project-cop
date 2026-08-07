@@ -89,6 +89,35 @@ def test_peer_shared_mismatch_stops_validation(tmp_path):
     assert any(i.code == "checksum_mismatch" for i in peer_issues)
 
 
+def test_reference_envelope_may_omit_custom_conformance(tmp_path):
+    local, issues = _manifest(tmp_path)
+    assert issues == []
+    identity = {
+        "repos": {
+            "cop": "https://github.com/example/cop",
+            "thief": "https://github.com/example/thief",
+        },
+        "mcp_servers": {"thief": "https://peer.example/mcp"},
+        "git_commit_hash": COMMIT,
+    }
+    peer_issues, checks = validate_peer_conformance(
+        None, local, local_role="cop", sub_game_number=1,
+        peer_identity=identity, inspect_repository=False,
+    )
+    assert peer_issues == []
+    assert checks[0]["status"] == "reference-envelope"
+
+
+def test_malformed_custom_conformance_is_still_rejected(tmp_path):
+    local, issues = _manifest(tmp_path)
+    assert issues == []
+    peer_issues, _ = validate_peer_conformance(
+        "invalid", local, local_role="cop", sub_game_number=1,
+        peer_identity={}, inspect_repository=False,
+    )
+    assert any(issue.code == "missing_or_wrong_type" for issue in peer_issues)
+
+
 def test_agreed_single_game_is_valid():
     data = _game()
     data["network_and_league"]["num_games"] = 1

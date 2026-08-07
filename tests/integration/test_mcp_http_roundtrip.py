@@ -51,7 +51,7 @@ def running_server():
 def test_real_http_roundtrip_accepts_well_formed_move(running_server):
     url, inboxes = running_server
     result = send_move(url, signed_move="N", signature="abc123")
-    assert result == {"accepted": True, "ok": True}
+    assert result == {"accepted": True, "kind": "turn", "errors": []}
     assert inboxes.turns.get_nowait() == {"signed_move": "N", "signature": "abc123"}
 
 
@@ -63,8 +63,9 @@ def test_real_http_retry_is_acknowledged_without_duplicate_delivery(running_serv
         async with Client(url) as client:
             first = await client.call_tool("receive_turn", {"message": payload})
             retry = await client.call_tool("receive_turn", {"message": payload})
-        assert first.data == {"ok": True}
-        assert retry.data == {"ok": True, "duplicate": True}
+        expected = {"accepted": True, "kind": "turn", "errors": []}
+        assert first.data == expected
+        assert retry.data == expected
 
     asyncio.run(exercise())
     assert inboxes.turns.get_nowait() == payload
@@ -79,19 +80,21 @@ def test_real_http_server_exposes_no_legacy_receive_move_tool(running_server):
 def test_real_http_server_routes_all_four_reference_tools(running_server):
     url, inboxes = running_server
     payloads = {
-        "negotiate": ("message", {"terms": {}}),
-        "receive_turn": ("message", {"step": 1}),
-        "submit_audit": ("payload", {"records": []}),
-        "receive_control": ("message", {"kind": "status"}),
+        "negotiate": ("message", {"terms": {}}, "negotiate"),
+        "receive_turn": ("message", {"step": 1}, "turn"),
+        "submit_audit": ("payload", {"records": []}, "audit"),
+        "receive_control": ("message", {"kind": "status"}, "control"),
     }
 
     async def exercise() -> None:
         async with Client(url) as client:
             tools = {tool.name for tool in await client.list_tools()}
             assert tools == set(payloads)
-            for tool, (argument, payload) in payloads.items():
+            for tool, (argument, payload, response_kind) in payloads.items():
                 result = await client.call_tool(tool, {argument: payload})
-                assert result.data == {"ok": True}
+                assert result.data == {
+                    "accepted": True, "kind": response_kind, "errors": [],
+                }
 
     asyncio.run(exercise())
     assert inboxes.agreements.get_nowait() == {"terms": {}}

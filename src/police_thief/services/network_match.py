@@ -120,7 +120,9 @@ class NetworkMatchRunner:
     ) -> None:
         self.settings = settings
         self.gemini_advisor = gemini_advisor
-        self.transport = transport or McpPeerTransport(settings.opponent_url, inboxes)
+        self.transport = transport or McpPeerTransport(
+            settings.opponent_url, inboxes, sender=settings.role.value,
+        )
         self._usage_start = self._gemini_usage_snapshot()
 
     def run(self, stop: Event, emit: EventSink = lambda _message: None) -> Path:
@@ -157,7 +159,7 @@ class NetworkMatchRunner:
         emit("Validating signed game terms, public configuration, and opponent repository")
         try:
             peer_agreement = self.transport.exchange_agreement(
-                create_agreement(terms, own_identity, local_manifest), timeout,
+                create_agreement(terms, own_identity), timeout,
             )
             peer_identity = verify_agreement(peer_agreement, terms)
             self._validate_peer_identity(peer_identity)
@@ -174,6 +176,8 @@ class NetworkMatchRunner:
             emit(format_failure(issues, report))
             raise NetworkProtocolError(format_failure(issues, report)) from exc
         peer_manifest = peer_agreement.get("conformance")
+        if peer_manifest is None:
+            emit("Opponent uses the strict four-field reference agreement envelope")
         peer_issues, repository_checks = validate_peer_conformance(
             peer_manifest, local_manifest, local_role=s.role.value,
             sub_game_number=s.sub_game_number, peer_identity=peer_identity,
@@ -585,7 +589,7 @@ class NetworkMatchRunner:
             "group_name": s.team_name,
             "members": list(s.members),
             "repos": {"cop": s.own_cop_repo, "thief": s.own_thief_repo},
-            "mcp_servers": {WIRE_ROLES[s.role.value]: s.public_url},
+            "mcp_servers": {s.role.value: s.public_url},
             "llm_model": s.llm_model,
             # Exact public hardware keys consumed by the reference report
             # builder after a successful match.
