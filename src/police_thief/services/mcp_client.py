@@ -46,12 +46,14 @@ class McpPeerTransport:
     def __init__(
         self, opponent_url: str, inboxes: PeerInboxes,
         connect_timeout: float = 30.0, retry_interval: float = 1.0,
+        boundary_retry_interval: float = 5.0,
         sender: str = "police-thief-peer",
     ) -> None:
         self.opponent_url = opponent_url
         self.inboxes = inboxes
         self.connect_timeout = connect_timeout
         self.retry_interval = retry_interval
+        self.boundary_retry_interval = boundary_retry_interval
         self.sender = sender
 
     async def _call_async(self, tool: str, argument_name: str, payload: dict) -> dict:
@@ -78,8 +80,31 @@ class McpPeerTransport:
                 continue
             if response.get("ok") is True or response.get("accepted") is True:
                 return response
-            raise PeerClientError(f"{tool} rejected by opponent: {response}")
+            rejection = PeerClientError(f"{tool} rejected by opponent: {response}")
+            if self._is_boundary_retry(tool, response):
+                last_error = rejection
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                time.sleep(min(self.boundary_retry_interval, remaining))
+                continue
+            raise rejection
         raise PeerClientError(f"{tool} timed out: {last_error}")
+
+    @staticmethod
+    def _is_boundary_retry(tool: str, response: dict) -> bool:
+        """Retry only the peer's explicit temporary sub-game boundary refusal."""
+        if tool != "negotiate":
+            return False
+        errors = response.get("errors", [])
+        if isinstance(errors, str):
+            errors = [errors]
+        return isinstance(errors, list) and any(
+            isinstance(error, str)
+            and "mini-game is in progress" in error.casefold()
+            and "boundary" in error.casefold()
+            for error in errors
+        )
 
     def exchange_agreement(self, message: dict, timeout: float) -> dict:
         response = self._send("negotiate", "message", message, timeout)

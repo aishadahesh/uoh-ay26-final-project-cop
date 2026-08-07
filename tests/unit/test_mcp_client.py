@@ -56,6 +56,34 @@ def test_exchange_agreement_surfaces_explicit_rejection_without_retrying(monkeyp
     assert calls == 1
 
 
+def test_exchange_agreement_retries_temporary_boundary_rejection(monkeypatch):
+    inboxes = PeerInboxes()
+    transport = McpPeerTransport(
+        "https://peer.example/mcp", inboxes, boundary_retry_interval=0,
+    )
+    agreement = {"identity": {}, "nonce": "n", "signature": "s", "terms": {}}
+    inboxes.agreements.put(agreement)
+    responses = iter([
+        {
+            "ok": False,
+            "accepted": False,
+            "kind": "negotiate",
+            "errors": ["a mini-game is in progress; re-send this handshake at the boundary"],
+        },
+        {"ok": True, "accepted": True, "kind": "negotiate", "errors": []},
+    ])
+    calls = 0
+
+    async def retry_at_boundary(_tool, _argument_name, _payload):
+        nonlocal calls
+        calls += 1
+        return next(responses)
+
+    monkeypatch.setattr(transport, "_call_async", retry_at_boundary)
+    assert transport.exchange_agreement(agreement, timeout=1) == agreement
+    assert calls == 2
+
+
 def test_exchange_agreement_accepts_inline_reference_agreement(monkeypatch):
     transport = McpPeerTransport("https://peer.example/mcp", PeerInboxes())
     agreement = {"identity": {}, "nonce": "n", "signature": "s", "terms": {}}

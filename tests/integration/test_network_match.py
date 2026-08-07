@@ -113,7 +113,7 @@ def _team_config(tmp_path, source, name, group_id, members, repos, num_games=6):
 
 
 @pytest.mark.parametrize("num_games", [1, 6])
-def test_two_peers_play_agreed_series_with_fixed_repository_roles(
+def test_two_peers_play_agreed_series_with_role_alternation(
     tmp_path, monkeypatch, num_games,
 ):
     project_root = Path(__file__).parents[2]
@@ -179,10 +179,10 @@ def test_two_peers_play_agreed_series_with_fixed_repository_roles(
     assert results[0]["game_uid"] == results[1]["game_uid"]
     assert results[0]["final_result"]["total_score"] == results[1]["final_result"]["total_score"]
     assert [game["roles"]["alpha"] for game in results[0]["sub_games"]] == [
-        "police" for _ in range(num_games)
+        "police" if index % 2 == 0 else "thief" for index in range(num_games)
     ]
     assert [game["roles"]["beta"] for game in results[0]["sub_games"]] == [
-        "thief" for _ in range(num_games)
+        "thief" if index % 2 == 0 else "police" for index in range(num_games)
     ]
     for number in range(1, num_games + 1):
         assert (tmp_path / "cop" / f"log_NETWORK-TEST_g{number:02d}.json").is_file()
