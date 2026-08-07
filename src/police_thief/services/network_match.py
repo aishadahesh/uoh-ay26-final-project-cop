@@ -742,12 +742,10 @@ class NetworkMatchRunner:
 
 
 def role_for_subgame(natural_role: AgentRole, series_index: int) -> AgentRole:
-    """Alternate roles while each repository keeps its natural first-game role."""
+    """Keep the CLI-selected repository role for every sub-game in the series."""
     if series_index < 0:
         raise ValueError("series_index must be non-negative")
-    if series_index % 2 == 0:
-        return natural_role
-    return AgentRole.THIEF if natural_role is AgentRole.COP else AgentRole.COP
+    return natural_role
 
 
 class NetworkMatchSeriesRunner:
