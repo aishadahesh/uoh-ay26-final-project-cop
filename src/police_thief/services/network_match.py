@@ -47,14 +47,6 @@ from police_thief.services.network_protocol import (
     seal_payload,
     verify_agreement,
 )
-from police_thief.services.pregame_validation import (
-    ValidationIssue,
-    build_local_conformance,
-    format_failure,
-    save_validation_result,
-    validate_local_identity,
-    validate_peer_conformance,
-)
 from police_thief.services.step0 import (
     Step0Declaration,
     TokenUsage,
@@ -127,80 +119,16 @@ class NetworkMatchRunner:
 
     def run(self, stop: Event, emit: EventSink = lambda _message: None) -> Path:
         s = self.settings
-        commit_hash = get_git_commit_hash(str(s.shared_config.parent.parent))
-        local_manifest, local_issues = build_local_conformance(
-            s.shared_config, s.shared_config.with_suffix(".toml"),
-            role=s.role.value, sub_game_number=s.sub_game_number,
-            git_commit_hash=commit_hash,
-        )
-        if local_issues:
-            report = save_validation_result(
-                s.output_dir, game_id=s.game_id,
-                sub_game_number=s.sub_game_number, status="failed",
-                local_manifest=local_manifest, issues=local_issues,
-            )
-            emit(format_failure(local_issues, report))
-            raise NetworkProtocolError(format_failure(local_issues, report))
-
         own_identity = self._identity()
-        identity_issues = validate_local_identity(local_manifest, own_identity)
-        if identity_issues:
-            report = save_validation_result(
-                s.output_dir, game_id=s.game_id,
-                sub_game_number=s.sub_game_number, status="failed",
-                local_manifest=local_manifest, issues=identity_issues,
-            )
-            emit(format_failure(identity_issues, report))
-            raise NetworkProtocolError(format_failure(identity_issues, report))
-
         params = load_match_parameters(s.shared_config)
         timeout = params.network_league.response_timeout_sec
         terms = self._terms(params)
-        emit("Validating signed game terms, public configuration, and opponent repository")
-        try:
-            peer_agreement = self.transport.exchange_agreement(
-                create_agreement(terms, own_identity), timeout,
-            )
-            peer_identity = verify_agreement(peer_agreement, terms)
-            self._validate_peer_identity(peer_identity)
-        except (NetworkProtocolError, PeerClientError) as exc:
-            issues = [ValidationIssue(
-                "opponent", "agreement", "$", "negotiation_failed",
-                "valid signed terms and declared identity", str(exc),
-            )]
-            report = save_validation_result(
-                s.output_dir, game_id=s.game_id,
-                sub_game_number=s.sub_game_number, status="failed",
-                local_manifest=local_manifest, issues=issues,
-            )
-            emit(format_failure(issues, report))
-            raise NetworkProtocolError(format_failure(issues, report)) from exc
-        peer_manifest = peer_agreement.get("conformance")
-        if peer_manifest is None:
-            emit("Opponent uses the strict four-field reference agreement envelope")
-        peer_issues, repository_checks = validate_peer_conformance(
-            peer_manifest, local_manifest, local_role=s.role.value,
-            sub_game_number=s.sub_game_number, peer_identity=peer_identity,
+        emit("Negotiating peer session")
+        peer_agreement = self.transport.exchange_agreement(
+            create_agreement(terms, own_identity), timeout,
         )
-        if peer_issues:
-            report = save_validation_result(
-                s.output_dir, game_id=s.game_id,
-                sub_game_number=s.sub_game_number, status="failed",
-                local_manifest=local_manifest, peer_manifest=peer_manifest,
-                issues=peer_issues, repository_checks=repository_checks,
-            )
-            emit(format_failure(peer_issues, report))
-            raise NetworkProtocolError(format_failure(peer_issues, report))
-        report = save_validation_result(
-            s.output_dir, game_id=s.game_id,
-            sub_game_number=s.sub_game_number, status="passed",
-            local_manifest=local_manifest, peer_manifest=peer_manifest,
-            repository_checks=repository_checks,
-        )
-        emit(
-            f"Pre-game validation passed with "
-            f"{peer_identity.get('group_name', 'opponent')}; report saved to {report}"
-        )
+        peer_identity = verify_agreement(peer_agreement, terms)
+        emit(f"Peer session established with {peer_identity.get('group_name', 'opponent')}")
         self._write_pregame_files(params)
         self._send_control("enable", "READY")
 
