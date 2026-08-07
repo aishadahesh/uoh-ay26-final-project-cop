@@ -14,7 +14,14 @@ async def test_send_move_raises_peer_client_error_when_opponent_unreachable():
         )
 
 
-@pytest.mark.parametrize("ack", [{"ok": True}, {"accepted": True, "kind": "negotiate"}])
+@pytest.mark.parametrize(
+    "ack",
+    [
+        {"ok": True},
+        {"accepted": True, "kind": "negotiate"},
+        {"ok": True, "accepted": True, "kind": "negotiate"},
+    ],
+)
 def test_exchange_agreement_accepts_local_and_reference_acknowledgements(monkeypatch, ack):
     inboxes = PeerInboxes()
     transport = McpPeerTransport("https://peer.example/mcp", inboxes)
@@ -26,6 +33,27 @@ def test_exchange_agreement_accepts_local_and_reference_acknowledgements(monkeyp
 
     monkeypatch.setattr(transport, "_call_async", call_once)
     assert transport.exchange_agreement(agreement, timeout=0.1) == agreement
+
+
+def test_exchange_agreement_surfaces_explicit_rejection_without_retrying(monkeypatch):
+    transport = McpPeerTransport("https://peer.example/mcp", PeerInboxes())
+    agreement = {"identity": {}, "nonce": "n", "signature": "s", "terms": {}}
+    calls = 0
+
+    async def reject_once(_tool, _argument_name, _payload):
+        nonlocal calls
+        calls += 1
+        return {
+            "ok": False,
+            "accepted": False,
+            "kind": "negotiate",
+            "errors": ["bad term"],
+        }
+
+    monkeypatch.setattr(transport, "_call_async", reject_once)
+    with pytest.raises(PeerClientError, match="bad term"):
+        transport.exchange_agreement(agreement, timeout=1)
+    assert calls == 1
 
 
 def test_exchange_agreement_accepts_inline_reference_agreement(monkeypatch):

@@ -35,7 +35,9 @@ async def test_each_tool_acknowledges_and_queues_payload(
     payload = {"kind": tool}
     async with Client(mcp) as client:
         result = await client.call_tool(tool, {argument: payload})
-    assert result.data == {"accepted": True, "kind": response_kind, "errors": []}
+    assert result.data == {
+        "ok": True, "accepted": True, "kind": response_kind, "errors": [],
+    }
     assert getattr(inboxes, inbox_name).get_nowait() == payload
 
 
@@ -58,7 +60,7 @@ async def test_retried_delivery_is_acknowledged_without_queueing_a_duplicate(
         first = await client.call_tool(tool, {argument: payload})
         retry = await client.call_tool(tool, {argument: payload})
 
-    expected = {"accepted": True, "kind": response_kind, "errors": []}
+    expected = {"ok": True, "accepted": True, "kind": response_kind, "errors": []}
     assert first.data == expected
     assert retry.data == expected
     inbox = getattr(inboxes, inbox_name)
@@ -76,7 +78,7 @@ async def test_distinct_turn_commit_is_not_mistaken_for_a_retry():
         await client.call_tool("receive_turn", {"message": first})
         result = await client.call_tool("receive_turn", {"message": second})
 
-    assert result.data == {"accepted": True, "kind": "turn", "errors": []}
+    assert result.data == {"ok": True, "accepted": True, "kind": "turn", "errors": []}
     assert inboxes.turns.get_nowait() == first
     assert inboxes.turns.get_nowait() == second
 

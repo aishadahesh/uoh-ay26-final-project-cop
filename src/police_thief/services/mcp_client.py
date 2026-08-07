@@ -72,12 +72,13 @@ class McpPeerTransport:
         while time.monotonic() < deadline:
             try:
                 response = asyncio.run(self._call_async(tool, argument_name, payload))
-                if response.get("ok") is True or response.get("accepted") is True:
-                    return response
-                raise PeerClientError(f"{tool} rejected by opponent: {response}")
             except PeerClientError as exc:
                 last_error = exc
                 time.sleep(self.retry_interval)
+                continue
+            if response.get("ok") is True or response.get("accepted") is True:
+                return response
+            raise PeerClientError(f"{tool} rejected by opponent: {response}")
         raise PeerClientError(f"{tool} timed out: {last_error}")
 
     def exchange_agreement(self, message: dict, timeout: float) -> dict:

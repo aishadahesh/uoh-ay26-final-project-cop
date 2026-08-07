@@ -56,25 +56,25 @@ def build_peer_server(role: str, inboxes: PeerInboxes) -> FastMCP:
     def negotiate(message: dict) -> dict:
         """Receive signed terms and the opponent's public identity."""
         inboxes.enqueue_once("agreements", message)
-        return {"accepted": True, "kind": "negotiate", "errors": []}
+        return {"ok": True, "accepted": True, "kind": "negotiate", "errors": []}
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def receive_turn(message: dict) -> dict:
         """Receive one public sealed turn; private truth remains committed."""
         inboxes.enqueue_once("turns", message)
-        return {"accepted": True, "kind": "turn", "errors": []}
+        return {"ok": True, "accepted": True, "kind": "turn", "errors": []}
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def submit_audit(payload: dict) -> dict:
         """Receive end-of-game records and nonce reveals for verification."""
         inboxes.enqueue_once("audits", payload)
-        return {"accepted": True, "kind": "audit", "errors": []}
+        return {"ok": True, "accepted": True, "kind": "audit", "errors": []}
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def receive_control(message: dict) -> dict:
         """Receive enable, status, restart, or quit lifecycle messages."""
         inboxes.controls.put(message)
-        return {"accepted": True, "kind": "control", "errors": []}
+        return {"ok": True, "accepted": True, "kind": "control", "errors": []}
 
     return mcp
 
