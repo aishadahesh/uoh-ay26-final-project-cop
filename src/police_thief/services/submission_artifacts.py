@@ -113,6 +113,23 @@ def _write(path: Path, value: dict[str, Any]) -> Path:
     return path
 
 
+def save_submission_validation_report(
+    directory: Path,
+    game_id: str,
+    errors: list[SubmissionValidationError],
+    message: str,
+) -> Path:
+    """Persist a public, secret-free explanation when the bundle cannot be sent."""
+    return _write(directory / f"submission_validation_{game_id}.json", {
+        "schema_version": SCHEMA_VERSION,
+        "game_id": game_id,
+        "valid": False,
+        "created_at": datetime.now().astimezone().isoformat(),
+        "message": message,
+        "errors": [error.to_dict() for error in errors],
+    })
+
+
 def finalize_submission_bundle(
     directory: Path,
     *,

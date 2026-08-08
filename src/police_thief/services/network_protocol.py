@@ -13,10 +13,40 @@ PROTOCOL_NAME = "police-thief-mcp"
 PROTOCOL_VERSION = "3.0.0"
 WIRE_ROLES = {"cop": "police", "thief": "thief"}
 CONTROL_KINDS = frozenset({"enable", "status", "restart", "quit"})
+ALLOWED_MOVES = frozenset({"N", "S", "E", "W", "STAY"})
+ALLOWED_WIN_CLAIMS = frozenset({"boxed_in", "survival"})
+SIGNED_EVIDENCE_FIELDS = (
+    "barrier_placed", "capture_claim", "claim_response", "win_claim",
+)
 
 
 class NetworkProtocolError(ValueError):
     """Raised when a peer message is malformed, incompatible, or tampered."""
+
+
+def _is_coordinate(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and len(value) == 2
+        and all(isinstance(item, int) and not isinstance(item, bool) for item in value)
+    )
+
+
+def validate_claim_response(
+    response: dict | None, expected_claims: list[list[int]] | None = None,
+) -> None:
+    """Validate structure and, when known, bind a response to our last claim."""
+    if response is None:
+        return
+    if not isinstance(response, dict) or not isinstance(response.get("caught"), bool):
+        raise NetworkProtocolError("claim_response must contain a boolean caught value")
+    claim = response.get("claim")
+    if not _is_coordinate(claim):
+        raise NetworkProtocolError("claim_response.claim must be a two-integer coordinate")
+    if expected_claims is not None and claim not in expected_claims:
+        raise NetworkProtocolError(
+            f"claim_response references {claim!r}, expected one of {expected_claims!r}"
+        )
 
 
 def _canonical(data: Any) -> str:
@@ -111,6 +141,23 @@ class TurnMessage:
             raise NetworkProtocolError("invalid turn sender or step")
         if len(message.commit) != 64:
             raise NetworkProtocolError("turn commitment must be a SHA-256 digest")
+        for field, value in (
+            ("barrier_placed", message.barrier_placed),
+            ("capture_claim", message.capture_claim),
+        ):
+            if value is not None and not _is_coordinate(value):
+                raise NetworkProtocolError(f"{field} must be a two-integer coordinate")
+        validate_claim_response(message.claim_response)
+        if (
+            message.win_claim is not None
+            and (
+                not isinstance(message.win_claim, dict)
+                or message.win_claim.get("type") not in ALLOWED_WIN_CLAIMS
+            )
+        ):
+            raise NetworkProtocolError(
+                "win_claim.type must be either 'boxed_in' or 'survival'"
+            )
         return message
 
 
@@ -167,6 +214,7 @@ def audit_records(
     records: list[dict],
     expected_commits: dict[int, str],
     *,
+    expected_turn_evidence: dict[int, dict[str, Any]] | None = None,
     require_step0: bool = False,
 ) -> tuple[bool, list[int]]:
     """Verify revealed records against the commitments seen during play.
@@ -200,7 +248,30 @@ def audit_records(
             failed.append(step)
             continue
         seen.add(step)
-        if expected_commits.get(step) != commit or not verify_record(record):
+        payload = record["payload"]
+        expected = (expected_turn_evidence or {}).get(step, {})
+        move = payload.get("move")
+        terminal_capture = payload.get("terminal_ack") == "capture"
+        evidence_matches = (
+            expected_turn_evidence is None
+            or all(
+                payload.get(field) == expected.get(field)
+                for field in SIGNED_EVIDENCE_FIELDS
+            )
+        )
+        semantic_ok = (
+            (
+                "role" not in expected
+                or payload.get("role") == expected["role"]
+            )
+            and (move in ALLOWED_MOVES or (move is None and terminal_capture))
+            and evidence_matches
+        )
+        if (
+            expected_commits.get(step) != commit
+            or not verify_record(record)
+            or not semantic_ok
+        ):
             failed.append(step)
     failed.extend(sorted(set(expected_commits) - seen))
     if require_step0 and not saw_step0:

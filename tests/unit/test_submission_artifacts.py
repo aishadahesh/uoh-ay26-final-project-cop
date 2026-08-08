@@ -7,6 +7,7 @@ from police_thief.services.submission_artifacts import (
     canonical_bytes,
     finalize_submission_bundle,
     public_participant,
+    save_submission_validation_report,
     validate_submission_directory,
 )
 
@@ -120,3 +121,18 @@ def test_submission_email_contains_every_json_attachment(tmp_path):
     parsed = message_from_bytes(message.as_bytes())
     names = [part.get_filename() for part in parsed.walk() if part.get_filename()]
     assert names == [path.name for path in paths]
+
+
+def test_failed_bundle_validation_is_saved_as_structured_json(tmp_path):
+    _bundle(tmp_path)
+    declaration = tmp_path / "declaration_G1.json"
+    data = json.loads(declaration.read_text(encoding="utf-8"))
+    data["groups"]["group_1"]["github_commit"] = ""
+    declaration.write_text(json.dumps(data), encoding="utf-8")
+    errors, _ = validate_submission_directory(tmp_path, "G1")
+
+    path = save_submission_validation_report(tmp_path, "G1", errors, "not sent")
+    report = json.loads(path.read_text(encoding="utf-8"))
+    assert report["valid"] is False
+    assert report["message"] == "not sent"
+    assert any(error["field"].endswith("github_commit") for error in report["errors"])

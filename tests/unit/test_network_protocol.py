@@ -8,6 +8,7 @@ from police_thief.services.network_protocol import (
     audit_records,
     create_agreement,
     seal_payload,
+    validate_claim_response,
     verify_agreement,
     verify_record,
 )
@@ -63,3 +64,57 @@ def test_audit_accepts_reference_step_zero_but_rejects_duplicates():
     step0 = seal_payload({"step": 0, "type": "system_spec", "spec": {}})
     assert audit_records([step0], {}, require_step0=True) == (True, [])
     assert audit_records([step0, step0], {}, require_step0=True) == (False, [0])
+
+
+def test_claim_response_must_reference_the_last_public_claim() -> None:
+    response = {"claim": [5, 6], "caught": True}
+    validate_claim_response(response, [[5, 5], [5, 6]])
+
+    with pytest.raises(NetworkProtocolError, match="expected one of"):
+        validate_claim_response(response, [[5, 5]])
+
+
+def test_audit_rejects_noncanonical_moves_and_unsealed_live_evidence() -> None:
+    prefixed = seal_payload({
+        "step": 1, "role": "thief", "state": {}, "move": "MOVE:S", "intent": True,
+    })
+    assert audit_records(
+        [prefixed], {1: prefixed["commit"]},
+        expected_turn_evidence={1: {"role": "thief"}},
+    ) == (False, [1])
+
+    unsigned_barrier = seal_payload({
+        "step": 2, "role": "police", "state": {}, "move": "E", "intent": True,
+    })
+    assert audit_records(
+        [unsigned_barrier], {2: unsigned_barrier["commit"]},
+        expected_turn_evidence={2: {"role": "police", "barrier_placed": [5, 6]}},
+    ) == (False, [2])
+
+    signed_barrier = seal_payload({
+        "step": 2, "role": "police", "state": {}, "move": "E", "intent": True,
+        "barrier_placed": [5, 6],
+    })
+    assert audit_records(
+        [signed_barrier], {2: signed_barrier["commit"]},
+        expected_turn_evidence={2: {"role": "police", "barrier_placed": [5, 6]}},
+    ) == (True, [])
+
+    undisclosed_claim = seal_payload({
+        "step": 3, "role": "thief", "state": {}, "move": "N", "intent": True,
+        "win_claim": {"type": "survival"},
+    })
+    assert audit_records(
+        [undisclosed_claim], {3: undisclosed_claim["commit"]},
+        expected_turn_evidence={3: {"role": "thief"}},
+    ) == (False, [3])
+
+
+def test_turn_rejects_unknown_win_claim_type() -> None:
+    record = seal_payload({"step": 1, "move": "N"})
+    message = TurnMessage(
+        step=1, sender="thief", hint="", smell_grid=[[0.0]],
+        commit=record["commit"], timestamp="now", win_claim={"type": "invented"},
+    )
+    with pytest.raises(NetworkProtocolError, match="win_claim.type"):
+        TurnMessage.from_dict(message.to_dict())
