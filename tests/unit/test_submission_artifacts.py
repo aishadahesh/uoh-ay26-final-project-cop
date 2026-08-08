@@ -2,7 +2,7 @@ import hashlib
 import json
 from email import message_from_bytes
 
-from police_thief.services.gmail_report_sender import build_submission_email
+from police_thief.services.gmail_report_sender import build_report_email
 from police_thief.services.submission_artifacts import (
     canonical_bytes,
     finalize_submission_bundle,
@@ -143,32 +143,14 @@ def test_validator_rejects_private_information(tmp_path):
     assert any(item.code == "private_information_exposed" for item in errors)
 
 
-def test_submission_email_contains_every_json_attachment(tmp_path):
-    paths = _bundle(tmp_path)
-    attachments = [(path.name, json.loads(path.read_text(encoding="utf-8"))) for path in paths]
-    message = build_submission_email("lecturer@example.com", "signed report", attachments)
-    parsed = message_from_bytes(message.as_bytes())
-    names = [part.get_filename() for part in parsed.walk() if part.get_filename()]
-    assert names == [path.name for path in paths]
-
-
-def test_six_game_email_contains_the_complete_fourteen_file_bundle():
-    names = [
-        "declaration_G001.json",
-        *(f"config_G001_g{number:02d}.json" for number in range(1, 7)),
-        *(f"log_G001_g{number:02d}.json" for number in range(1, 7)),
-        "result_G001.json",
-    ]
-    message = build_submission_email(
-        "lecturer@example.com",
-        "signed report",
-        [(name, {"filename": name}) for name in names],
+def test_six_game_email_contains_only_the_aggregate_result():
+    message = build_report_email(
+        "lecturer@example.com", "signed report", {"game_id": "G001"}, "result_G001.json",
     )
     parsed = message_from_bytes(message.as_bytes())
 
     attached = [part.get_filename() for part in parsed.walk() if part.get_filename()]
-    assert len(attached) == 14
-    assert attached == names
+    assert attached == ["result_G001.json"]
 
 
 def test_failed_bundle_validation_is_saved_as_structured_json(tmp_path):

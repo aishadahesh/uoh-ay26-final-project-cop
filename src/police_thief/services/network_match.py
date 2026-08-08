@@ -956,7 +956,7 @@ class NetworkMatchSeriesRunner:
                 token_budget=params.network_league.token_budget_per_series,
             )
         except SubmissionBundleError as exc:
-            errors, required_paths = validate_submission_directory(
+            errors, _ = validate_submission_directory(
                 self.settings.output_dir, self.settings.game_id,
             )
             report = save_submission_validation_report(
@@ -970,17 +970,17 @@ class NetworkMatchSeriesRunner:
                 "WARNING: submission has "
                 f"{len(errors)} validation error(s); report saved to {report}"
             )
-            _deliver_unverified_submission(
-                required_paths, params, self.settings, emit,
+            _deliver_unverified_result(
+                path, params, self.settings, emit,
             )
             return path
-        path = submission_paths[-1]
+        path = self.settings.output_dir / f"result_{self.settings.game_id}.json"
         emit(
             f"Series complete; {len(submission_paths)} validated submission JSON files "
             f"ready in {self.settings.output_dir}"
         )
         if self.settings.email_mode == "real":
-            _try_email_submission(submission_paths, params, self.settings, emit)
+            _try_email_result(path, params, self.settings, emit)
         else:
             emit("Email mode is dry_run; aggregate JSON created but not sent")
         return path
@@ -999,41 +999,25 @@ def _try_email_result(path: Path, params, settings: NetworkMatchSettings, emit: 
         emit(f"Email delivery failed (result already saved to {path}): {exc}")
 
 
-def _try_email_submission(
-    paths: list[Path], params, settings: NetworkMatchSettings, emit: EventSink,
-) -> None:
-    from police_thief.services.network_reporting import email_submission_files
-
-    try:
-        email_submission_files(paths, params, settings, emit)
-    except RuntimeError as exc:
-        emit(
-            f"Email delivery failed (validated JSON files remain saved in "
-            f"{settings.output_dir}): {exc}"
-        )
-
-
-def _deliver_unverified_submission(
-    required_paths: list[Path], params, settings: NetworkMatchSettings,
+def _deliver_unverified_result(
+    result_path: Path, params, settings: NetworkMatchSettings,
     emit: EventSink,
 ) -> bool:
-    """Deliver a complete required bundle without claiming it is verified."""
-    missing = [path for path in required_paths if not path.is_file()]
-    if missing or not required_paths:
+    """Deliver only the aggregate result without claiming it is verified."""
+    if not result_path.is_file():
         emit(
-            "Submission email could not be created because required files are "
-            f"missing: {[path.name for path in missing] or 'unknown bundle'}"
+            "Submission email could not be created because the aggregate result "
+            f"is missing: {result_path.name}"
         )
         return False
     if settings.email_mode != "real":
         emit(
-            "Email mode is dry_run; unverified required JSON files were created "
-            "but not sent"
+            "Email mode is dry_run; unverified aggregate result was created but not sent"
         )
         return False
     emit(
-        "Sending all required submission JSON files despite validation warnings; "
-        "no values were fabricated or confirmed"
+        "Sending only the aggregate result JSON despite validation warnings; "
+        "supporting artifacts remain local and no values were fabricated or confirmed"
     )
-    _try_email_submission(required_paths, params, settings, emit)
+    _try_email_result(result_path, params, settings, emit)
     return True
