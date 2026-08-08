@@ -115,8 +115,19 @@ def test_cop_brain_excludes_already_blocked_neighbors_from_barrier_target():
     board.place_barrier(Position(0, 0), only_neighbor_toward_target)
     target = brain._pick_move(board, Position(0, 0), belief)
     assert target != only_neighbor_toward_target
-    assert target in board.neighbors(Position(0, 0))
-    assert not board.is_blocked(target)
+    if target is not None:
+        assert target in board.neighbors(Position(0, 0))
+        assert not board.is_blocked(target)
+
+
+def test_cop_brain_never_uses_a_barrier_that_removes_its_last_exit():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    board.apply_declared_barrier(Position(0, 4))
+    board.apply_declared_barrier(Position(1, 3))
+    belief = _belief_peaked_at(board, Position(0, 2))
+    brain = ManhattanHeuristicBrain(role=AgentRole.COP)
+
+    assert brain._pick_move(board, Position(0, 3), belief) is None
 
 
 def test_thief_brain_never_places_a_barrier():

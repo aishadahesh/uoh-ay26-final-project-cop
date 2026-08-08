@@ -13,7 +13,7 @@ from pathlib import Path
 from threading import Event
 
 from police_thief.domain.belief import BeliefMap
-from police_thief.domain.board import Board, Move, Position
+from police_thief.domain.board import Board, Position
 from police_thief.domain.capture import is_boxed_in
 from police_thief.domain.hints import TemplateHintProvider
 from police_thief.domain.replay import save_log
@@ -160,6 +160,11 @@ class NetworkMatchRunner:
         )
         own_scent = ScentField(params.board.grid_size, params.scent)
         belief = BeliefMap(board)
+        belief.set_certain_position(
+            params.thief_start
+            if self.settings.role is AgentRole.COP
+            else params.cop_start
+        )
         brain = ManhattanHeuristicBrain(
             self.settings.role, strategy_seed=self.settings.sub_game_number
         )
@@ -217,7 +222,12 @@ class NetworkMatchRunner:
                     outcome = MatchOutcome.CAPTURE
                     break
                 self._send_control("status", "THINKING")
-                fallback = brain._decide_move(board, own_position, belief)
+                fallback = brain._decide_move(
+                    board,
+                    own_position,
+                    belief,
+                    known_opponent_position=known_cop_position,
+                )
                 move, _private_reason = self._choose_move(
                     board, belief, own_position, fallback, step, params.max_moves, emit,
                     plan=brain.last_plan,
@@ -406,13 +416,34 @@ class NetworkMatchRunner:
         legal_now = board.legal_moves(own)
         safe_now = dict(legal_now)
         if self.settings.role is AgentRole.THIEF and known_opponent_position is not None:
-            for move, destination in legal_now.items():
-                if destination == known_opponent_position:
-                    safe_now.pop(move)
+            cop_reachable_next = set(
+                board.legal_moves(known_opponent_position).values()
+            )
+            guaranteed_safe = {
+                move: destination
+                for move, destination in legal_now.items()
+                if destination not in cop_reachable_next
+            }
+            if guaranteed_safe:
+                safe_now = guaranteed_safe
+                for move, destination in legal_now.items():
+                    if move in safe_now:
+                        continue
                     emit(
                         f"Step {step}: rejected {move.name} ({move.value}); destination "
-                        f"{known_opponent_position} is the cop's confirmed current cell"
+                        f"{destination} is reachable by the cop on its next move"
                     )
+            else:
+                # If capture cannot be ruled out, still forbid walking onto
+                # the cop's current cell: that loses immediately before the
+                # cop even takes its turn.
+                for move, destination in tuple(safe_now.items()):
+                    if destination == known_opponent_position:
+                        safe_now.pop(move)
+                        emit(
+                            f"Step {step}: rejected {move.name} ({move.value}); destination "
+                            f"{known_opponent_position} is the cop's confirmed current cell"
+                        )
         if plan is not None:
             for item in plan.evaluations:
                 emit(f"Step {step}: candidate {item.move.name} ({item.move.value}) - {item.summary()}")
@@ -432,7 +463,16 @@ class NetworkMatchRunner:
         if not allowed:
             allowed = tuple(safe_now) or tuple(legal_now)
         if fallback not in allowed:
-            fallback = Move.STAY if Move.STAY in allowed else allowed[0]
+            ranked_allowed = (
+                tuple(
+                    item.move
+                    for item in plan.evaluations
+                    if item.move in allowed
+                )
+                if plan is not None
+                else ()
+            )
+            fallback = ranked_allowed[0] if ranked_allowed else allowed[0]
         if self.gemini_advisor is None:
             emit(f"Step {step}: planner selected {fallback.name} ({fallback.value}); valid=True")
             return fallback, "Deterministic local-truth move"

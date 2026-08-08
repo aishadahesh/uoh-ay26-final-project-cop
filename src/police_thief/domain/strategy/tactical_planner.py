@@ -61,6 +61,7 @@ class TacticalPlanner:
         self.strategy_seed = strategy_seed
         self._positions: deque[Position] = deque(maxlen=history_limit)
         self._moves: deque[Move] = deque(maxlen=history_limit)
+        self._visits: Counter[Position] = Counter()
 
     @property
     def recent_positions(self) -> tuple[Position, ...]:
@@ -73,29 +74,69 @@ class TacticalPlanner:
     def record_move(self, before: Position, move: Move, after: Position) -> None:
         if not self._positions or self._positions[-1] != before:
             self._positions.append(before)
+            self._visits[before] += 1
         self._moves.append(move)
         self._positions.append(after)
+        self._visits[after] += 1
 
-    def evaluate(self, board: Board, own: Position, belief: BeliefMap) -> StrategyPlan:
+    def evaluate(
+        self,
+        board: Board,
+        own: Position,
+        belief: BeliefMap,
+        known_opponent_position: Position | None = None,
+    ) -> StrategyPlan:
         legal = board.legal_moves(own)
         if not legal:
             raise RuntimeError("board returned no legal moves (STAY must always be legal)")
         loop_detected, loop_reason = self._detect_loop(own)
-        belief_targets = belief.top_positions(5)
-        visits = Counter(self._positions)
+        # A signed starting position or a public capture claim is stronger
+        # evidence than the probabilistic scent belief.  In particular, the
+        # thief receives the cop's exact declared position every turn and must
+        # use it when evaluating capture risk.
+        belief_targets = (
+            ((known_opponent_position, 1.0),)
+            if known_opponent_position is not None
+            else belief.top_positions(5)
+        )
+        # Retain visit pressure for the entire mini-game, not just the short
+        # loop-detection window.  With an empty scent grid the former behavior
+        # forgot old cells and repeatedly searched the same central corridor.
+        visits = self._visits.copy()
         evaluations = tuple(
             self._score_move(board, own, move, destination, belief_targets, visits, loop_detected)
             for move, destination in legal.items()
         )
-        excluded: set[Move] = set()
+        hard_excluded: set[Move] = set()
+        # An active cop must keep searching whenever at least one movement is
+        # possible.  STAY remains legal for protocol correctness, but is not a
+        # strategic candidate unless barriers have genuinely boxed the cop in.
+        if self.role is AgentRole.COP and any(move is not Move.STAY for move in legal):
+            hard_excluded.add(Move.STAY)
+        if self.role is AgentRole.THIEF and known_opponent_position is not None:
+            guaranteed_safe = tuple(
+                item for item in evaluations if item.proximity_risk == 0.0
+            )
+            if guaranteed_safe:
+                hard_excluded.update(
+                    item.move for item in evaluations if item.proximity_risk > 0.0
+                )
+
+        excluded: set[Move] = set(hard_excluded)
         if loop_detected and len(evaluations) > 1:
             recent_cells = set(tuple(self._positions)[-2:])
             for item in evaluations:
                 if item.move is Move.STAY or item.destination in recent_cells:
                     excluded.add(item.move)
-            if len(excluded) == len(evaluations):
-                # Never manufacture an impossible choice: retain the best legal move.
-                excluded.remove(max(evaluations, key=self._rank_key).move)
+        if len(excluded) == len(evaluations):
+            # Relax history preferences before safety constraints.  This lets
+            # a cornered thief STAY when every movement can be captured next
+            # turn, instead of re-enabling a losing move merely to break a loop.
+            hard_safe = tuple(
+                item for item in evaluations if item.move not in hard_excluded
+            )
+            retained = max(hard_safe or evaluations, key=self._rank_key)
+            excluded.discard(retained.move)
         admissible = tuple(item for item in evaluations if item.move not in excluded)
         candidates = admissible or evaluations
         best_score = max(item.total for item in candidates)
@@ -167,7 +208,7 @@ class TacticalPlanner:
             loop_penalty += 9.0
         if loop_detected and (move is Move.STAY or destination in set(tuple(self._positions)[-2:])):
             loop_penalty += 25.0
-        dead_end_penalty = 14.0 if mobility <= 1 else (4.0 if mobility == 2 else 0.0)
+        dead_end_penalty = 24.0 if mobility <= 1 else (12.0 if mobility == 2 else 0.0)
         variation_bonus = self._variation_bonus(own, move)
 
         if self.role is AgentRole.COP:
@@ -195,8 +236,8 @@ class TacticalPlanner:
                 - loop_penalty
                 - dead_end_penalty
                 + variation_bonus
-                - 200.0 * direct_capture_risk
-                - 45.0 * proximity_risk
+                - 1000.0 * direct_capture_risk
+                - 250.0 * proximity_risk
             )
         return ActionEvaluation(
             move=move,
@@ -228,7 +269,7 @@ class TacticalPlanner:
             f"{own.row}:{own.col}:{move.value}"
         ).encode()
         value = int.from_bytes(hashlib.sha256(material).digest()[:4], "big")
-        return (value / 0xFFFFFFFF) * 0.49
+        return (value / 0xFFFFFFFF) * 0.89
 
     def _future_value(
         self,

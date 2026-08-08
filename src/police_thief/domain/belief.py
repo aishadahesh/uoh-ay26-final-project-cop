@@ -47,6 +47,20 @@ class BeliefMap:
         """0.0 for any blocked or otherwise untracked cell."""
         return self._belief.get(pos, 0.0)
 
+    def set_certain_position(self, position: Position) -> None:
+        """Reset the public belief to a known legal opponent position.
+
+        Both initial agent positions are signed game terms, and the cop's
+        live capture claim is public.  Using either is therefore legitimate
+        local information, not access to the opponent's private state.
+        """
+        if not self._board.is_within_bounds(position) or self._board.is_blocked(position):
+            raise ValueError(f"cannot place belief certainty on illegal cell {position}")
+        self._belief = {
+            cell: float(cell == position)
+            for cell in self._open_cells()
+        }
+
     def update_from_scent(self, scent_field: ScentField) -> None:
         """Posterior proportional to prior * likelihood(scent), renormalized.
 

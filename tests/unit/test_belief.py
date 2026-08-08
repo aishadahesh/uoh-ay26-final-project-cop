@@ -23,6 +23,25 @@ def test_uniform_prior_is_equal_across_all_open_cells(board):
     assert len(values) == 1
 
 
+def test_public_known_position_can_seed_a_certain_belief(board):
+    belief = BeliefMap(board)
+    known = Position(3, 3)
+
+    belief.set_certain_position(known)
+
+    assert belief.arg_max() == known
+    assert belief.belief_at(known) == 1.0
+    assert sum(belief._belief.values()) == pytest.approx(1.0)
+
+
+def test_certain_belief_rejects_an_illegal_cell(board):
+    board.apply_declared_barrier(Position(3, 3))
+    belief = BeliefMap(board)
+
+    with pytest.raises(ValueError, match="illegal cell"):
+        belief.set_certain_position(Position(3, 3))
+
+
 def test_blocked_cell_always_has_zero_belief(board):
     board.place_barrier(Position(3, 3), Position(2, 3))
     belief = BeliefMap(board)

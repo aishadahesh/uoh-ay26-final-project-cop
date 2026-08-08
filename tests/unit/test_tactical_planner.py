@@ -77,3 +77,116 @@ def test_subgame_seed_varies_only_equally_strong_opening_routes():
     assert next(item for item in first.evaluations if item.move is first.selected).path_distance == next(
         item for item in second.evaluations if item.move is second.selected
     ).path_distance
+
+
+def test_cop_never_stays_while_a_search_move_is_available():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    plan = TacticalPlanner(AgentRole.COP).evaluate(
+        board, Position(0, 0), _belief_at(board, Position(0, 0))
+    )
+
+    assert Move.STAY not in plan.allowed_moves
+    assert plan.selected is not Move.STAY
+
+
+def test_thief_uses_confirmed_cop_position_to_avoid_repeated_corner_capture():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    plan = TacticalPlanner(AgentRole.THIEF).evaluate(
+        board,
+        Position(6, 0),
+        _belief_at(board, Position(0, 0)),
+        known_opponent_position=Position(5, 1),
+    )
+
+    assert plan.selected is Move.STAY
+    assert plan.allowed_moves == (Move.STAY,)
+
+
+def test_thief_does_not_repeat_the_recorded_seven_turn_capture_route():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = _belief_at(board, Position(0, 0))
+    planner = TacticalPlanner(AgentRole.THIEF, strategy_seed=2)
+    thief = Position(3, 3)
+    cop = Position(0, 0)
+    recorded_cop_moves = (
+        Move.SOUTH,
+        Move.SOUTH,
+        Move.EAST,
+        Move.SOUTH,
+        Move.SOUTH,
+        Move.SOUTH,
+        Move.WEST,
+    )
+    selected: list[Move] = []
+
+    for cop_move in recorded_cop_moves:
+        plan = planner.evaluate(
+            board,
+            thief,
+            belief,
+            known_opponent_position=cop,
+        )
+        before = thief
+        thief = board.apply_move(thief, plan.selected)
+        planner.record_move(before, plan.selected, thief)
+        selected.append(plan.selected)
+        assert thief != cop
+
+        cop = board.apply_move(cop, cop_move)
+        assert thief != cop
+
+    assert selected != [
+        Move.SOUTH,
+        Move.SOUTH,
+        Move.SOUTH,
+        Move.WEST,
+        Move.WEST,
+        Move.WEST,
+        Move.NORTH,
+    ]
+
+
+def test_cop_captures_the_recorded_game_one_path_without_stalling():
+    class ZeroScent:
+        @staticmethod
+        def intensity_at(_position):
+            return 0.0
+
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = BeliefMap(board)
+    belief.set_certain_position(Position(3, 3))
+    planner = TacticalPlanner(AgentRole.COP, strategy_seed=1)
+    cop = Position(0, 0)
+    thief = Position(3, 3)
+    thief_moves = (
+        Move.EAST,
+        Move.EAST,
+        Move.SOUTH,
+        Move.EAST,
+        Move.SOUTH,
+        *(Move.STAY for _ in range(19)),
+        Move.NORTH,
+        Move.SOUTH,
+        Move.STAY,
+        Move.STAY,
+        Move.WEST,
+        Move.WEST,
+        Move.NORTH,
+        Move.STAY,
+    )
+    cop_moves: list[Move] = []
+
+    for thief_move in thief_moves:
+        thief = board.apply_move(thief, thief_move)
+        belief.update_from_scent(ZeroScent())
+        plan = planner.evaluate(board, cop, belief)
+        before = cop
+        cop = board.apply_move(cop, plan.selected)
+        planner.record_move(before, plan.selected, cop)
+        cop_moves.append(plan.selected)
+        if cop == thief:
+            break
+
+    assert cop == thief == Position(4, 4)
+    assert len(cop_moves) == 32
+    assert Move.STAY not in cop_moves

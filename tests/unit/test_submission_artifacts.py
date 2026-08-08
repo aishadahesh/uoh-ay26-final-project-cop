@@ -152,6 +152,25 @@ def test_submission_email_contains_every_json_attachment(tmp_path):
     assert names == [path.name for path in paths]
 
 
+def test_six_game_email_contains_the_complete_fourteen_file_bundle():
+    names = [
+        "declaration_G001.json",
+        *(f"config_G001_g{number:02d}.json" for number in range(1, 7)),
+        *(f"log_G001_g{number:02d}.json" for number in range(1, 7)),
+        "result_G001.json",
+    ]
+    message = build_submission_email(
+        "lecturer@example.com",
+        "signed report",
+        [(name, {"filename": name}) for name in names],
+    )
+    parsed = message_from_bytes(message.as_bytes())
+
+    attached = [part.get_filename() for part in parsed.walk() if part.get_filename()]
+    assert len(attached) == 14
+    assert attached == names
+
+
 def test_failed_bundle_validation_is_saved_as_structured_json(tmp_path):
     _bundle(tmp_path)
     declaration = tmp_path / "declaration_G1.json"

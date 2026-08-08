@@ -26,8 +26,19 @@ class ManhattanHeuristicBrain(BrainBase):
         self.planner = TacticalPlanner(role, strategy_seed=strategy_seed)
         self.last_plan: StrategyPlan | None = None
 
-    def _decide_move(self, board: Board, own: Position, belief: BeliefMap) -> Move:
-        self.last_plan = self.planner.evaluate(board, own, belief)
+    def _decide_move(
+        self,
+        board: Board,
+        own: Position,
+        belief: BeliefMap,
+        known_opponent_position: Position | None = None,
+    ) -> Move:
+        self.last_plan = self.planner.evaluate(
+            board,
+            own,
+            belief,
+            known_opponent_position=known_opponent_position,
+        )
         return self.last_plan.selected
 
     def record_move(self, before: Position, move: Move, after: Position) -> None:
@@ -64,13 +75,44 @@ class ManhattanHeuristicBrain(BrainBase):
         """
         if self.role is not AgentRole.COP or board.remaining_barrier_budget <= 0:
             return None
-        candidates = [own, *(n for n in board.neighbors(own) if not board.is_blocked(n))]
+        open_neighbors = [
+            neighbor for neighbor in board.neighbors(own) if not board.is_blocked(neighbor)
+        ]
+        # A barrier must never eliminate the cop's last escape route.  This
+        # exact failure boxed the cop at (0,3) in the reviewed G001 series and
+        # forced ten consecutive STAY turns.
+        candidates = [
+            candidate
+            for candidate in (own, *open_neighbors)
+            if (
+                len(open_neighbors)
+                if candidate == own
+                else len(open_neighbors) - 1
+            )
+            >= 2
+        ]
+        if not candidates:
+            return None
         target = belief.arg_max()
+        target_confidence = belief.belief_at(target)
+        # Blocking the predicted cell gives a direct capture claim, but it is
+        # worth attempting only when public evidence is meaningfully focused.
+        # Otherwise a flat/no-scent belief would spend barriers on arbitrary
+        # tie-broken cells and gradually wall in the cop.
+        if (
+            target_confidence >= 0.35
+            and target in candidates
+            and target != own
+        ):
+            return target
+        structural_candidates = [candidate for candidate in candidates if candidate != target]
+        if not structural_candidates:
+            return None
         baseline_area = board.reachable_area(target)
         best_area, best_candidate = min(
             (
                 (board.reachable_area(target, extra_blocked=candidate), candidate)
-                for candidate in candidates
+                for candidate in structural_candidates
             ),
             key=lambda scored: (scored[0], manhattan_distance(scored[1], target)),
         )

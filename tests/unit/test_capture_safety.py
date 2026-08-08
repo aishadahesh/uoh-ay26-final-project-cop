@@ -31,6 +31,12 @@ class _UnsafeGemini:
         return GeminiDecision(Move.WEST, "unsafe test response")
 
 
+class _NextTurnUnsafeGemini(_UnsafeGemini):
+    def choose_move(self, context, _fallback):
+        self.context = context
+        return GeminiDecision(Move.NORTH, "walk into next-turn capture")
+
+
 def _runner(tmp_path: Path, advisor=None) -> NetworkMatchRunner:
     settings = NetworkMatchSettings(
         role=AgentRole.THIEF,
@@ -77,3 +83,25 @@ def test_confirmed_cop_cell_is_excluded_and_unsafe_gemini_is_rejected(tmp_path):
     assert Move.WEST not in advisor.context.legal_moves
     assert advisor.context.known_opponent_position == Position(6, 4)
     assert any("confirmed current cell" in message for message in messages)
+
+
+def test_thief_exposes_only_guaranteed_safe_action_to_gemini(tmp_path):
+    advisor = _NextTurnUnsafeGemini()
+    runner = _runner(tmp_path, advisor)
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    messages: list[str] = []
+
+    move, _reason = runner._choose_move(
+        board,
+        _CertainBelief(Position(0, 0)),
+        Position(6, 0),
+        Move.NORTH,
+        7,
+        35,
+        messages.append,
+        known_opponent_position=Position(5, 1),
+    )
+
+    assert advisor.context.legal_moves == (Move.STAY,)
+    assert move is Move.STAY
+    assert any("reachable by the cop on its next move" in message for message in messages)
