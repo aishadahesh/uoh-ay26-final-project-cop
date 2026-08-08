@@ -109,7 +109,12 @@ def public_participant(identity: dict[str, Any]) -> dict[str, Any]:
 
 def _write(path: Path, value: dict[str, Any]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(canonical_bytes(value) + b"\n")
+    # Keep canonical_bytes() compact for signatures and hashes, but make the
+    # persisted submission artifacts readable for human review.
+    path.write_text(
+        json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
     return path
 
 

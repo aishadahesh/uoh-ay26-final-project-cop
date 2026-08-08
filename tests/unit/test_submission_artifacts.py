@@ -91,6 +91,18 @@ def test_finalize_builds_and_validates_all_required_json(tmp_path):
     assert len(uids) == 1
 
 
+def test_submission_files_are_pretty_printed_without_changing_canonical_data(tmp_path):
+    paths = _bundle(tmp_path)
+
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        parsed = json.loads(text)
+        assert len(text.splitlines()) > 1
+        compact = canonical_bytes(parsed)
+        assert b"\n" not in compact
+        assert json.loads(compact) == parsed
+
+
 def test_validator_reports_exact_file_field_expected_and_received(tmp_path):
     _bundle(tmp_path)
     path = tmp_path / "config_G1_g02.json"
