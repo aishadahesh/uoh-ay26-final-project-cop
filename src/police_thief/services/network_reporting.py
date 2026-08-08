@@ -9,9 +9,19 @@ from police_thief.services.anomaly_detector import AnomalyDetector
 from police_thief.services.gatekeeper import Gatekeeper, Http429BackoffPolicy
 from police_thief.services.gmail_oauth import build_gmail_api_transport
 from police_thief.services.gmail_report_sender import send_match_report, send_submission_bundle
-from police_thief.services.submission_artifacts import validate_submission_directory
 from police_thief.services.quota_manager import QuotaManager
+from police_thief.services.submission_artifacts import validate_submission_directory
 from police_thief.services.token_bucket import TokenBucket
+
+
+def submission_email_subject(settings) -> str:
+    """Build one role-neutral subject for the complete alternating-role series."""
+    group_1_id = settings.team_name.strip().lower().replace(" ", "-")
+    group_2_id = settings.opponent_team_name.strip().lower().replace(" ", "-")
+    return (
+        f"Final Project, Police-Thief result, {settings.game_id} "
+        f"({group_1_id}, {group_2_id})"
+    )
 
 
 def email_result_file(path: Path, params, settings, emit) -> None:
@@ -29,7 +39,7 @@ def email_result_file(path: Path, params, settings, emit) -> None:
         transport=transport,
         backoff_policy=Http429BackoffPolicy(rate.retry_backoff_sec, rate.max_retries),
         to_addr=settings.email_recipient,
-        subject=f"Police-Thief result {settings.game_id} ({settings.role.value})",
+        subject=submission_email_subject(settings),
         json_payload=payload,
         attachment_filename=path.name,
     )
@@ -66,7 +76,7 @@ def email_submission_files(paths: list[Path], params, settings, emit) -> None:
         transport=transport,
         backoff_policy=Http429BackoffPolicy(rate.retry_backoff_sec, rate.max_retries),
         to_addr=settings.email_recipient,
-        subject=f"Police-Thief signed report {settings.game_id} ({settings.role.value})",
+        subject=submission_email_subject(settings),
         attachments=attachments,
     )
     if not result.sent:
