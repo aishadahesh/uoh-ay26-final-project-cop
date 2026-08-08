@@ -103,6 +103,23 @@ def test_submission_files_are_pretty_printed_without_changing_canonical_data(tmp
         assert json.loads(compact) == parsed
 
 
+def test_validator_accepts_opponent_specific_move_notation(tmp_path):
+    _bundle(tmp_path)
+    path = tmp_path / "log_G1_g01.json"
+    document = json.loads(path.read_text(encoding="utf-8"))
+    record = document["records"][0]
+    record["payload"]["move"] = "MOVE:E"
+    record["commit"] = hashlib.sha256(
+        canonical_bytes(record["payload"])
+        + b"|"
+        + record["nonce"].encode()
+    ).hexdigest()
+    path.write_text(json.dumps(document, indent=2), encoding="utf-8")
+
+    errors, _ = validate_submission_directory(tmp_path, "G1")
+    assert not any(error.field.endswith("payload.move") for error in errors)
+
+
 def test_validator_reports_exact_file_field_expected_and_received(tmp_path):
     _bundle(tmp_path)
     path = tmp_path / "config_G1_g02.json"

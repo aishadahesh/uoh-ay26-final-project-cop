@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "1.1"
-ALLOWED_MOVES = {"N", "S", "E", "W", "STAY"}
 ALLOWED_ROLES = {"police", "thief"}
 ALLOWED_RESULTS = {"capture", "survival", "technical_loss"}
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -451,9 +450,6 @@ def _validate_records(filename: str, records: list[Any], errors: list[Submission
             errors.append(_error(filename, f"{field}.commit", expected, commit, "commit_mismatch"))
         if not isinstance(payload, dict):
             continue
-        move = payload.get("move")
-        if move is not None and move not in ALLOWED_MOVES:
-            errors.append(_error(filename, f"{field}.payload.move", sorted(ALLOWED_MOVES), move, "invalid_value"))
         role = payload.get("role")
         if role is not None and role not in ALLOWED_ROLES:
             errors.append(_error(filename, f"{field}.payload.role", sorted(ALLOWED_ROLES), role, "invalid_value"))

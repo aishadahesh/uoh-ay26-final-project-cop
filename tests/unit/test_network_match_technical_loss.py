@@ -35,6 +35,20 @@ def _own_records() -> list[dict]:
     ]
 
 
+def _records_with_terminal_capture_ack() -> list[dict]:
+    return [
+        *_own_records(),
+        seal_payload({
+            "step": 2,
+            "role": "thief",
+            "state": {"row": 3, "col": 3},
+            "position": [3, 3],
+            "terminal_ack": "capture",
+            "claim_response": {"claim": [3, 3], "caught": True},
+        }),
+    ]
+
+
 def _peer_identity() -> dict:
     return {
         "group_name": "rival-team", "group_id": "rival-team", "members": ["Linus", "Margaret"],
@@ -80,3 +94,21 @@ def test_technical_loss_result_excludes_the_step_zero_system_spec_record(tmp_pat
     entries = json.loads(log_path.read_text(encoding="utf-8"))
     assert len(entries) == 1
     assert entries[0]["move"] == "N"
+
+
+def test_technical_loss_result_excludes_terminal_records_without_a_move(tmp_path):
+    """A capture acknowledgement is signed evidence, not an executed move."""
+    runner = _runner(tmp_path)
+    params = load_match_parameters(Path("config/game.json"))
+
+    path = runner._write_technical_loss_result(
+        params,
+        _records_with_terminal_capture_ack(),
+        _peer_identity(),
+        lambda _message: None,
+    )
+
+    result = json.loads(path.read_text(encoding="utf-8"))
+    entries = json.loads((tmp_path / "log_TL-TEST_g01.json").read_text(encoding="utf-8"))
+    assert result["outcome"] == "technical_loss"
+    assert [entry["move"] for entry in entries] == ["N"]

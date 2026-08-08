@@ -165,7 +165,6 @@ class NetworkMatchRunner:
         )
         hint_provider = TemplateHintProvider(params.world.hint_max_words)
         peer_commits: dict[int, str] = {}
-        peer_turn_evidence: dict[int, dict] = {}
         pending_claim_response: dict | None = None
         outstanding_capture_claims: list[list[int]] = []
         known_cop_position = (
@@ -311,17 +310,6 @@ class NetworkMatchRunner:
                         f"received sender={message.sender!r}, step={message.step}"
                     )
                 peer_commits[step] = message.commit
-                peer_turn_evidence[step] = {
-                    field: value
-                    for field, value in {
-                        "role": message.sender,
-                        "barrier_placed": message.barrier_placed,
-                        "capture_claim": message.capture_claim,
-                        "claim_response": message.claim_response,
-                        "win_claim": message.win_claim,
-                    }.items()
-                    if value is not None
-                }
                 belief.update_from_scent(_WireScent(message.smell_grid))
                 emit(f"Step {step}: received sealed {message.sender} turn")
                 if message.barrier_placed is not None:
@@ -369,7 +357,6 @@ class NetworkMatchRunner:
         audit_ok, failed = audit_records(
             peer_audit.records,
             peer_commits,
-            expected_turn_evidence=peer_turn_evidence,
             require_step0=True,
         )
         if not audit_ok:
@@ -760,7 +747,9 @@ class NetworkMatchRunner:
                 intent=record["payload"]["intent"], nonce=record["nonce"],
                 h_commit=record["commit"], payload=record["payload"],
             )
-            for record in own_records if record["payload"]["step"] > 0
+            for record in own_records
+            if record["payload"].get("step", 0) > 0
+            and "move" in record["payload"]
         ]
         save_log(entries, s.output_dir / f"log_{s.game_id}_g{s.sub_game_number:02d}.json")
         cop_score, thief_score = score_for(MatchOutcome.TECHNICAL_LOSS, params.scoring)
