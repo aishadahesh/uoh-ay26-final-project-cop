@@ -619,6 +619,9 @@ class NetworkMatchRunner:
             "code_version": "3.0.0",
             "group_name": self.settings.team_name,
             "sub_game_number": self.settings.sub_game_number,
+            "git_commit_hash": get_git_commit_hash(
+                str(self.settings.shared_config.parent.parent)
+            ),
         }
         return seal_payload(payload)
 
@@ -913,7 +916,7 @@ class NetworkMatchSeriesRunner:
                 token_budget=params.network_league.token_budget_per_series,
             )
         except SubmissionBundleError as exc:
-            errors, _required = validate_submission_directory(
+            errors, required_paths = validate_submission_directory(
                 self.settings.output_dir, self.settings.game_id,
             )
             report = save_submission_validation_report(
@@ -924,8 +927,11 @@ class NetworkMatchSeriesRunner:
             )
             path = self.settings.output_dir / f"result_{self.settings.game_id}.json"
             emit(
-                "Series completed, but official submission was not sent: "
+                "WARNING: submission has "
                 f"{len(errors)} validation error(s); report saved to {report}"
+            )
+            _deliver_unverified_submission(
+                required_paths, params, self.settings, emit,
             )
             return path
         path = submission_paths[-1]
@@ -965,3 +971,29 @@ def _try_email_submission(
             f"Email delivery failed (validated JSON files remain saved in "
             f"{settings.output_dir}): {exc}"
         )
+
+
+def _deliver_unverified_submission(
+    required_paths: list[Path], params, settings: NetworkMatchSettings,
+    emit: EventSink,
+) -> bool:
+    """Deliver a complete required bundle without claiming it is verified."""
+    missing = [path for path in required_paths if not path.is_file()]
+    if missing or not required_paths:
+        emit(
+            "Submission email could not be created because required files are "
+            f"missing: {[path.name for path in missing] or 'unknown bundle'}"
+        )
+        return False
+    if settings.email_mode != "real":
+        emit(
+            "Email mode is dry_run; unverified required JSON files were created "
+            "but not sent"
+        )
+        return False
+    emit(
+        "Sending all required submission JSON files despite validation warnings; "
+        "no values were fabricated or confirmed"
+    )
+    _try_email_submission(required_paths, params, settings, emit)
+    return True
