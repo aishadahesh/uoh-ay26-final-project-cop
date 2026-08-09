@@ -10,6 +10,7 @@ from police_thief.services.mcp_server import PeerInboxes
 from police_thief.services.network_match import (
     NetworkMatchRunner,
     NetworkMatchSettings,
+    _audit_revealed_trajectory,
     _confirmed_cop_position,
     _infer_public_scent_candidates,
     _infer_public_scent_center,
@@ -123,6 +124,89 @@ def test_cop_claims_recorded_step_13_collision_despite_scent_ambiguity():
     assert _truthful_capture_claim(
         AgentRole.COP, cop, saturated_corner_candidates,
     ) == [5, 6]
+
+
+def test_final_audit_detects_recorded_step_13_collision_across_peer_formats():
+    thief_moves = (
+        "S", "S", "E", "E", "S", "E", "N", "S", "N", "S", "N", "S", "N", "N",
+    )
+    thief_positions = (
+        (4, 3), (5, 3), (5, 4), (5, 5), (6, 5), (6, 6), (5, 6),
+        (6, 6), (5, 6), (6, 6), (5, 6), (6, 6), (5, 6), (4, 6),
+    )
+    police_moves = (
+        "E", "S", "E", "S", "E", "S", "S", "E", "S", "E", "N", "S", "E", "S",
+    )
+    police_positions = (
+        (0, 1), (1, 1), (1, 2), (2, 2), (2, 3), (3, 3), (4, 3),
+        (4, 4), (5, 4), (5, 5), (4, 5), (5, 5), (5, 6), (6, 6),
+    )
+
+    thief_records = [
+        {
+            "payload": {
+                "step": step,
+                "role": "thief",
+                "state": f"grid=7;self=[{row}, {col}]",
+                "move": f"MOVE:{move}",
+                "intent": "truth",
+            }
+        }
+        for step, (move, (row, col)) in enumerate(
+            zip(thief_moves, thief_positions, strict=True), start=1,
+        )
+    ]
+    previous = Position(0, 0)
+    police_records = []
+    for step, (move, (row, col)) in enumerate(
+        zip(police_moves, police_positions, strict=True), start=1,
+    ):
+        police_records.append({
+            "payload": {
+                "step": step,
+                "role": "police",
+                "state": {"row": previous.row, "col": previous.col},
+                "position": [row, col],
+                "move": move,
+                "intent": True,
+            }
+        })
+        previous = Position(row, col)
+
+    audit = _audit_revealed_trajectory(
+        police_records,
+        thief_records,
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(3, 3),
+        7,
+    )
+
+    assert audit.errors == ()
+    assert audit.capture_step == 13
+    assert audit.capture_after_role == "police"
+    assert audit.trailing_moves == 2
+
+
+def test_final_audit_rejects_a_discontinuous_revealed_position():
+    audit = _audit_revealed_trajectory(
+        [{
+            "payload": {
+                "step": 1, "role": "police", "state": {"row": 0, "col": 0},
+                "position": [6, 6], "move": "E", "intent": True,
+            }
+        }],
+        [],
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(3, 3),
+        7,
+    )
+
+    assert audit.capture_step is None
+    assert "does not match" in audit.errors[0]
 
 
 def test_confirmed_cop_cell_is_excluded_and_unsafe_gemini_is_rejected(tmp_path):

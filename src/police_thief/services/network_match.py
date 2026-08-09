@@ -312,6 +312,157 @@ def _truthful_capture_claim(
     return None
 
 
+_REVEALED_SELF_POSITION = re.compile(
+    r"self\s*=\s*\[\s*(-?\d+)\s*,\s*(-?\d+)\s*\]", re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class _RevealedTrajectoryAudit:
+    capture_step: int | None = None
+    capture_after_role: str | None = None
+    trailing_moves: int = 0
+    errors: tuple[str, ...] = ()
+
+
+def _revealed_coordinate(value: object) -> Position | None:
+    """Read only public/revealed coordinate shapes used by compatible peers."""
+    if isinstance(value, dict):
+        row, col = value.get("row"), value.get("col")
+        if all(isinstance(item, int) and not isinstance(item, bool) for item in (row, col)):
+            return Position(row, col)
+    if (
+        isinstance(value, (list, tuple))
+        and len(value) == 2
+        and all(isinstance(item, int) and not isinstance(item, bool) for item in value)
+    ):
+        return Position(value[0], value[1])
+    if isinstance(value, str):
+        match = _REVEALED_SELF_POSITION.search(value)
+        if match:
+            return Position(int(match.group(1)), int(match.group(2)))
+    return None
+
+
+def _revealed_move(value: object) -> Move | None:
+    raw = str(value).strip().upper()
+    for prefix in ("MOVE:", "MOVE=", "MOVE ", "ACTION:", "ACTION=", "ACTION "):
+        if raw.startswith(prefix):
+            raw = raw[len(prefix):].strip()
+            break
+    aliases = {
+        "NORTH": "N", "SOUTH": "S", "EAST": "E", "WEST": "W",
+        "WAIT": "STAY", "NONE": "STAY",
+    }
+    try:
+        return Move(aliases.get(raw, raw))
+    except ValueError:
+        return None
+
+
+def _revealed_post_position(
+    payload: dict, previous: Position, grid_size: int,
+) -> tuple[Position | None, str | None]:
+    """Normalize a signed move without assuming whether ``state`` is pre/post.
+
+    Our records publish pre-move ``state`` plus post-move ``position``.  The
+    reviewed reference-compatible peer publishes its post-move cell inside
+    ``grid=...;self=[row,col]`` and uses ``MOVE:*`` actions.  Continuity from
+    the protected start position distinguishes both formats safely.
+    """
+    move = _revealed_move(payload.get("move"))
+    if move is None:
+        return None, f"unsupported move {payload.get('move')!r}"
+    delta = {
+        Move.NORTH: (-1, 0), Move.SOUTH: (1, 0),
+        Move.EAST: (0, 1), Move.WEST: (0, -1), Move.STAY: (0, 0),
+    }[move]
+    expected = Position(previous.row + delta[0], previous.col + delta[1])
+    if not (0 <= expected.row < grid_size and 0 <= expected.col < grid_size):
+        return None, f"move {move.value} from {previous} leaves the board"
+
+    explicit = _revealed_coordinate(payload.get("position"))
+    state = _revealed_coordinate(payload.get("state"))
+    if explicit is not None:
+        if explicit != expected:
+            return None, f"position {explicit} does not match {move.value} from {previous}"
+        if state is not None and state not in (previous, explicit):
+            return None, f"state {state} is inconsistent with {previous}->{explicit}"
+        return explicit, None
+    if state == expected:
+        return state, None
+    if state == previous:
+        return expected, None
+    return None, f"state {payload.get('state')!r} does not continue from {previous}"
+
+
+def _audit_revealed_trajectory(
+    own_records: list[dict],
+    peer_records: list[dict],
+    own_role: str,
+    peer_role: str,
+    cop_start: Position,
+    thief_start: Position,
+    grid_size: int,
+) -> _RevealedTrajectoryAudit:
+    """Replay signed public records and find the first physical collision."""
+    decorated: list[tuple[str, dict]] = []
+    for source_role, records in ((own_role, own_records), (peer_role, peer_records)):
+        for record in records:
+            payload = record.get("payload") if isinstance(record, dict) else None
+            if not isinstance(payload, dict) or "move" not in payload:
+                continue
+            decorated.append((source_role, payload))
+    def sort_key(item: tuple[str, dict]) -> tuple[int, int]:
+        try:
+            step = int(item[1].get("step", -1))
+        except (TypeError, ValueError):
+            step = -1
+        return step, 0 if item[0] == "thief" else 1
+
+    decorated.sort(key=sort_key)
+
+    positions = {"police": cop_start, "thief": thief_start}
+    seen: set[tuple[str, int]] = set()
+    errors: list[str] = []
+    capture_step: int | None = None
+    capture_after_role: str | None = None
+    trailing_moves = 0
+    for source_role, payload in decorated:
+        role = "police" if source_role == "cop" else source_role
+        try:
+            step = int(payload.get("step"))
+        except (TypeError, ValueError):
+            errors.append(f"{role} record has invalid step {payload.get('step')!r}")
+            continue
+        declared_role = "police" if payload.get("role") == "cop" else payload.get("role")
+        if role not in positions or declared_role not in (None, role):
+            errors.append(
+                f"step {step} source role {role!r} conflicts with payload role {declared_role!r}"
+            )
+            continue
+        key = (role, step)
+        if key in seen:
+            errors.append(f"duplicate {role} move at step {step}")
+            continue
+        seen.add(key)
+        position, error = _revealed_post_position(payload, positions[role], grid_size)
+        if error is not None or position is None:
+            errors.append(f"step {step} {role}: {error}")
+            continue
+        positions[role] = position
+        if capture_step is not None:
+            trailing_moves += 1
+            continue
+        if positions["police"] == positions["thief"]:
+            capture_step = step
+            capture_after_role = role
+
+    return _RevealedTrajectoryAudit(
+        capture_step, capture_after_role, trailing_moves, tuple(errors),
+    )
+
+
 _OPPOSITE_MOVE = {
     Move.NORTH: Move.SOUTH,
     Move.SOUTH: Move.NORTH,
@@ -384,6 +535,9 @@ class NetworkMatchRunner:
         peer_commits: dict[int, str] = {}
         pending_claim_response: dict | None = None
         outstanding_capture_claims: list[list[int]] = []
+        outstanding_scent_claim: list[int] | None = None
+        scent_capture_evidence_reliable = True
+        missing_claim_response = False
         known_cop_position = (
             params.cop_start if self.settings.role is AgentRole.THIEF else None
         )
@@ -500,7 +654,11 @@ class NetworkMatchRunner:
                 capture_claim = _truthful_capture_claim(
                     self.settings.role,
                     own_position,
-                    public_thief_candidates,
+                    (
+                        public_thief_candidates
+                        if scent_capture_evidence_reliable
+                        else ()
+                    ),
                 )
                 if capture_claim is not None:
                     emit(
@@ -549,6 +707,9 @@ class NetworkMatchRunner:
                         list(claim) for claim in (capture_claim, barrier_placed)
                         if claim is not None
                     ]
+                    outstanding_scent_claim = (
+                        list(capture_claim) if capture_claim is not None else None
+                    )
                     public_thief_candidates = ()
                 elif pending_claim_response and not pending_claim_response.get("caught"):
                     # A negative acknowledgement answers one public claim only;
@@ -693,14 +854,39 @@ class NetworkMatchRunner:
                     else:
                         public_thief_candidates = ()
                         last_inferred_opponent_position = None
-                if self.settings.role is AgentRole.COP and message.claim_response:
-                    validate_claim_response(
-                        message.claim_response, outstanding_capture_claims,
-                    )
+                if self.settings.role is AgentRole.COP and outstanding_capture_claims:
+                    if message.claim_response is None:
+                        missing_claim_response = True
+                        scent_capture_evidence_reliable = False
+                        emit(
+                            f"Step {step}: opponent omitted the required response to "
+                            f"capture claim(s) {outstanding_capture_claims}; disabling "
+                            "scent-derived capture claims for this sub-game"
+                        )
+                    else:
+                        validate_claim_response(
+                            message.claim_response, outstanding_capture_claims,
+                        )
+                        if (
+                            outstanding_scent_claim is not None
+                            and message.claim_response.get("claim") == outstanding_scent_claim
+                            and not message.claim_response.get("caught")
+                        ):
+                            scent_capture_evidence_reliable = False
+                            emit(
+                                f"Step {step}: opponent rejected scent-derived capture "
+                                f"claim {outstanding_scent_claim}; treating scent as pursuit "
+                                "evidence only for the rest of this sub-game"
+                            )
+                        if message.claim_response.get("caught"):
+                            outcome = MatchOutcome.CAPTURE
+                            break
                     outstanding_capture_claims = []
-                    if message.claim_response.get("caught"):
-                        outcome = MatchOutcome.CAPTURE
-                        break
+                    outstanding_scent_claim = None
+                elif self.settings.role is AgentRole.COP and message.claim_response:
+                    raise NetworkProtocolError(
+                        "opponent sent an unsolicited capture response"
+                    )
                 if message.win_claim:
                     claim_type = message.win_claim.get("type")
                     outcome = MatchOutcome.CAPTURE if claim_type == "boxed_in" else MatchOutcome.SURVIVAL
@@ -730,7 +916,43 @@ class NetworkMatchRunner:
             return self._write_technical_loss_result(
                 params, own_records, peer_identity, emit,
             )
-        if peer_audit.result_claim != outcome.value:
+        entries = self._combined_log(
+            own_records, peer_audit.records, wire_role, peer_audit.sender,
+        )
+        trajectory = _audit_revealed_trajectory(
+            own_records,
+            peer_audit.records,
+            wire_role,
+            peer_audit.sender,
+            params.cop_start,
+            params.thief_start,
+            params.board.grid_size,
+        )
+        semantic_audit_clean = not trajectory.errors
+        if trajectory.errors:
+            rendered = "; ".join(trajectory.errors[:5])
+            emit(
+                "Revealed trajectory contains semantic validation errors; "
+                f"mutual sign-off disabled: {rendered}"
+            )
+        if trajectory.capture_step is not None:
+            if outcome is not MatchOutcome.CAPTURE:
+                emit(
+                    f"Final audit corrected the outcome to capture: signed positions "
+                    f"first coincide at step {trajectory.capture_step} after the "
+                    f"{trajectory.capture_after_role} move"
+                )
+            outcome = MatchOutcome.CAPTURE
+            if trajectory.trailing_moves:
+                semantic_audit_clean = False
+                emit(
+                    f"Final audit found {trajectory.trailing_moves} move(s) after the "
+                    f"terminal collision at step {trajectory.capture_step}; retaining "
+                    "the signed log but disabling mutual sign-off"
+                )
+
+        peer_claim_matches = peer_audit.result_claim == outcome.value
+        if not peer_claim_matches and trajectory.capture_step is None:
             emit(
                 "Opponent result claim does not match local result; recording "
                 "technical loss with mutual_sign_off=false"
@@ -739,17 +961,21 @@ class NetworkMatchRunner:
             return self._write_technical_loss_result(
                 params, own_records, peer_identity, emit,
             )
+        if not peer_claim_matches:
+            emit(
+                f"Opponent claimed {peer_audit.result_claim!r}, but the signed revealed "
+                f"trajectory proves {outcome.value!r}; saving the evidence-derived "
+                "result without mutual sign-off"
+            )
         mutual_sign_off = bool(re.fullmatch(
             r"[0-9a-f]{40}", str(peer_identity.get("git_commit_hash", "")),
-        ))
+        )) and peer_claim_matches and semantic_audit_clean and not missing_claim_response
         if not mutual_sign_off:
             emit(
-                "Opponent identity omitted a valid 40-character Git commit; "
-                "result retained with mutual_sign_off=false"
+                "Audit was not fully mutually verifiable (identity, result claim, "
+                "trajectory, or capture response); result retained with "
+                "mutual_sign_off=false"
             )
-        entries = self._combined_log(
-            own_records, peer_audit.records, wire_role, peer_audit.sender,
-        )
         path = self._write_result(
             params, entries, outcome, peer_identity, peer_audit.token_usage, emit,
             mutual_sign_off=mutual_sign_off,
