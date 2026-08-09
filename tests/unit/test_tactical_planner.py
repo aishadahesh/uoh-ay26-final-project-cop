@@ -39,6 +39,21 @@ def test_detected_abab_loop_excludes_reversal_and_stay_when_alternatives_exist()
     assert plan.selected not in (Move.WEST, Move.STAY)
 
 
+def test_single_backtrack_triggers_replanning_before_it_becomes_abab():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    planner = TacticalPlanner(AgentRole.THIEF)
+    a, b = Position(3, 3), Position(3, 4)
+    planner.record_move(a, Move.EAST, b)
+    planner.record_move(b, Move.WEST, a)
+
+    plan = planner.evaluate(board, a, _belief_at(board, Position(0, 0)))
+
+    assert plan.loop_detected is True
+    assert "immediate-backtrack" in plan.loop_reason
+    assert Move.EAST in plan.excluded_moves
+    assert plan.selected not in (Move.EAST, Move.STAY)
+
+
 def test_thief_prefers_open_escape_route_over_equal_distance_corner():
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
     plan = TacticalPlanner(AgentRole.THIEF).evaluate(
@@ -49,7 +64,7 @@ def test_thief_prefers_open_escape_route_over_equal_distance_corner():
 
     assert plan.selected is Move.EAST
     assert east.path_distance == west.path_distance
-    assert east.escape_routes > west.escape_routes
+    assert east.mobility > west.mobility
 
 
 def test_every_currently_legal_move_receives_an_explainable_score():
@@ -108,11 +123,91 @@ def test_thief_uses_confirmed_cop_position_to_avoid_repeated_corner_capture():
         board,
         Position(6, 0),
         _belief_at(board, Position(0, 0)),
-        known_opponent_position=Position(5, 1),
+        known_opponent_position=Position(4, 1),
     )
 
     assert plan.selected is Move.STAY
     assert plan.allowed_moves == (Move.STAY,)
+
+
+def test_thief_accounts_for_move_then_barrier_capture_footprint():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    plan = TacticalPlanner(AgentRole.THIEF).evaluate(
+        board,
+        Position(3, 6),
+        _belief_at(board, Position(0, 0)),
+        known_opponent_position=Position(3, 3),
+    )
+
+    west = next(item for item in plan.evaluations if item.move is Move.WEST)
+    assert west.destination == Position(3, 5)
+    assert west.proximity_risk == 1.0
+    assert Move.WEST not in plan.allowed_moves
+
+    no_barrier_board = Board(BoardConfig(grid_size=7, max_barriers=0))
+    no_barrier_plan = TacticalPlanner(AgentRole.THIEF).evaluate(
+        no_barrier_board,
+        Position(3, 6),
+        _belief_at(no_barrier_board, Position(0, 0)),
+        known_opponent_position=Position(3, 3),
+    )
+    no_barrier_west = next(
+        item for item in no_barrier_plan.evaluations if item.move is Move.WEST
+    )
+    assert no_barrier_west.proximity_risk == 0.0
+
+
+def test_thief_treats_belief_proximity_as_a_hard_constraint():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    plan = TacticalPlanner(AgentRole.THIEF).evaluate(
+        board,
+        Position(1, 6),
+        _belief_at(board, Position(2, 5)),
+    )
+
+    # WEST, SOUTH, and STAY are all inside the cop's move-then-barrier capture
+    # footprint.  NORTH is the sole destination at a safe graph distance.
+    assert plan.allowed_moves == (Move.NORTH,)
+    assert plan.selected is Move.NORTH
+
+
+def test_public_barrier_evidence_breaks_recorded_step_11_capture_route():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    barrier_target = Position(5, 5)
+    plausible_cop_positions = (
+        barrier_target,
+        *board.neighbors(barrier_target),
+    )
+    board.apply_declared_barrier(barrier_target)
+
+    plan = TacticalPlanner(AgentRole.THIEF, strategy_seed=2).evaluate(
+        board,
+        Position(6, 4),
+        _belief_at(board, Position(0, 0)),
+        plausible_opponent_positions=plausible_cop_positions,
+    )
+
+    # In the recorded loss, NORTH entered the cop's actual cell (5,4), and
+    # EAST was another plausible cop cell.  WEST is the safe escape corridor.
+    assert Move.NORTH not in plan.allowed_moves
+    assert Move.EAST not in plan.allowed_moves
+    assert plan.selected is Move.WEST
+
+
+def test_cop_on_own_blocked_barrier_cell_still_threatens_adjacent_cells():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    barrier_target = Position(5, 5)
+    board.apply_declared_barrier(barrier_target)
+    plan = TacticalPlanner(AgentRole.THIEF).evaluate(
+        board,
+        Position(6, 4),
+        _belief_at(board, Position(0, 0)),
+        plausible_opponent_positions=(barrier_target,),
+    )
+
+    north = next(item for item in plan.evaluations if item.move is Move.NORTH)
+    assert north.proximity_risk == 1.0
+    assert Move.NORTH not in plan.allowed_moves
 
 
 def test_thief_does_not_repeat_the_recorded_seven_turn_capture_route():

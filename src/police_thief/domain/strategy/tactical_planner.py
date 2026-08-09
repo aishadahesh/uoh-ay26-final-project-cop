@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from police_thief.domain.belief import BeliefMap
 from police_thief.domain.board import Board, Move, Position
+from police_thief.domain.capture import cop_capture_cells
 from police_thief.shared.constants import AgentRole
 
 
@@ -88,20 +89,24 @@ class TacticalPlanner:
         own: Position,
         belief: BeliefMap,
         known_opponent_position: Position | None = None,
+        plausible_opponent_positions: tuple[Position, ...] = (),
     ) -> StrategyPlan:
         legal = board.legal_moves(own)
         if not legal:
             raise RuntimeError("board returned no legal moves (STAY must always be legal)")
         loop_detected, loop_reason = self._detect_loop(own)
-        # A signed starting position or a public capture claim is stronger
-        # evidence than the probabilistic scent belief.  In particular, the
-        # thief receives the cop's exact declared position every turn and must
-        # use it when evaluating capture risk.
-        belief_targets = (
-            ((known_opponent_position, 1.0),)
-            if known_opponent_position is not None
-            else belief.top_positions(5)
-        )
+        # Exact public evidence wins.  A public barrier is the next strongest
+        # clue: its target proves that the cop occupies either that cell or an
+        # orthogonally adjacent one.  Only when neither exists do we use the
+        # probabilistic scent belief.  No hidden opponent state is consulted.
+        if known_opponent_position is not None:
+            belief_targets = ((known_opponent_position, 1.0),)
+        elif plausible_opponent_positions:
+            candidates = tuple(dict.fromkeys(plausible_opponent_positions))
+            probability = 1.0 / len(candidates)
+            belief_targets = tuple((position, probability) for position in candidates)
+        else:
+            belief_targets = belief.top_positions(5)
         # Retain visit pressure for the entire mini-game, not just the short
         # loop-detection window.  With an empty scent grid the former behavior
         # forgot old cells and repeatedly searched the same central corridor.
@@ -116,19 +121,35 @@ class TacticalPlanner:
         # strategic candidate unless barriers have genuinely boxed the cop in.
         if self.role is AgentRole.COP and any(move is not Move.STAY for move in legal):
             hard_excluded.add(Move.STAY)
-        if self.role is AgentRole.THIEF and known_opponent_position is not None:
-            guaranteed_safe = tuple(
-                item for item in evaluations if item.proximity_risk == 0.0
+        if self.role is AgentRole.THIEF:
+            # Risk is a constraint, not merely a score.  The former planner
+            # hard-filtered danger only when the cop published an exact cell;
+            # with scent/boundary evidence it could still accept a high-scoring
+            # move directly into capture.  Eliminate each risk tier whenever a
+            # safer legal alternative exists, while retaining at least one move
+            # when the thief is genuinely cornered.
+            safety_pool = evaluations
+            direct_safe = tuple(
+                item for item in safety_pool if item.direct_capture_risk == 0.0
             )
-            if guaranteed_safe:
+            if direct_safe:
                 hard_excluded.update(
-                    item.move for item in evaluations if item.proximity_risk > 0.0
+                    item.move for item in safety_pool if item.direct_capture_risk > 0.0
                 )
-                trap_safe = tuple(item for item in guaranteed_safe if item.trap_risk == 0.0)
-                if trap_safe:
-                    hard_excluded.update(
-                        item.move for item in guaranteed_safe if item.trap_risk > 0.0
-                    )
+                safety_pool = direct_safe
+            proximity_safe = tuple(
+                item for item in safety_pool if item.proximity_risk == 0.0
+            )
+            if proximity_safe:
+                hard_excluded.update(
+                    item.move for item in safety_pool if item.proximity_risk > 0.0
+                )
+                safety_pool = proximity_safe
+            trap_safe = tuple(item for item in safety_pool if item.trap_risk == 0.0)
+            if trap_safe:
+                hard_excluded.update(
+                    item.move for item in safety_pool if item.trap_risk > 0.0
+                )
 
         excluded: set[Move] = set(hard_excluded)
         if loop_detected and len(evaluations) > 1:
@@ -175,6 +196,8 @@ class TacticalPlanner:
     def _detect_loop(self, own: Position) -> tuple[bool, str]:
         positions = tuple(self._positions)
         moves = tuple(self._moves)
+        if len(positions) >= 3 and positions[-3] == positions[-1]:
+            return True, "ABA immediate-backtrack oscillation"
         if len(positions) >= 4 and positions[-4] == positions[-2] and positions[-3] == positions[-1]:
             return True, "ABAB position oscillation"
         if len(moves) >= 4 and moves[-4] == moves[-2] and moves[-3] == moves[-1]:
@@ -199,10 +222,14 @@ class TacticalPlanner:
         weight = sum(probability for _, probability in distances) or 1.0
         expected_distance = sum(distance * probability for distance, probability in distances) / weight
         direct_capture_risk = sum(
-            probability for distance, probability in distances if distance == 0
+            probability
+            for target, probability in targets
+            if destination == target
         ) / weight
         proximity_risk = sum(
-            probability for distance, probability in distances if distance <= 1
+            probability
+            for target, probability in targets
+            if destination in cop_capture_cells(board, target)
         ) / weight
         mobility = sum(candidate is not Move.STAY for candidate in board.legal_moves(destination))
         future_value = self._future_value(board, destination, targets)
@@ -290,17 +317,20 @@ class TacticalPlanner:
         def safe_continuation_count(cop_reply: Position) -> int:
             if cop_reply == destination:
                 return 0
-            next_capture_cells = set(board.legal_moves(cop_reply).values())
+            next_capture_cells = cop_capture_cells(board, cop_reply)
             return sum(
                 continuation not in next_capture_cells
                 for continuation in thief_continuations
             )
 
         for target, probability in targets:
-            worst_case_routes = min(
-                safe_continuation_count(cop_reply)
-                for cop_reply in set(board.legal_moves(target).values())
-            )
+            if destination in cop_capture_cells(board, target):
+                worst_case_routes = 0
+            else:
+                worst_case_routes = min(
+                    safe_continuation_count(cop_reply)
+                    for cop_reply in set(board.legal_moves(target).values())
+                )
             expected_routes += probability * worst_case_routes
             if worst_case_routes == 0:
                 trapped_weight += probability
@@ -359,10 +389,12 @@ def _shortest_distance(board: Board, start: Position, goal: Position) -> int:
     while queue:
         current, distance = queue.popleft()
         for neighbor in board.neighbors(current):
-            if neighbor in visited or board.is_blocked(neighbor):
-                continue
+            # A cop may legally place a barrier on its occupied cell.  Such a
+            # cell is blocked for entry but is still the distance target.
             if neighbor == goal:
                 return distance + 1
+            if neighbor in visited or board.is_blocked(neighbor):
+                continue
             visited.add(neighbor)
             queue.append((neighbor, distance + 1))
     return board.config.grid_size ** 2 + 1

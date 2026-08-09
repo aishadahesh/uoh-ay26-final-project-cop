@@ -24,6 +24,23 @@ def check_capture(cop_position: Position, thief_position: Position) -> bool:
     return cop_position == thief_position
 
 
+def cop_capture_cells(board: Board, cop_position: Position) -> frozenset[Position]:
+    """Cells the cop can capture on its next complete turn.
+
+    A cop may first make one legal orthogonal move (or STAY), then—while it
+    still has budget—place a barrier on its resulting cell or an adjacent
+    cell.  The second footprint matters to escape planning because a barrier
+    landing on the thief is an immediate capture.
+    """
+    after_move = set(board.legal_moves(cop_position).values())
+    if board.remaining_barrier_budget <= 0:
+        return frozenset(after_move)
+    capture_cells = set(after_move)
+    for position in after_move:
+        capture_cells.update(board.legal_moves(position).values())
+    return frozenset(capture_cells)
+
+
 def is_boxed_in(board: Board, thief_position: Position) -> bool:
     """True if every orthogonal neighbor of the thief is blocked or off-board."""
     neighbors = board.neighbors(thief_position)

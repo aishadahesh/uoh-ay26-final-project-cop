@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import math
 import platform
 import re
+import secrets
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, replace
@@ -13,9 +15,10 @@ from pathlib import Path
 from threading import Event
 
 from police_thief.domain.belief import BeliefMap
-from police_thief.domain.board import Board, Position
-from police_thief.domain.capture import is_boxed_in
+from police_thief.domain.board import Board, Move, Position
+from police_thief.domain.capture import cop_capture_cells, is_boxed_in
 from police_thief.domain.hints import TemplateHintProvider
+from police_thief.domain.league import apply_tie_rule
 from police_thief.domain.replay import save_log
 from police_thief.domain.scent import ScentField
 from police_thief.domain.scoring import MatchOutcome, score_for
@@ -110,14 +113,110 @@ class _WireScent:
 
 
 def _confirmed_cop_position(
-    belief: BeliefMap, capture_claim: list[int] | None,
+    belief: BeliefMap,
+    capture_claim: list[int] | None,
+    *,
+    occupied_blocked_position: Position | None = None,
 ) -> Position | None:
     """Return only a currently published cop cell, never stale certainty."""
     if capture_claim is None:
         return None
     position = Position(*capture_claim)
-    belief.set_certain_position(position)
+    # The cop may legally place a barrier on its own occupied cell.  The board
+    # must remain blocked for movement, while the separately tracked exact
+    # position still identifies the cop there; BeliefMap intentionally cannot
+    # assign probability to a blocked cell.
+    if position != occupied_blocked_position:
+        belief.set_certain_position(position)
     return position
+
+
+def _public_barrier_cop_candidates(
+    board: Board, barrier_target: Position,
+) -> tuple[Position, ...]:
+    """Return every cop cell consistent with a public barrier declaration.
+
+    A legal barrier is placed on the cop's own cell or an orthogonally
+    adjacent cell.  The target may therefore itself be occupied even after it
+    becomes blocked, so it is intentionally retained in this candidate set.
+    """
+    return tuple(dict.fromkeys((barrier_target, *board.neighbors(barrier_target))))
+
+
+def _infer_public_scent_center(
+    board: Board,
+    previous_grid: dict[str, float],
+    current_grid: dict[str, float],
+    *,
+    decay_rate: float,
+    min_center_intensity: float,
+    previous_position: Position | None = None,
+) -> Position | None:
+    """Infer a fresh emission center from two truthful public scent grids.
+
+    The signed rule is ``new = (1-rho)*old + emission``.  Subtracting the
+    retained trail prevents old high-intensity cells from being mistaken for
+    the cop's current region.  The result remains an inference: malformed,
+    capped, ambiguous, or physically impossible grids return ``None`` and the
+    normal probabilistic belief path remains in control.
+    """
+    retained = 1.0 - decay_rate
+    innovations: list[tuple[Position, float]] = []
+    for row in range(board.config.grid_size):
+        for col in range(board.config.grid_size):
+            position = Position(row, col)
+            key = f"{row},{col}"
+            try:
+                current = float(current_grid.get(key, 0.0))
+                previous = float(previous_grid.get(key, 0.0))
+            except (TypeError, ValueError):
+                return None
+            if not math.isfinite(current) or not math.isfinite(previous):
+                return None
+            innovations.append((position, current - retained * previous))
+
+    ranked = sorted(innovations, key=lambda item: item[1], reverse=True)
+    if not ranked:
+        return None
+    center, peak = ranked[0]
+    runner_up = ranked[1][1] if len(ranked) > 1 else float("-inf")
+    rounding_tolerance = 2e-5
+    minimum_gap = max(0.05, min_center_intensity * 0.10)
+    if peak < min_center_intensity - rounding_tolerance:
+        return None
+    if peak - runner_up < minimum_gap:
+        return None
+    if (
+        previous_position is not None
+        and center not in set(board.legal_moves(previous_position).values())
+    ):
+        return None
+    return center
+
+
+def _truthful_capture_claim(
+    role: AgentRole,
+    own_position: Position,
+    plausible_opponent_positions: tuple[Position, ...],
+) -> list[int] | None:
+    """Declare capture only when public evidence identifies the occupied cell."""
+    candidates = tuple(dict.fromkeys(plausible_opponent_positions))
+    if (
+        role is AgentRole.COP
+        and len(candidates) == 1
+        and own_position == candidates[0]
+    ):
+        return [own_position.row, own_position.col]
+    return None
+
+
+_OPPOSITE_MOVE = {
+    Move.NORTH: Move.SOUTH,
+    Move.SOUTH: Move.NORTH,
+    Move.EAST: Move.WEST,
+    Move.WEST: Move.EAST,
+    Move.STAY: Move.STAY,
+}
 
 
 class NetworkMatchRunner:
@@ -186,6 +285,14 @@ class NetworkMatchRunner:
         known_cop_position = (
             params.cop_start if self.settings.role is AgentRole.THIEF else None
         )
+        public_cop_candidates: tuple[Position, ...] = ()
+        public_thief_candidates: tuple[Position, ...] = ()
+        previous_peer_scent: dict[str, float] = {}
+        last_inferred_opponent_position = (
+            params.cop_start
+            if self.settings.role is AgentRole.THIEF
+            else params.thief_start
+        )
         thief_boxed_in = False
         outcome = MatchOutcome.SURVIVAL
         wire_role = WIRE_ROLES[self.settings.role.value]
@@ -238,18 +345,36 @@ class NetworkMatchRunner:
                     own_position,
                     belief,
                     known_opponent_position=known_cop_position,
+                    plausible_opponent_positions=(
+                        public_cop_candidates
+                        if self.settings.role is AgentRole.THIEF
+                        else public_thief_candidates
+                    ),
                 )
                 move, _private_reason = self._choose_move(
                     board, belief, own_position, fallback, step, params.max_moves, emit,
                     plan=brain.last_plan,
                     known_opponent_position=known_cop_position,
+                    plausible_opponent_positions=(
+                        public_cop_candidates
+                        if self.settings.role is AgentRole.THIEF
+                        else public_thief_candidates
+                    ),
                 )
                 # Gemini's rationale is private reasoning and may mention local
                 # truth.  Only a bounded direction claim crosses the wire.
-                hint = hint_provider.generate(move, tell_truth=True).text
                 state_before = own_position
+                public_hint = self._generate_public_hint(
+                    hint_provider, board, state_before, move, step,
+                )
+                hint = public_hint.text
                 own_position = board.apply_move(own_position, move)
                 brain.record_move(state_before, move, own_position)
+                if self.settings.role is AgentRole.THIEF:
+                    # Barrier evidence describes the cop before its next turn.
+                    # Do not carry that exact candidate set across another cop
+                    # move; the fresh scent/public declaration will replace it.
+                    public_cop_candidates = ()
                 if (
                     self.settings.role is AgentRole.THIEF
                     and known_cop_position is not None
@@ -267,9 +392,10 @@ class NetworkMatchRunner:
                 own_scent.decay()
                 own_scent.emit(own_position)
                 barrier_placed = self._maybe_place_barrier(board, own_position, belief, brain, emit, step)
-                capture_claim = (
-                    [own_position.row, own_position.col]
-                    if self.settings.role is AgentRole.COP else None
+                capture_claim = _truthful_capture_claim(
+                    self.settings.role,
+                    own_position,
+                    public_thief_candidates,
                 )
                 win_claim = (
                     {"type": "boxed_in"} if self.settings.role is AgentRole.THIEF and thief_boxed_in
@@ -283,7 +409,7 @@ class NetworkMatchRunner:
                     "state": {"row": state_before.row, "col": state_before.col},
                     "position": [own_position.row, own_position.col],
                     "move": move.value,
-                    "intent": True,
+                    "intent": public_hint.intent_truthful,
                     "hint": hint,
                 }
                 payload.update({
@@ -313,6 +439,11 @@ class NetworkMatchRunner:
                         list(claim) for claim in (capture_claim, barrier_placed)
                         if claim is not None
                     ]
+                    public_thief_candidates = ()
+                elif pending_claim_response and not pending_claim_response.get("caught"):
+                    # A negative acknowledgement answers one public claim only;
+                    # do not repeat it on unrelated later turns.
+                    pending_claim_response = None
                 emit(f"Step {step}: sealed turn delivered; nonce remains private")
                 if pending_claim_response and pending_claim_response.get("caught"):
                     outcome = MatchOutcome.CAPTURE
@@ -331,17 +462,69 @@ class NetworkMatchRunner:
                         f"received sender={message.sender!r}, step={message.step}"
                     )
                 peer_commits[step] = message.commit
+                inferred_scent_center = _infer_public_scent_center(
+                    board,
+                    previous_peer_scent,
+                    message.smell_grid,
+                    decay_rate=params.scent.decay_rate,
+                    min_center_intensity=params.scent.min_center_intensity,
+                    previous_position=last_inferred_opponent_position,
+                )
+                previous_peer_scent = dict(message.smell_grid)
                 belief.update_from_scent(_WireScent(message.smell_grid))
                 emit(f"Step {step}: received sealed {message.sender} turn")
+                barrier_cop_candidates: tuple[Position, ...] = ()
+                barrier_target: Position | None = None
                 if message.barrier_placed is not None:
                     barrier_target = Position(*message.barrier_placed)
+                    barrier_cop_candidates = _public_barrier_cop_candidates(
+                        board, barrier_target,
+                    )
                     board.apply_declared_barrier(barrier_target)
                     emit(f"Step {step}: opponent publicly declared a barrier at {barrier_target}")
                 if self.settings.role is AgentRole.THIEF:
                     previous_known_cop_position = known_cop_position
                     known_cop_position = _confirmed_cop_position(
-                        belief, message.capture_claim,
+                        belief,
+                        message.capture_claim,
+                        occupied_blocked_position=barrier_target,
                     )
+                    if known_cop_position is not None:
+                        public_cop_candidates = ()
+                        last_inferred_opponent_position = known_cop_position
+                    elif inferred_scent_center is not None:
+                        public_cop_candidates = (inferred_scent_center,)
+                        last_inferred_opponent_position = inferred_scent_center
+                        if (
+                            barrier_cop_candidates
+                            and inferred_scent_center not in barrier_cop_candidates
+                        ):
+                            # Two public channels disagree.  Do not fabricate
+                            # certainty; protect against the union instead.
+                            public_cop_candidates = tuple(dict.fromkeys(
+                                (inferred_scent_center, *barrier_cop_candidates)
+                            ))
+                            # Do not validate the next transition from one side
+                            # of disputed evidence.  The next fresh scent frame
+                            # will be assessed without a false singleton anchor.
+                            last_inferred_opponent_position = None
+                        emit(
+                            f"Step {step}: fresh public scent implies cop center "
+                            f"({inferred_scent_center.row},{inferred_scent_center.col}); "
+                            "using it as high-confidence escape evidence"
+                        )
+                    else:
+                        public_cop_candidates = barrier_cop_candidates
+                        last_inferred_opponent_position = None
+                    if public_cop_candidates:
+                        rendered = ", ".join(
+                            f"({position.row},{position.col})"
+                            for position in public_cop_candidates
+                        )
+                        emit(
+                            f"Step {step}: public evidence constrains the cop to "
+                            f"one of [{rendered}]; applying this to escape safety"
+                        )
                     if (
                         previous_known_cop_position is not None
                         and known_cop_position is None
@@ -362,6 +545,18 @@ class NetworkMatchRunner:
                     if is_boxed_in(board, own_position):
                         thief_boxed_in = True
                         emit(f"Step {step}: no legal move remains -- boxed in (Sec. 3.3.5)")
+                elif self.settings.role is AgentRole.COP:
+                    if inferred_scent_center is not None:
+                        public_thief_candidates = (inferred_scent_center,)
+                        last_inferred_opponent_position = inferred_scent_center
+                        emit(
+                            f"Step {step}: fresh public scent implies thief center "
+                            f"({inferred_scent_center.row},{inferred_scent_center.col}); "
+                            "using it for pursuit and truthful capture detection"
+                        )
+                    else:
+                        public_thief_candidates = ()
+                        last_inferred_opponent_position = None
                 if self.settings.role is AgentRole.COP and message.claim_response:
                     validate_claim_response(
                         message.claim_response, outstanding_capture_claims,
@@ -433,13 +628,21 @@ class NetworkMatchRunner:
     def _choose_move(
         self, board, belief, own, fallback, step, max_steps, emit, plan=None,
         known_opponent_position=None,
+        plausible_opponent_positions=(),
     ):
         legal_now = board.legal_moves(own)
         safe_now = dict(legal_now)
-        if self.settings.role is AgentRole.THIEF and known_opponent_position is not None:
-            cop_reachable_next = set(
-                board.legal_moves(known_opponent_position).values()
-            )
+        threat_positions = (
+            (known_opponent_position,)
+            if known_opponent_position is not None
+            else tuple(dict.fromkeys(plausible_opponent_positions))
+        )
+        if self.settings.role is AgentRole.THIEF and threat_positions:
+            cop_reachable_next = {
+                destination
+                for position in threat_positions
+                for destination in cop_capture_cells(board, position)
+            }
             guaranteed_safe = {
                 move: destination
                 for move, destination in legal_now.items()
@@ -452,18 +655,24 @@ class NetworkMatchRunner:
                         continue
                     emit(
                         f"Step {step}: rejected {move.name} ({move.value}); destination "
-                        f"{destination} is reachable by the cop on its next move"
+                        f"{destination} is capturable on the cop's next turn "
+                        "(move or barrier)"
                     )
             else:
-                # If capture cannot be ruled out, still forbid walking onto
-                # the cop's current cell: that loses immediately before the
-                # cop even takes its turn.
+                # If every option is threatened, still forbid walking onto a
+                # currently plausible cop cell: that loses immediately before
+                # the cop even takes its turn.
                 for move, destination in tuple(safe_now.items()):
-                    if destination == known_opponent_position:
+                    if destination in threat_positions and len(safe_now) > 1:
                         safe_now.pop(move)
+                        evidence = (
+                            "the cop's confirmed current cell"
+                            if known_opponent_position is not None
+                            else "a publicly plausible current cop cell"
+                        )
                         emit(
                             f"Step {step}: rejected {move.name} ({move.value}); destination "
-                            f"{known_opponent_position} is the cop's confirmed current cell"
+                            f"{destination} is {evidence}"
                         )
         if plan is not None:
             for item in plan.evaluations:
@@ -514,7 +723,14 @@ class NetworkMatchRunner:
                 action_scores=tuple((move, evaluations.get(move, "not scored")) for move in allowed),
                 board_size=size,
                 blocked_cells=blocked,
-                belief_candidates=belief.top_positions(5),
+                belief_candidates=(
+                    tuple(
+                        (position, 1.0 / len(threat_positions))
+                        for position in threat_positions
+                    )
+                    if known_opponent_position is None and threat_positions
+                    else belief.top_positions(5)
+                ),
                 recent_positions=plan.recent_positions if plan else (),
                 recent_actions=plan.recent_actions if plan else (),
                 repeated_state_warning=plan.loop_reason if plan and plan.loop_detected else "",
@@ -554,6 +770,43 @@ class NetworkMatchRunner:
         source = "fallback" if decision.used_fallback else "Gemini"
         emit(f"Step {step}: {source} ({elapsed:.1f}s) - {decision.rationale}")
         return decision.move, decision.rationale
+
+    def _generate_public_hint(
+        self, provider, board, before, true_move, step,
+    ):
+        """Generate a legal verbal bluff for the thief, never a fake scent.
+
+        Hints are the one rule-authorized deceptive channel.  Prefer claiming
+        the opposite move when that claim is plausible from the public origin;
+        otherwise rotate through other legal claims across games/turns.  The
+        cop remains truthful because pursuit gains nothing from advertising a
+        fabricated route here.
+        """
+        if self.settings.role is not AgentRole.THIEF:
+            return provider.generate(true_move, tell_truth=True)
+        # Mix truth into the policy so an opponent cannot simply invert every
+        # audited hint in the next game.  Randomness affects language only,
+        # never the deterministic movement or legal-action validation.
+        if secrets.randbelow(4) == 0:
+            return provider.generate(true_move, tell_truth=True)
+        alternatives = tuple(
+            move for move in board.legal_moves(before)
+            if move is not true_move
+        )
+        if not alternatives:
+            return provider.generate(true_move, tell_truth=True)
+        preferred = tuple(
+            move
+            for move in alternatives
+            if move is _OPPOSITE_MOVE[true_move] and move is not Move.STAY
+        )
+        # Include the opposite twice to make it a useful default without
+        # becoming a deterministic, invertible signal.
+        bluff_pool = preferred + alternatives
+        false_move = bluff_pool[secrets.randbelow(len(bluff_pool))]
+        return provider.generate(
+            true_move, tell_truth=False, false_move=false_move,
+        )
 
     def _gemini_usage_snapshot(self) -> tuple[int, int]:
         if self.gemini_advisor is None or not hasattr(
@@ -945,6 +1198,13 @@ class NetworkMatchSeriesRunner:
             })
             emit(f"Sub-game {series_index + 1}/{num_games} verified")
 
+        # Tie Rule (Sec. 9.2.8-9.2.9 / Appendix F Table 17 row 5): a tied
+        # cumulative series total credits each side the tie score on top of
+        # its raw subtotal, so the emailed aggregate carries e.g. 77-77.
+        group_a, group_b = totals
+        totals[group_a], totals[group_b] = apply_tie_rule(
+            totals[group_a], totals[group_b], params.scoring.tie_score,
+        )
         ordered_totals = dict(sorted(totals.items(), key=lambda item: item[0].casefold()))
         highest = max(ordered_totals.values())
         winners = [team for team, score in ordered_totals.items() if score == highest]

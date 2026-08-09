@@ -32,12 +32,14 @@ class ManhattanHeuristicBrain(BrainBase):
         own: Position,
         belief: BeliefMap,
         known_opponent_position: Position | None = None,
+        plausible_opponent_positions: tuple[Position, ...] = (),
     ) -> Move:
         self.last_plan = self.planner.evaluate(
             board,
             own,
             belief,
             known_opponent_position=known_opponent_position,
+            plausible_opponent_positions=plausible_opponent_positions,
         )
         return self.last_plan.selected
 
