@@ -28,6 +28,9 @@ class ActionEvaluation:
     proximity_risk: float = 0.0
     escape_routes: float = 0.0
     trap_risk: float = 0.0
+    intercept_distance: float = 0.0
+    containment: float = 0.0
+    escape_space: float = 0.0
 
     def summary(self) -> str:
         return (
@@ -247,14 +250,45 @@ class TacticalPlanner:
         dead_end_penalty = 24.0 if mobility <= 1 else (12.0 if mobility == 2 else 0.0)
         variation_bonus = self._variation_bonus(own, move)
 
+        intercept_distance = 0.0
+        containment = 0.0
+        escape_space = 0.0
         if self.role is AgentRole.COP:
             current_distance = _expected_distance(board, own, targets)
             progress = current_distance - expected_distance
+            # Pursuit terms are gated on a genuinely focused target: with an
+            # exact/near-exact public fix (a fresh scent center, a barrier
+            # deduction, or a published cell) they stop the cop from
+            # tail-chasing; against a flat searching belief they would only
+            # add noise to the sweep that the plain distance objective and
+            # revisit pressure already handle well.
+            focused = max((probability for _, probability in targets), default=0.0) >= 0.3
+            if focused:
+                # Interception: a fleeing thief does not wait on its scent
+                # peak.  Also score the destination against each believed
+                # cell's best one-step flight from our CURRENT cell, so the
+                # cop cuts the corner instead of following decayed scent.
+                intercept_distance = sum(
+                    probability
+                    * _shortest_distance(board, destination, _evasive_reply(board, target, own))
+                    for target, probability in targets
+                ) / weight
+                # Containment: the escape space the believed thief keeps if
+                # we stand at `destination`.  Standing in a pocket's doorway
+                # collapses this area and turns barriers already on the
+                # board into a cage; plain distance-chasing never sees that.
+                containment = sum(
+                    probability
+                    * (0 if destination == target else board.reachable_area(target, extra_blocked=destination))
+                    for target, probability in targets
+                ) / weight
             total = (
                 -10.0 * expected_distance
+                - 4.0 * intercept_distance
                 + 7.0 * progress
                 + 1.4 * mobility
                 + 2.0 * future_value
+                - 0.35 * containment
                 - revisit_penalty
                 - loop_penalty
                 - 0.4 * dead_end_penalty
@@ -264,11 +298,21 @@ class TacticalPlanner:
             # Assume the believed cop takes its best one-step approach, then value
             # our best following escape. This is a conservative two-ply safety view.
             capture_margin = max(0.0, expected_distance - 1.0)
+            # Open-space preference: reachable area with the believed cop
+            # treated as one more wall.  Slipping into a region whose sole
+            # doorway the cop occupies reads as ~zero escape space here even
+            # when one-step mobility still looks healthy.
+            escape_space = sum(
+                probability
+                * (0.0 if destination == target else board.reachable_area(destination, extra_blocked=target))
+                for target, probability in targets
+            ) / weight
             total = (
                 9.0 * capture_margin
                 + 3.0 * future_value
                 + 2.2 * mobility
                 + 5.0 * escape_routes
+                + 0.6 * escape_space
                 - revisit_penalty
                 - loop_penalty
                 - dead_end_penalty
@@ -292,6 +336,9 @@ class TacticalPlanner:
             proximity_risk=proximity_risk,
             escape_routes=escape_routes,
             trap_risk=trap_risk,
+            intercept_distance=intercept_distance,
+            containment=containment,
+            escape_space=escape_space,
         )
 
     def _escape_outlook(
@@ -369,6 +416,16 @@ class TacticalPlanner:
             # Higher is better, so negate the shortest continuation distance.
             return -min(future_distances)
         return max(future_distances)
+
+
+def _evasive_reply(board: Board, target: Position, chaser: Position) -> Position:
+    """The believed thief's best one-step flight from `chaser`: the legal
+    destination maximizing BFS distance, with a deterministic tie-break."""
+    options = set(board.legal_moves(target).values())
+    return max(
+        options,
+        key=lambda cell: (_shortest_distance(board, chaser, cell), -cell.row, -cell.col),
+    )
 
 
 def _expected_distance(

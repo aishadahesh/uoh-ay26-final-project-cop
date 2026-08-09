@@ -710,3 +710,24 @@ ruff check: All checks passed!
 **Quality gate results:** cop: 566 passed, 1 skipped; ruff clean. Thief: 578 passed; ruff clean.
 
 **Status:** awaiting review before committing.
+
+---
+
+### Strategy Strengthening from Two Reviewed Live-Match Logs (Pursuit + Evasion)
+
+**Context:** the team reviewed two real match logs against another team and lost on both sides. As police: 35 moves, zero barriers placed, and a textbook tail-chase (the cop reached one step behind the thief around step 13, then followed its decayed scent trail for 20 more turns, twice oscillating between the same two cells). As thief: the thief drifted down the west edge into the (5,0)/(6,0) corner region and finally stepped east into the cop's occupied cell -- an immediate capture -- during a stretch where the opponent's scent frames gave no usable center and the escape logic was effectively blind. All changes were made while a live match was running: source-only edits (Python never re-reads loaded modules), no touch of config/game.json, network_match.json, TOMLs, .env, results/, or the venv.
+
+**Change 1 -- interception and containment for the cop (`domain/strategy/tactical_planner.py`, both repos):** two new scoring terms in the cop branch, gated on a genuinely focused target (max belief-target probability >= 0.3, which is exactly the live-match condition where a fresh public scent center, a barrier deduction, or a published cell yields one candidate at probability 1.0):
+- *Interception* (`-4.0 x intercept_distance`): scores each destination against every believed cell's best one-step flight from the cop's current cell (new `_evasive_reply` helper, BFS-based, deterministic tie-break) -- the cop cuts the corner instead of stepping onto year-old scent.
+- *Containment* (`-0.35 x containment`): the believed thief's `Board.reachable_area` with the cop's destination treated as blocked -- standing in a pocket doorway now scores like the cage it is.
+Against a flat searching belief both terms stay zero, preserving the proven sweep behavior byte-for-byte (the recorded G001 capture-replay test still selects the identical 32-move path).
+
+**Change 2 -- open-space preference for the thief (same file, both repos):** a new `+0.6 x escape_space` term: reachable area from each destination with the believed cop treated as one more wall. A region whose sole doorway the cop occupies now reads as ~zero escape space even when one-step mobility looks healthy, so the thief stops drifting into corner pockets like the (5,0)/(6,0) trap from the reviewed loss. The existing hard risk tiers (direct capture / proximity / trap) are unchanged and still dominate.
+
+**Change 3 -- the endgame barrier closer (`services/network_match.py`, both repos):** root cause of the zero-barrier game: `_maybe_place_barrier` consulted only the diffuse BeliefMap, never the fresh single public scent candidate the movement planner already trusted, so neither the confidence-gated direct block (threshold never met) nor the structural pocket rule (no pockets ever form on an open board) could fire. New module-level `_cornered_candidate_barrier`, tried before the brain heuristic: when the single public thief candidate is adjacent to the cop AND already cornered (at most two open exits beyond the cop's cell), wall it -- a capture claim if the thief is still there, a sealed pocket otherwise. Guards: exactly one candidate, cop keeps >= 3 open neighbors (never repeats the reviewed G001 self-boxing failure), and in open field (3-4 exits) the rule is silent so a one-turn-stale scent center can never wall off the cop's own pursuit path.
+
+**Tests:** three new unit tests in `test_network_match_barrier.py` (cornered candidate is walled; open-field candidate is not; the rule declines rather than seal the cop's own escape); the existing G001 sweep-capture characterization test now doubles as the proof that the confidence gate preserves blind-search behavior. Everything mirrored to the thief repo (which plays cop in alternated sub-games and had no barrier test file at all -- copied).
+
+**Quality gate results:** cop: 569 passed, 1 skipped; ruff clean. Thief: 585 passed; ruff clean.
+
+**Status:** awaiting review before committing. Takes effect on the NEXT match launch; the currently running match is untouched.
