@@ -31,6 +31,14 @@ class _CertainBelief:
         return ((self.position, 1.0),)
 
 
+class _WeightedBelief:
+    def __init__(self, ranked: tuple[tuple[Position, float], ...]) -> None:
+        self.ranked = ranked
+
+    def top_positions(self, limit: int = 5):
+        return self.ranked[:limit]
+
+
 class _UnsafeGemini:
     def __init__(self) -> None:
         self.context = None
@@ -49,9 +57,13 @@ class _NextTurnUnsafeGemini(_UnsafeGemini):
         return GeminiDecision(Move.NORTH, "walk into next-turn capture")
 
 
-def _runner(tmp_path: Path, advisor=None) -> NetworkMatchRunner:
+def _runner(
+    tmp_path: Path,
+    advisor=None,
+    role: AgentRole = AgentRole.THIEF,
+) -> NetworkMatchRunner:
     settings = NetworkMatchSettings(
-        role=AgentRole.THIEF,
+        role=role,
         local_port=8802,
         opponent_url="https://cop.example/mcp",
         public_url="https://thief.example/mcp",
@@ -124,6 +136,33 @@ def test_cop_claims_recorded_step_13_collision_despite_scent_ambiguity():
     assert _truthful_capture_claim(
         AgentRole.COP, cop, saturated_corner_candidates,
     ) == [5, 6]
+
+
+def test_cop_challenges_recorded_collision_from_strong_belief_without_scent_candidate():
+    cop = Position(5, 6)
+    belief = _WeightedBelief((
+        (Position(6, 6), 0.208),
+        (cop, 0.192),
+        (Position(5, 5), 0.180),
+    ))
+
+    assert _truthful_capture_claim(
+        AgentRole.COP, cop, (), belief=belief,
+    ) == [5, 6]
+
+
+def test_cop_does_not_challenge_weak_or_low_rank_belief_cell():
+    cop = Position(5, 6)
+    weak = _WeightedBelief(((cop, 0.14), (Position(6, 6), 0.13)))
+    low_rank = _WeightedBelief((
+        (Position(6, 6), 0.30),
+        (Position(5, 5), 0.25),
+        (cop, 0.24),
+    ))
+
+    assert _truthful_capture_claim(AgentRole.COP, cop, (), belief=weak) is None
+    assert _truthful_capture_claim(AgentRole.COP, cop, (), belief=low_rank) is None
+    assert _truthful_capture_claim(AgentRole.THIEF, cop, (), belief=weak) is None
 
 
 def test_final_audit_detects_recorded_step_13_collision_across_peer_formats():
@@ -356,14 +395,14 @@ def test_capped_opponent_step_onto_own_trail_yields_a_set_with_the_true_center()
     candidates = _infer_public_scent_candidates(
         board, previous_grid, current_grid,
         decay_rate=0.10, min_center_intensity=0.5, emission_cap=0.9,
-        previous_position=Position(3, 3),
+        previous_positions=(Position(3, 3),),
     )
     assert candidates
     assert len(candidates) <= 4
     assert Position(3, 4) in candidates
 
 
-def test_saturated_oscillation_yields_a_small_candidate_set_with_the_thief_in_it():
+def test_saturated_oscillation_tracks_the_true_cell_across_consecutive_turns():
     """The reviewed loss: the thief oscillates (6,6)<->(5,6) while the whole
     neighborhood saturates at the 0.9 cap.  The singleton inference reads an
     innovation of ~0.09 and goes blind; the cap-aware fallback must still
@@ -373,25 +412,37 @@ def test_saturated_oscillation_yields_a_small_candidate_set_with_the_thief_in_it
     spots = (Position(6, 6), Position(5, 6))
     for turn in range(8):
         grid = _opponent_capped_step(grid, spots[turn % 2])
-    previous_grid = grid
-    current_center = spots[8 % 2]  # (6,6)
-    current_grid = _opponent_capped_step(previous_grid, current_center)
+    first_center = spots[8 % 2]  # (6,6)
+    first_grid = _opponent_capped_step(grid, first_center)
 
     singleton = _infer_public_scent_center(
-        board, previous_grid, current_grid,
+        board, grid, first_grid,
         decay_rate=0.10, min_center_intensity=0.5,
         previous_position=spots[7 % 2],
     )
     assert singleton is None
 
-    candidates = _infer_public_scent_candidates(
-        board, previous_grid, current_grid,
-        decay_rate=0.10, min_center_intensity=0.5, emission_cap=0.9,
-        previous_position=spots[7 % 2],
-    )
-    assert candidates
-    assert len(candidates) <= 4
-    assert current_center in candidates
+    previous_grid = grid
+    anchors = (spots[7 % 2],)
+    for turn in range(8, 14):
+        current_center = spots[turn % 2]
+        current_grid = _opponent_capped_step(previous_grid, current_center)
+        if turn == 9:
+            assert _infer_public_scent_candidates(
+                board, previous_grid, current_grid,
+                decay_rate=0.10, min_center_intensity=0.5, emission_cap=0.9,
+                previous_positions=anchors,
+            ) == ()
+        candidates = _infer_public_scent_candidates(
+            board, previous_grid, current_grid,
+            decay_rate=0.10, min_center_intensity=0.5, emission_cap=0.9,
+            previous_positions=anchors, max_ambiguity=8,
+        )
+        assert candidates, f"candidate tracking failed at turn {turn}"
+        assert len(candidates) <= 8
+        assert current_center in candidates
+        anchors = candidates
+        previous_grid = current_grid
 
 
 def test_saturated_scent_without_an_anchor_stays_silent():
@@ -403,13 +454,29 @@ def test_saturated_scent_without_an_anchor_stays_silent():
     candidates = _infer_public_scent_candidates(
         board, grid, current_grid,
         decay_rate=0.10, min_center_intensity=0.5, emission_cap=0.9,
-        previous_position=None,
+        previous_positions=(),
     )
     assert candidates == ()
 
 
 def test_thief_public_hint_is_a_plausible_lie(tmp_path, monkeypatch):
     runner = _runner(tmp_path)
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    draws = iter((1, 0))
+    monkeypatch.setattr(
+        "police_thief.services.network_match.secrets.randbelow",
+        lambda _limit: next(draws),
+    )
+    hint = runner._generate_public_hint(
+        TemplateHintProvider(), board, Position(3, 3), Move.EAST, step=4,
+    )
+
+    assert hint.intent_truthful is False
+    assert hint.text == "I moved west."
+
+
+def test_cop_public_hint_is_also_a_plausible_lie(tmp_path, monkeypatch):
+    runner = _runner(tmp_path, role=AgentRole.COP)
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
     draws = iter((1, 0))
     monkeypatch.setattr(

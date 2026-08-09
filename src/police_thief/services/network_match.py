@@ -202,7 +202,7 @@ def _infer_public_scent_candidates(
     decay_rate: float,
     min_center_intensity: float,
     emission_cap: float,
-    previous_position: Position | None = None,
+    previous_positions: tuple[Position, ...] = (),
     max_ambiguity: int = 4,
 ) -> tuple[Position, ...]:
     """Cap-aware generalization of `_infer_public_scent_center`.
@@ -216,7 +216,7 @@ def _infer_public_scent_candidates(
     unique fresh center exists, this fallback returns the SMALL set of cells
     that (a) sit at the cap yet cannot be explained by pure retained trail
     -- staying at the cap requires a fresh deposit -- and (b) remain one
-    legal step from the last inferred position.  Ambiguity wider than
+    legal step from the last inferred candidate set. Ambiguity wider than
     ``max_ambiguity`` cells returns () -- never fabricated certainty."""
     center = _infer_public_scent_center(
         board,
@@ -224,16 +224,26 @@ def _infer_public_scent_candidates(
         current_grid,
         decay_rate=decay_rate,
         min_center_intensity=min_center_intensity,
-        previous_position=previous_position,
+        previous_position=None,
     )
     if center is not None:
-        return (center,)
-    if previous_position is None:
+        reachable = {
+            destination
+            for position in previous_positions
+            for destination in board.legal_moves(position).values()
+        }
+        if not previous_positions or center in reachable:
+            return (center,)
+    if not previous_positions:
         return ()
     retained = 1.0 - decay_rate
     tolerance = 2e-5
     reachable = sorted(
-        set(board.legal_moves(previous_position).values()),
+        {
+            destination
+            for position in previous_positions
+            for destination in board.legal_moves(position).values()
+        },
         key=lambda cell: (cell.row, cell.col),
     )
     candidates: list[Position] = []
@@ -293,20 +303,42 @@ def _truthful_capture_claim(
     role: AgentRole,
     own_position: Position,
     plausible_opponent_positions: tuple[Position, ...],
+    *,
+    belief: BeliefMap | None = None,
+    minimum_belief: float = 0.15,
+    peak_ratio: float = 0.75,
 ) -> list[int] | None:
-    """Challenge capture when public evidence includes the cop's occupied cell.
+    """Issue a conservative, evidence-based capture challenge.
 
     A saturated scent can legitimately leave several current thief candidates.
     Requiring a singleton in that situation lets the cop move onto the real
     thief without issuing the claim that asks the thief to acknowledge capture.
-    The claim remains evidence-based: the occupied cell must be one of the
-    publicly plausible candidates, and the thief's signed response is still
-    authoritative when the candidate set is ambiguous.
+    If direct scent inference is unavailable, a cell may also be challenged
+    when it is one of the two strongest belief cells, has at least 15% mass,
+    and remains close to the belief peak.  This covers the reviewed step-11
+    and step-13 collisions without broadcasting the cop's position every turn.
+    The thief's signed response remains authoritative.
     """
+    if role is not AgentRole.COP:
+        return None
     candidates = tuple(dict.fromkeys(plausible_opponent_positions))
+    if own_position in candidates:
+        return [own_position.row, own_position.col]
+    if belief is None:
+        return None
+    ranked = belief.top_positions(limit=2)
+    if not ranked:
+        return None
+    peak = float(ranked[0][1])
+    own_probability = next(
+        (float(probability) for position, probability in ranked if position == own_position),
+        0.0,
+    )
     if (
-        role is AgentRole.COP
-        and own_position in candidates
+        math.isfinite(peak)
+        and math.isfinite(own_probability)
+        and own_probability >= minimum_belief
+        and own_probability >= peak * peak_ratio
     ):
         return [own_position.row, own_position.col]
     return None
@@ -535,8 +567,9 @@ class NetworkMatchRunner:
         peer_commits: dict[int, str] = {}
         pending_claim_response: dict | None = None
         outstanding_capture_claims: list[list[int]] = []
-        outstanding_scent_claim: list[int] | None = None
-        scent_capture_evidence_reliable = True
+        outstanding_evidence_claim: list[int] | None = None
+        capture_evidence_reliable = True
+        rejected_belief_claim_until: dict[tuple[int, int], int] = {}
         missing_claim_response = False
         known_cop_position = (
             params.cop_start if self.settings.role is AgentRole.THIEF else None
@@ -544,10 +577,12 @@ class NetworkMatchRunner:
         public_cop_candidates: tuple[Position, ...] = ()
         public_thief_candidates: tuple[Position, ...] = ()
         previous_peer_scent: dict[str, float] = {}
-        last_inferred_opponent_position = (
-            params.cop_start
-            if self.settings.role is AgentRole.THIEF
-            else params.thief_start
+        last_inferred_opponent_positions = (
+            (
+                params.cop_start
+                if self.settings.role is AgentRole.THIEF
+                else params.thief_start
+            ),
         )
         thief_boxed_in = False
         outcome = MatchOutcome.SURVIVAL
@@ -656,14 +691,31 @@ class NetworkMatchRunner:
                     own_position,
                     (
                         public_thief_candidates
-                        if scent_capture_evidence_reliable
+                        if capture_evidence_reliable
                         else ()
                     ),
+                    belief=belief if capture_evidence_reliable else None,
                 )
-                if capture_claim is not None:
+                public_capture_evidence = own_position in public_thief_candidates
+                if (
+                    capture_claim is not None
+                    and not public_capture_evidence
+                    and rejected_belief_claim_until.get(tuple(capture_claim), 0) >= step
+                ):
                     emit(
-                        f"Step {step}: cop occupies a publicly plausible thief cell "
-                        f"{own_position}; requesting signed capture acknowledgement"
+                        f"Step {step}: suppressing repeated belief-only capture challenge "
+                        f"at {own_position} during its rejection cooldown"
+                    )
+                    capture_claim = None
+                if capture_claim is not None:
+                    if public_capture_evidence:
+                        evidence = "public scent candidate"
+                    else:
+                        evidence = f"belief confidence={belief.belief_at(own_position):.3f}"
+                    emit(
+                        f"Step {step}: cop occupies an evidence-supported thief cell "
+                        f"{own_position} ({evidence}); requesting signed capture "
+                        "acknowledgement"
                     )
                 win_claim = (
                     {"type": "boxed_in"} if self.settings.role is AgentRole.THIEF and thief_boxed_in
@@ -707,7 +759,7 @@ class NetworkMatchRunner:
                         list(claim) for claim in (capture_claim, barrier_placed)
                         if claim is not None
                     ]
-                    outstanding_scent_claim = (
+                    outstanding_evidence_claim = (
                         list(capture_claim) if capture_claim is not None else None
                     )
                     public_thief_candidates = ()
@@ -740,7 +792,7 @@ class NetworkMatchRunner:
                     decay_rate=params.scent.decay_rate,
                     min_center_intensity=params.scent.min_center_intensity,
                     emission_cap=params.scent.center_intensity,
-                    previous_position=last_inferred_opponent_position,
+                    previous_positions=last_inferred_opponent_positions,
                 )
                 inferred_scent_center = (
                     inferred_candidates[0] if len(inferred_candidates) == 1 else None
@@ -766,10 +818,10 @@ class NetworkMatchRunner:
                     )
                     if known_cop_position is not None:
                         public_cop_candidates = ()
-                        last_inferred_opponent_position = known_cop_position
+                        last_inferred_opponent_positions = (known_cop_position,)
                     elif inferred_scent_center is not None:
                         public_cop_candidates = (inferred_scent_center,)
-                        last_inferred_opponent_position = inferred_scent_center
+                        last_inferred_opponent_positions = (inferred_scent_center,)
                         if (
                             barrier_cop_candidates
                             and inferred_scent_center not in barrier_cop_candidates
@@ -782,7 +834,7 @@ class NetworkMatchRunner:
                             # Do not validate the next transition from one side
                             # of disputed evidence.  The next fresh scent frame
                             # will be assessed without a false singleton anchor.
-                            last_inferred_opponent_position = None
+                            last_inferred_opponent_positions = ()
                         emit(
                             f"Step {step}: fresh public scent implies cop center "
                             f"({inferred_scent_center.row},{inferred_scent_center.col}); "
@@ -790,15 +842,15 @@ class NetworkMatchRunner:
                         )
                     elif inferred_candidates:
                         # Saturated-scent ambiguity: the cop is one of a few
-                        # capped cells near the last anchor.  Protect against
-                        # the whole set and KEEP the anchor -- the cop is
-                        # still within one legal step of it.
+                        # capped cells near the prior candidate set. Protect
+                        # against the whole set and advance the anchor with it.
                         public_cop_candidates = tuple(dict.fromkeys(
                             (*inferred_candidates, *barrier_cop_candidates)
                         ))
+                        last_inferred_opponent_positions = inferred_candidates
                     else:
                         public_cop_candidates = barrier_cop_candidates
-                        last_inferred_opponent_position = None
+                        last_inferred_opponent_positions = ()
                     if public_cop_candidates:
                         rendered = ", ".join(
                             f"({position.row},{position.col})"
@@ -831,7 +883,7 @@ class NetworkMatchRunner:
                 elif self.settings.role is AgentRole.COP:
                     if inferred_scent_center is not None:
                         public_thief_candidates = (inferred_scent_center,)
-                        last_inferred_opponent_position = inferred_scent_center
+                        last_inferred_opponent_positions = (inferred_scent_center,)
                         emit(
                             f"Step {step}: fresh public scent implies thief center "
                             f"({inferred_scent_center.row},{inferred_scent_center.col}); "
@@ -839,10 +891,10 @@ class NetworkMatchRunner:
                         )
                     elif inferred_candidates:
                         # Saturated-scent ambiguity: the thief lingers inside
-                        # a capped blob near the last anchor.  Pursue the
-                        # small candidate set and KEEP the anchor -- the
-                        # thief is still within one legal step of it.
+                        # a capped blob near the prior candidate set. Pursue
+                        # the small set and advance the anchor with it.
                         public_thief_candidates = inferred_candidates
+                        last_inferred_opponent_positions = inferred_candidates
                         rendered = ", ".join(
                             f"({position.row},{position.col})"
                             for position in inferred_candidates
@@ -853,36 +905,38 @@ class NetworkMatchRunner:
                         )
                     else:
                         public_thief_candidates = ()
-                        last_inferred_opponent_position = None
+                        last_inferred_opponent_positions = ()
                 if self.settings.role is AgentRole.COP and outstanding_capture_claims:
                     if message.claim_response is None:
                         missing_claim_response = True
-                        scent_capture_evidence_reliable = False
+                        capture_evidence_reliable = False
                         emit(
                             f"Step {step}: opponent omitted the required response to "
                             f"capture claim(s) {outstanding_capture_claims}; disabling "
-                            "scent-derived capture claims for this sub-game"
+                            "evidence-based capture claims for this sub-game"
                         )
                     else:
                         validate_claim_response(
                             message.claim_response, outstanding_capture_claims,
                         )
                         if (
-                            outstanding_scent_claim is not None
-                            and message.claim_response.get("claim") == outstanding_scent_claim
+                            outstanding_evidence_claim is not None
+                            and message.claim_response.get("claim")
+                            == outstanding_evidence_claim
                             and not message.claim_response.get("caught")
                         ):
-                            scent_capture_evidence_reliable = False
+                            rejected_cell = tuple(outstanding_evidence_claim)
+                            rejected_belief_claim_until[rejected_cell] = step + 1
                             emit(
-                                f"Step {step}: opponent rejected scent-derived capture "
-                                f"claim {outstanding_scent_claim}; treating scent as pursuit "
-                                "evidence only for the rest of this sub-game"
+                                f"Step {step}: opponent rejected evidence-based capture "
+                                f"claim {outstanding_evidence_claim}; belief-only repeats "
+                                "at that cell are paused for two Cop turns"
                             )
                         if message.claim_response.get("caught"):
                             outcome = MatchOutcome.CAPTURE
                             break
                     outstanding_capture_claims = []
-                    outstanding_scent_claim = None
+                    outstanding_evidence_claim = None
                 elif self.settings.role is AgentRole.COP and message.claim_response:
                     raise NetworkProtocolError(
                         "opponent sent an unsolicited capture response"
@@ -1136,16 +1190,14 @@ class NetworkMatchRunner:
     def _generate_public_hint(
         self, provider, board, before, true_move, step,
     ):
-        """Generate a legal verbal bluff for the thief, never a fake scent.
+        """Generate a legal verbal bluff for either role, never a fake scent.
 
         Hints are the one rule-authorized deceptive channel.  Prefer claiming
         the opposite move when that claim is plausible from the public origin;
-        otherwise rotate through other legal claims across games/turns.  The
-        cop remains truthful because pursuit gains nothing from advertising a
-        fabricated route here.
+        otherwise rotate through other legal claims across games/turns. Both
+        roles keep their exact route private while the scent channel remains
+        truthful and unchanged.
         """
-        if self.settings.role is not AgentRole.THIEF:
-            return provider.generate(true_move, tell_truth=True)
         # Mix truth into the policy so an opponent cannot simply invert every
         # audited hint in the next game.  Randomness affects language only,
         # never the deterministic movement or legal-action validation.

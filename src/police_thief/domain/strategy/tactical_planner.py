@@ -110,12 +110,24 @@ class TacticalPlanner:
             belief_targets = tuple((position, probability) for position in candidates)
         else:
             belief_targets = belief.top_positions(5)
+        evidence_backed = (
+            known_opponent_position is not None or bool(plausible_opponent_positions)
+        )
         # Retain visit pressure for the entire mini-game, not just the short
         # loop-detection window.  With an empty scent grid the former behavior
         # forgot old cells and repeatedly searched the same central corridor.
         visits = self._visits.copy()
         evaluations = tuple(
-            self._score_move(board, own, move, destination, belief_targets, visits, loop_detected)
+            self._score_move(
+                board,
+                own,
+                move,
+                destination,
+                belief_targets,
+                visits,
+                loop_detected,
+                evidence_backed,
+            )
             for move, destination in legal.items()
         )
         hard_excluded: set[Move] = set()
@@ -220,6 +232,7 @@ class TacticalPlanner:
         targets: tuple[tuple[Position, float], ...],
         visits: Counter[Position],
         loop_detected: bool,
+        evidence_backed: bool,
     ) -> ActionEvaluation:
         distances = [(_shortest_distance(board, destination, target), probability) for target, probability in targets]
         weight = sum(probability for _, probability in distances) or 1.0
@@ -256,14 +269,11 @@ class TacticalPlanner:
         if self.role is AgentRole.COP:
             current_distance = _expected_distance(board, own, targets)
             progress = current_distance - expected_distance
-            # Pursuit terms are gated on a genuinely focused target: with an
-            # exact/near-exact public fix (a fresh scent center, a barrier
-            # deduction, or a published cell) they stop the cop from
-            # tail-chasing; against a flat searching belief they would only
-            # add noise to the sweep that the plain distance objective and
-            # revisit pressure already handle well.
-            focused = max((probability for _, probability in targets), default=0.0) >= 0.3
-            if focused:
+            # Interception and containment require public evidence provenance,
+            # not an arbitrary probability threshold. A four-cell public set
+            # is actionable even though each cell has only 0.25 mass, while a
+            # diffuse belief fallback must not perturb the established sweep.
+            if evidence_backed:
                 # Interception: a fleeing thief does not wait on its scent
                 # peak.  Also score the destination against each believed
                 # cell's best one-step flight from our CURRENT cell, so the

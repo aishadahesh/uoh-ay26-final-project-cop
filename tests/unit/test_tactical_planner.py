@@ -24,6 +24,35 @@ def test_cop_uses_an_alternative_path_when_direct_route_is_blocked():
     assert plan.selected in plan.allowed_moves
 
 
+def test_four_candidate_public_set_activates_interception_and_containment():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    candidates = (
+        Position(4, 4),
+        Position(4, 5),
+        Position(5, 4),
+        Position(5, 5),
+    )
+    plan = TacticalPlanner(AgentRole.COP).evaluate(
+        board,
+        Position(0, 0),
+        BeliefMap(board),
+        plausible_opponent_positions=candidates,
+    )
+
+    assert any(item.intercept_distance > 0.0 for item in plan.evaluations)
+    assert any(item.containment > 0.0 for item in plan.evaluations)
+
+
+def test_diffuse_belief_does_not_activate_public_evidence_pursuit_terms():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    plan = TacticalPlanner(AgentRole.COP).evaluate(
+        board, Position(0, 0), BeliefMap(board),
+    )
+
+    assert all(item.intercept_distance == 0.0 for item in plan.evaluations)
+    assert all(item.containment == 0.0 for item in plan.evaluations)
+
+
 def test_detected_abab_loop_excludes_reversal_and_stay_when_alternatives_exist():
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
     planner = TacticalPlanner(AgentRole.COP)
