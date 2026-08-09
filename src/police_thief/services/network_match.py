@@ -194,6 +194,66 @@ def _infer_public_scent_center(
     return center
 
 
+def _infer_public_scent_candidates(
+    board: Board,
+    previous_grid: dict[str, float],
+    current_grid: dict[str, float],
+    *,
+    decay_rate: float,
+    min_center_intensity: float,
+    emission_cap: float,
+    previous_position: Position | None = None,
+    max_ambiguity: int = 4,
+) -> tuple[Position, ...]:
+    """Cap-aware generalization of `_infer_public_scent_center`.
+
+    Some opponents implement the signed scent rule with a hard intensity cap
+    (``new = min(cap, (1-rho)*old + emission)``).  Once their agent lingers
+    or backtracks, its whole neighborhood saturates at the cap and the
+    fresh-emission innovation collapses below ``min_center_intensity``,
+    blinding the singleton inference exactly during the hiding phases where
+    pursuit evidence matters most (both reviewed live-match losses).  When no
+    unique fresh center exists, this fallback returns the SMALL set of cells
+    that (a) sit at the cap yet cannot be explained by pure retained trail
+    -- staying at the cap requires a fresh deposit -- and (b) remain one
+    legal step from the last inferred position.  Ambiguity wider than
+    ``max_ambiguity`` cells returns () -- never fabricated certainty."""
+    center = _infer_public_scent_center(
+        board,
+        previous_grid,
+        current_grid,
+        decay_rate=decay_rate,
+        min_center_intensity=min_center_intensity,
+        previous_position=previous_position,
+    )
+    if center is not None:
+        return (center,)
+    if previous_position is None:
+        return ()
+    retained = 1.0 - decay_rate
+    tolerance = 2e-5
+    reachable = sorted(
+        set(board.legal_moves(previous_position).values()),
+        key=lambda cell: (cell.row, cell.col),
+    )
+    candidates: list[Position] = []
+    for position in reachable:
+        key = f"{position.row},{position.col}"
+        try:
+            current = float(current_grid.get(key, 0.0))
+            previous = float(previous_grid.get(key, 0.0))
+        except (TypeError, ValueError):
+            return ()
+        if not math.isfinite(current) or not math.isfinite(previous):
+            return ()
+        innovation = current - retained * previous
+        if current >= emission_cap - tolerance and innovation > tolerance:
+            candidates.append(position)
+    if not candidates or len(candidates) > max_ambiguity:
+        return ()
+    return tuple(candidates)
+
+
 def _cornered_candidate_barrier(
     board: Board,
     own_position: Position,
@@ -500,13 +560,17 @@ class NetworkMatchRunner:
                         f"received sender={message.sender!r}, step={message.step}"
                     )
                 peer_commits[step] = message.commit
-                inferred_scent_center = _infer_public_scent_center(
+                inferred_candidates = _infer_public_scent_candidates(
                     board,
                     previous_peer_scent,
                     message.smell_grid,
                     decay_rate=params.scent.decay_rate,
                     min_center_intensity=params.scent.min_center_intensity,
+                    emission_cap=params.scent.center_intensity,
                     previous_position=last_inferred_opponent_position,
+                )
+                inferred_scent_center = (
+                    inferred_candidates[0] if len(inferred_candidates) == 1 else None
                 )
                 previous_peer_scent = dict(message.smell_grid)
                 belief.update_from_scent(_WireScent(message.smell_grid))
@@ -551,6 +615,14 @@ class NetworkMatchRunner:
                             f"({inferred_scent_center.row},{inferred_scent_center.col}); "
                             "using it as high-confidence escape evidence"
                         )
+                    elif inferred_candidates:
+                        # Saturated-scent ambiguity: the cop is one of a few
+                        # capped cells near the last anchor.  Protect against
+                        # the whole set and KEEP the anchor -- the cop is
+                        # still within one legal step of it.
+                        public_cop_candidates = tuple(dict.fromkeys(
+                            (*inferred_candidates, *barrier_cop_candidates)
+                        ))
                     else:
                         public_cop_candidates = barrier_cop_candidates
                         last_inferred_opponent_position = None
@@ -591,6 +663,20 @@ class NetworkMatchRunner:
                             f"Step {step}: fresh public scent implies thief center "
                             f"({inferred_scent_center.row},{inferred_scent_center.col}); "
                             "using it for pursuit and truthful capture detection"
+                        )
+                    elif inferred_candidates:
+                        # Saturated-scent ambiguity: the thief lingers inside
+                        # a capped blob near the last anchor.  Pursue the
+                        # small candidate set and KEEP the anchor -- the
+                        # thief is still within one legal step of it.
+                        public_thief_candidates = inferred_candidates
+                        rendered = ", ".join(
+                            f"({position.row},{position.col})"
+                            for position in inferred_candidates
+                        )
+                        emit(
+                            f"Step {step}: saturated public scent constrains the "
+                            f"thief to one of [{rendered}]; pursuing the set"
                         )
                     else:
                         public_thief_candidates = ()

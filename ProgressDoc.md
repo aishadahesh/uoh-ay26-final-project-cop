@@ -731,3 +731,25 @@ Against a flat searching belief both terms stay zero, preserving the proven swee
 **Quality gate results:** cop: 569 passed, 1 skipped; ruff clean. Thief: 585 passed; ruff clean.
 
 **Status:** awaiting review before committing. Takes effect on the NEXT match launch; the currently running match is untouched.
+
+---
+
+### Root Cause of the Repeated Cop Losses: Saturated Opponent Scent Blinded Every Inference
+
+**Context:** a third police log was reviewed after another loss. Critically, it is move-for-move IDENTICAL to the first police log across all 35 steps -- proof that (a) the running process was still on the pre-improvement code (Python does not reload modules), and (b) the cop was playing a fully deterministic blind sweep, because two live games against a real opponent cannot coincide by chance unless zero opponent-dependent evidence reaches the planner.
+
+**The real bug, found by reading the opponent's public repository (AMIR13BD/Game-P2P-Cop-Chase-Thief, `src/thief_agent/domain/smell.py`):** their scent model applies a HARD CAP -- `tau_next = min(0.9, max(0, (1-rho)*tau_old + delta))` -- with a 5x5 kernel depositing 0.90/0.62/0.42/0.20/0.14/0.04 by offset. Our `_infer_public_scent_center` inverts the UNCAPPED signed rule `new = (1-rho)*old + emission` and requires the peak innovation to clear `min_center_intensity` (0.5) with a clear gap. Against a capped emitter this fails structurally: once the opponent lingers or backtracks, its neighborhood saturates at 0.9 and the apparent innovation collapses to ~0.09 (a saturated cell can only "gain" the decay it just lost). Every frame then returned `None`.
+
+The downstream consequences chain exactly onto the observed losses. As cop: `public_thief_candidates` stayed empty every single turn, so no capture claim could ever be truthfully made -- at step 13 our cop stood on (5,6), the thief's actual cell, and could not claim it -- and the belief stayed flat, so the deterministic sweep replayed identically. As thief: `public_cop_candidates` stayed empty, so the escape logic had no threat set and walked into the cop's cell. It also means the pursuit/evasion terms added in the previous entry were dormant, since they gate on a focused target.
+
+**Fix -- `_infer_public_scent_candidates` (new, both repos), a cap-aware second stage:** the exact singleton inference runs first and is returned unchanged when it succeeds (all existing behavior preserved). When it returns `None`, the fallback identifies cells that (a) sit AT the emission cap yet still show positive innovation -- staying at the cap requires a fresh deposit, since pure decay would drop them below it -- and (b) are within one legal step of the last inferred anchor. It returns that small set (at most 4 cells; wider ambiguity returns () rather than fabricating certainty), and critically KEEPS the anchor instead of discarding it, so a saturated blob no longer breaks the tracking chain frame after frame.
+
+Both role branches consume the set: the cop pursues it (feeding the interception/containment terms and the endgame barrier rule, which needs exactly one candidate), and the thief protects against the union of it (feeding the existing hard risk tiers). `emission_cap` is read from the agreed `params.scent.center_intensity`, not hardcoded.
+
+**Tests:** three new cases in `test_capture_safety.py` in both repos, driven by a faithful replica of the opponent's capped kernel (`_opponent_capped_step`): an ordinary step onto one's own trail still yields a small set containing the true cell; the reviewed oscillation scenario is asserted to defeat the singleton inference (`is None`) yet still yield a small set containing the true cell; and with no anchor the fallback stays silent. The existing uncapped-path test is untouched and still passes, proving the exact inference is unchanged.
+
+**Regarding commit 67f5c8d "feeling better":** the strategy code in that commit is identical to what preceded this session's work -- `_infer_public_scent_center` and the planner were the same. What differed was the opponent, not our agent. This entry addresses the actual asymmetry.
+
+**Quality gate results:** cop: 572 passed, 1 skipped; ruff clean. Thief: 588 passed; ruff clean.
+
+**Status:** awaiting review before committing. Takes effect on the NEXT launch; the running match is untouched.
