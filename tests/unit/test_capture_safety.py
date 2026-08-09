@@ -99,7 +99,7 @@ def test_confirmed_cop_may_occupy_its_own_newly_blocked_barrier_cell():
     assert belief.belief_at(target) == 0.0
 
 
-def test_cop_announces_capture_only_on_the_uniquely_identified_thief_cell():
+def test_cop_challenges_capture_on_any_publicly_plausible_occupied_cell():
     cop = Position(3, 3)
 
     assert _truthful_capture_claim(
@@ -107,9 +107,22 @@ def test_cop_announces_capture_only_on_the_uniquely_identified_thief_cell():
     ) is None
     assert _truthful_capture_claim(
         AgentRole.COP, cop, (cop, Position(3, 4)),
-    ) is None
+    ) == [3, 3]
     assert _truthful_capture_claim(AgentRole.COP, cop, (cop,)) == [3, 3]
     assert _truthful_capture_claim(AgentRole.THIEF, cop, (cop,)) is None
+
+
+def test_cop_claims_recorded_step_13_collision_despite_scent_ambiguity():
+    """The reviewed G002 g01 collision was missed because saturated scent
+    left both corner cells plausible.  Occupying either candidate must trigger
+    the signed challenge so the real thief can acknowledge capture immediately.
+    """
+    cop = Position(5, 6)
+    saturated_corner_candidates = (Position(5, 6), Position(6, 6))
+
+    assert _truthful_capture_claim(
+        AgentRole.COP, cop, saturated_corner_candidates,
+    ) == [5, 6]
 
 
 def test_confirmed_cop_cell_is_excluded_and_unsafe_gemini_is_rejected(tmp_path):

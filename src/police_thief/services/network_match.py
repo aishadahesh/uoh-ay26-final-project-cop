@@ -294,12 +294,19 @@ def _truthful_capture_claim(
     own_position: Position,
     plausible_opponent_positions: tuple[Position, ...],
 ) -> list[int] | None:
-    """Declare capture only when public evidence identifies the occupied cell."""
+    """Challenge capture when public evidence includes the cop's occupied cell.
+
+    A saturated scent can legitimately leave several current thief candidates.
+    Requiring a singleton in that situation lets the cop move onto the real
+    thief without issuing the claim that asks the thief to acknowledge capture.
+    The claim remains evidence-based: the occupied cell must be one of the
+    publicly plausible candidates, and the thief's signed response is still
+    authoritative when the candidate set is ambiguous.
+    """
     candidates = tuple(dict.fromkeys(plausible_opponent_positions))
     if (
         role is AgentRole.COP
-        and len(candidates) == 1
-        and own_position == candidates[0]
+        and own_position in candidates
     ):
         return [own_position.row, own_position.col]
     return None
@@ -495,6 +502,11 @@ class NetworkMatchRunner:
                     own_position,
                     public_thief_candidates,
                 )
+                if capture_claim is not None:
+                    emit(
+                        f"Step {step}: cop occupies a publicly plausible thief cell "
+                        f"{own_position}; requesting signed capture acknowledgement"
+                    )
                 win_claim = (
                     {"type": "boxed_in"} if self.settings.role is AgentRole.THIEF and thief_boxed_in
                     else {"type": "survival"}
