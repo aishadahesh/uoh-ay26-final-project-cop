@@ -2,6 +2,8 @@
 
 from police_thief.domain.belief import BeliefMap
 from police_thief.domain.board import Board, BoardConfig, Move, Position
+from police_thief.domain.scent import ScentConfig, ScentField
+from police_thief.domain.strategy.manhattan_brain import ManhattanHeuristicBrain
 from police_thief.domain.strategy.tactical_planner import TacticalPlanner
 from police_thief.shared.constants import AgentRole
 
@@ -42,7 +44,12 @@ def test_thief_prefers_open_escape_route_over_equal_distance_corner():
     plan = TacticalPlanner(AgentRole.THIEF).evaluate(
         board, Position(0, 1), _belief_at(board, Position(1, 1))
     )
+    east = next(item for item in plan.evaluations if item.move is Move.EAST)
+    west = next(item for item in plan.evaluations if item.move is Move.WEST)
+
     assert plan.selected is Move.EAST
+    assert east.path_distance == west.path_distance
+    assert east.escape_routes > west.escape_routes
 
 
 def test_every_currently_legal_move_receives_an_explainable_score():
@@ -52,7 +59,13 @@ def test_every_currently_legal_move_receives_an_explainable_score():
         board, own, _belief_at(board, Position(1, 1))
     )
     assert {item.move for item in plan.evaluations} == set(board.legal_moves(own))
-    assert all("total=" in item.summary() and "path=" in item.summary() for item in plan.evaluations)
+    assert all(
+        "total=" in item.summary()
+        and "path=" in item.summary()
+        and "escape_routes=" in item.summary()
+        and "trap_risk=" in item.summary()
+        for item in plan.evaluations
+    )
 
 
 def test_gemini_allowed_moves_exclude_materially_worse_legal_actions():
@@ -144,6 +157,45 @@ def test_thief_does_not_repeat_the_recorded_seven_turn_capture_route():
         Move.WEST,
         Move.NORTH,
     ]
+
+
+def test_thief_escapes_recorded_south_east_pursuit_using_public_scent():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = _belief_at(board, Position(0, 0))
+    scent = ScentField(7, ScentConfig())
+    brain = ManhattanHeuristicBrain(AgentRole.THIEF, strategy_seed=4)
+    thief = Position(3, 3)
+    cop = Position(0, 0)
+    recorded_cop_moves = (
+        Move.SOUTH,
+        Move.SOUTH,
+        Move.SOUTH,
+        Move.SOUTH,
+        Move.SOUTH,
+        Move.EAST,
+        Move.EAST,
+        Move.EAST,
+        Move.EAST,
+        Move.SOUTH,
+    )
+
+    for index, cop_move in enumerate(recorded_cop_moves):
+        known_cop = cop if index == 0 else None
+        move = brain._decide_move(
+            board, thief, belief, known_opponent_position=known_cop,
+        )
+        before = thief
+        thief = board.apply_move(thief, move)
+        brain.record_move(before, move, thief)
+        assert thief != cop
+
+        cop = board.apply_move(cop, cop_move)
+        assert thief != cop
+        scent.decay()
+        scent.emit(cop)
+        belief.update_from_scent(scent)
+
+    assert abs(thief.row - cop.row) + abs(thief.col - cop.col) >= 3
 
 
 def test_cop_captures_the_recorded_game_one_path_without_stalling():

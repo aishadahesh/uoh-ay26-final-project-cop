@@ -109,6 +109,17 @@ class _WireScent:
         return float(self.values.get(f"{position.row},{position.col}", 0.0))
 
 
+def _confirmed_cop_position(
+    belief: BeliefMap, capture_claim: list[int] | None,
+) -> Position | None:
+    """Return only a currently published cop cell, never stale certainty."""
+    if capture_claim is None:
+        return None
+    position = Position(*capture_claim)
+    belief.set_certain_position(position)
+    return position
+
+
 class NetworkMatchRunner:
     def __init__(
         self, settings: NetworkMatchSettings, inboxes: PeerInboxes,
@@ -327,8 +338,18 @@ class NetworkMatchRunner:
                     board.apply_declared_barrier(barrier_target)
                     emit(f"Step {step}: opponent publicly declared a barrier at {barrier_target}")
                 if self.settings.role is AgentRole.THIEF:
-                    if message.capture_claim is not None:
-                        known_cop_position = Position(*message.capture_claim)
+                    previous_known_cop_position = known_cop_position
+                    known_cop_position = _confirmed_cop_position(
+                        belief, message.capture_claim,
+                    )
+                    if (
+                        previous_known_cop_position is not None
+                        and known_cop_position is None
+                    ):
+                        emit(
+                            f"Step {step}: cop position was not published; discarded stale "
+                            "certainty and switched to the public scent belief"
+                        )
                     claims = [
                         list(claim) for claim in (message.capture_claim, message.barrier_placed)
                         if claim is not None

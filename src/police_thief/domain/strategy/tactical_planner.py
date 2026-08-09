@@ -25,6 +25,8 @@ class ActionEvaluation:
     variation_bonus: float
     direct_capture_risk: float = 0.0
     proximity_risk: float = 0.0
+    escape_routes: float = 0.0
+    trap_risk: float = 0.0
 
     def summary(self) -> str:
         return (
@@ -33,7 +35,8 @@ class ActionEvaluation:
             f"revisit={self.revisit_penalty:.2f}, loop={self.loop_penalty:.2f}, "
             f"dead_end={self.dead_end_penalty:.2f}, variation={self.variation_bonus:.2f}, "
             f"direct_capture_risk={self.direct_capture_risk:.3f}, "
-            f"proximity_risk={self.proximity_risk:.3f}"
+            f"proximity_risk={self.proximity_risk:.3f}, "
+            f"escape_routes={self.escape_routes:.2f}, trap_risk={self.trap_risk:.3f}"
         )
 
 
@@ -121,6 +124,11 @@ class TacticalPlanner:
                 hard_excluded.update(
                     item.move for item in evaluations if item.proximity_risk > 0.0
                 )
+                trap_safe = tuple(item for item in guaranteed_safe if item.trap_risk == 0.0)
+                if trap_safe:
+                    hard_excluded.update(
+                        item.move for item in guaranteed_safe if item.trap_risk > 0.0
+                    )
 
         excluded: set[Move] = set(hard_excluded)
         if loop_detected and len(evaluations) > 1:
@@ -198,6 +206,7 @@ class TacticalPlanner:
         ) / weight
         mobility = sum(candidate is not Move.STAY for candidate in board.legal_moves(destination))
         future_value = self._future_value(board, destination, targets)
+        escape_routes, trap_risk = self._escape_outlook(board, destination, targets)
         revisit_penalty = 4.0 * visits[destination]
         loop_penalty = 0.0
         if len(self._positions) >= 2 and destination == self._positions[-2]:
@@ -232,12 +241,14 @@ class TacticalPlanner:
                 9.0 * capture_margin
                 + 3.0 * future_value
                 + 2.2 * mobility
+                + 5.0 * escape_routes
                 - revisit_penalty
                 - loop_penalty
                 - dead_end_penalty
                 + variation_bonus
                 - 1000.0 * direct_capture_risk
                 - 250.0 * proximity_risk
+                - 300.0 * trap_risk
             )
         return ActionEvaluation(
             move=move,
@@ -252,7 +263,48 @@ class TacticalPlanner:
             variation_bonus=variation_bonus,
             direct_capture_risk=direct_capture_risk,
             proximity_risk=proximity_risk,
+            escape_routes=escape_routes,
+            trap_risk=trap_risk,
         )
+
+    def _escape_outlook(
+        self,
+        board: Board,
+        destination: Position,
+        targets: tuple[tuple[Position, float], ...],
+    ) -> tuple[float, float]:
+        """Conservatively score the thief's next escape after the cop responds.
+
+        For each public-belief cop candidate, the cop is allowed its best legal
+        reply. We then count thief continuations that also stay outside the
+        cop's following one-step capture range. This is a small three-ply
+        search over legal board moves; it uses no private opponent state.
+        """
+        if self.role is AgentRole.COP:
+            return 0.0, 0.0
+        weight = sum(probability for _, probability in targets) or 1.0
+        thief_continuations = set(board.legal_moves(destination).values())
+        expected_routes = 0.0
+        trapped_weight = 0.0
+
+        def safe_continuation_count(cop_reply: Position) -> int:
+            if cop_reply == destination:
+                return 0
+            next_capture_cells = set(board.legal_moves(cop_reply).values())
+            return sum(
+                continuation not in next_capture_cells
+                for continuation in thief_continuations
+            )
+
+        for target, probability in targets:
+            worst_case_routes = min(
+                safe_continuation_count(cop_reply)
+                for cop_reply in set(board.legal_moves(target).values())
+            )
+            expected_routes += probability * worst_case_routes
+            if worst_case_routes == 0:
+                trapped_weight += probability
+        return expected_routes / weight, trapped_weight / weight
 
     def _variation_bonus(self, own: Position, move: Move) -> float:
         """Small stable preference that varies only strategically close choices.

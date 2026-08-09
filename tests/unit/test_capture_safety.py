@@ -1,10 +1,15 @@
 from pathlib import Path
 
+from police_thief.domain.belief import BeliefMap
 from police_thief.domain.board import Board, BoardConfig, Move, Position
 from police_thief.domain.strategy.tactical_planner import TacticalPlanner
 from police_thief.services.gemini_agent import GeminiDecision
 from police_thief.services.mcp_server import PeerInboxes
-from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
+from police_thief.services.network_match import (
+    NetworkMatchRunner,
+    NetworkMatchSettings,
+    _confirmed_cop_position,
+)
 from police_thief.shared.constants import AgentRole
 
 
@@ -62,6 +67,16 @@ def test_thief_planner_heavily_penalizes_entering_believed_cop_cell():
     assert west.direct_capture_risk == 1.0
     assert Move.WEST not in plan.allowed_moves
     assert plan.selected is not Move.WEST
+
+
+def test_missing_live_claim_discards_stale_initial_cop_certainty():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = BeliefMap(board)
+    belief.set_certain_position(Position(0, 0))
+
+    assert _confirmed_cop_position(belief, None) is None
+    assert _confirmed_cop_position(belief, [5, 4]) == Position(5, 4)
+    assert belief.arg_max() == Position(5, 4)
 
 
 def test_confirmed_cop_cell_is_excluded_and_unsafe_gemini_is_rejected(tmp_path):
