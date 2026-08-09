@@ -84,6 +84,24 @@ async def test_distinct_turn_commit_is_not_mistaken_for_a_retry():
 
 
 @pytest.mark.asyncio
+async def test_turn_retry_is_deduplicated_by_commit_when_metadata_changes():
+    inboxes = PeerInboxes()
+    mcp = build_peer_server("thief", inboxes)
+    first = {
+        "sender": "police", "step": 7, "commit": "a" * 64,
+        "timestamp": "2026-08-09T10:00:00Z",
+    }
+    retry = {**first, "timestamp": "2026-08-09T10:00:04Z"}
+    async with Client(mcp) as client:
+        await client.call_tool("receive_turn", {"message": first})
+        result = await client.call_tool("receive_turn", {"message": retry})
+
+    assert result.data == {"ok": True, "accepted": True, "kind": "turn", "errors": []}
+    assert inboxes.turns.get_nowait() == first
+    assert inboxes.turns.empty()
+
+
+@pytest.mark.asyncio
 async def test_tool_schema_rejects_wrong_argument_name():
     mcp = build_peer_server("cop", PeerInboxes())
     async with Client(mcp) as client:

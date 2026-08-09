@@ -112,6 +112,91 @@ class _WireScent:
         return float(self.values.get(f"{position.row},{position.col}", 0.0))
 
 
+class _OrderedTurnReceiver:
+    """Apply the protocol's at-least-once, commit-keyed receive contract."""
+
+    def __init__(self, transport, *, max_buffered: int = 8) -> None:
+        self._transport = transport
+        self._max_buffered = max_buffered
+        self._slot_commits: dict[tuple[str, int], str] = {}
+        self._commit_slots: dict[str, tuple[str, int]] = {}
+        self._buffered: dict[tuple[str, int], TurnMessage] = {}
+
+    def receive(
+        self,
+        expected_sender: str,
+        expected_step: int,
+        timeout: float,
+        emit: EventSink,
+    ) -> TurnMessage:
+        expected_slot = (expected_sender, expected_step)
+        buffered = self._buffered.pop(expected_slot, None)
+        if buffered is not None:
+            emit(f"Step {expected_step}: replaying buffered {expected_sender} turn")
+            return buffered
+
+        # Retries and future messages do not extend the per-turn deadline.
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise PeerClientError("opponent turn timed out")
+            message = TurnMessage.from_dict(self._transport.receive_turn(remaining))
+            slot = (message.sender, message.step)
+
+            prior_commit = self._slot_commits.get(slot)
+            if prior_commit is not None:
+                if prior_commit != message.commit:
+                    raise NetworkProtocolError(
+                        "opponent equivocated at turn slot "
+                        f"sender={message.sender!r}, step={message.step}: "
+                        f"first commit={prior_commit}, second commit={message.commit}"
+                    )
+                emit(
+                    f"Step {expected_step}: absorbed duplicate {message.sender} "
+                    f"turn {message.step} (commit {message.commit[:12]}...)"
+                )
+                continue
+
+            prior_slot = self._commit_slots.get(message.commit)
+            if prior_slot is not None and prior_slot != slot:
+                raise NetworkProtocolError(
+                    f"opponent reused turn commit {message.commit} for slots "
+                    f"{prior_slot!r} and {slot!r}"
+                )
+            self._slot_commits[slot] = message.commit
+            self._commit_slots[message.commit] = slot
+
+            if message.sender != expected_sender:
+                raise NetworkProtocolError(
+                    "received a wrong-role turn: "
+                    f"expected sender={expected_sender!r}, step={expected_step}; "
+                    f"received sender={message.sender!r}, step={message.step}"
+                )
+            if message.step < expected_step:
+                raise NetworkProtocolError(
+                    "received an unrecognized stale turn: "
+                    f"expected sender={expected_sender!r}, step={expected_step}; "
+                    f"received sender={message.sender!r}, step={message.step}"
+                )
+            if message.step == expected_step:
+                return message
+            if (
+                message.step - expected_step > self._max_buffered
+                or len(self._buffered) >= self._max_buffered
+            ):
+                raise NetworkProtocolError(
+                    "future-turn buffer limit exceeded: "
+                    f"expected step={expected_step}, received step={message.step}, "
+                    f"limit={self._max_buffered}"
+                )
+            self._buffered[slot] = message
+            emit(
+                f"Step {expected_step}: buffered early {message.sender} "
+                f"turn {message.step} while waiting for the missing turn"
+            )
+
+
 def _confirmed_cop_position(
     belief: BeliefMap,
     capture_claim: list[int] | None,
@@ -587,6 +672,7 @@ class NetworkMatchRunner:
         thief_boxed_in = False
         outcome = MatchOutcome.SURVIVAL
         wire_role = WIRE_ROLES[self.settings.role.value]
+        peer_turns = _OrderedTurnReceiver(self.transport)
         emit(f"Peer ready as {wire_role.upper()} - game {self.settings.game_id}")
 
         # Reference v3 numbers each peer's own turns 1..max_steps.  The thief
@@ -776,14 +862,8 @@ class NetworkMatchRunner:
                     break
             else:
                 self._send_control("status", "WAITING")
-                message = TurnMessage.from_dict(self.transport.receive_turn(timeout))
                 expected_sender = WIRE_ROLES[active_role.value]
-                if message.step != step or message.sender != expected_sender:
-                    raise NetworkProtocolError(
-                        "received an out-of-order or wrong-role turn: "
-                        f"expected sender={expected_sender!r}, step={step}; "
-                        f"received sender={message.sender!r}, step={message.step}"
-                    )
+                message = peer_turns.receive(expected_sender, step, timeout, emit)
                 peer_commits[step] = message.commit
                 inferred_candidates = _infer_public_scent_candidates(
                     board,

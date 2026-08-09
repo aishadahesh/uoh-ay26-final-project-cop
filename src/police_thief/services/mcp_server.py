@@ -31,11 +31,20 @@ class PeerInboxes:
         }
 
     def enqueue_once(self, inbox_name: str, payload: dict) -> bool:
-        """Queue a retriable payload once, while acknowledging exact retries."""
-        canonical = json.dumps(
-            payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
-        ).encode()
-        fingerprint = hashlib.sha256(canonical).hexdigest()
+        """Queue a retriable payload once and acknowledge safe redelivery.
+
+        A turn's immutable commitment is its delivery identifier.  Transport
+        metadata such as the timestamp may change when a peer retries the
+        envelope, but that must not execute the sealed turn twice.
+        """
+        commit = payload.get("commit") if inbox_name == "turns" else None
+        if isinstance(commit, str) and commit:
+            fingerprint = f"commit:{commit}"
+        else:
+            canonical = json.dumps(
+                payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+            ).encode()
+            fingerprint = f"payload:{hashlib.sha256(canonical).hexdigest()}"
         with self._delivery_lock:
             delivered = self._delivered[inbox_name]
             if fingerprint in delivered:
