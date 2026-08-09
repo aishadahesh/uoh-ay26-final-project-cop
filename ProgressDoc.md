@@ -689,3 +689,24 @@ ruff check: All checks passed!
 ```
 
 **Status:** awaiting review before committing.
+
+---
+
+### Tie Rule Applied to the Aggregate Series Score (75-75 -> 77-77)
+
+**Context:** the first full six-game series (G001) ended with every sub-game decided by capture, giving each team 3 x 20 (as cop) + 3 x 5 (as thief) = 75 raw cumulative points. The user asked whether the mandatory Tie Rule was being applied. Verified directly against the PDF before changing anything: the Tie Rule box (Sec. 9.2.8-9.2.9, footer page 71) and Appendix F Table 17 row 5 (footer page 137) both mandate that when the cumulative score of all sub-games between two groups ends in a tie, each group receives the fixed tie score (2). The team's agreed interpretation: a credit on TOP of the raw subtotal, so 75-75 must be reported as 77-77.
+
+**The bug:** the tie rule existed in the codebase (`domain/league.py::apply_tie_rule`) but was dead code -- never called from the aggregation path -- and it implemented a replacement reading (tied totals became 2-2) rather than the additive credit. The emailed `result_<game_id>.json` therefore carried raw tied totals (75-75) with no tie credit in any form. Worse, the totals that actually get emailed are computed independently in `services/submission_artifacts.py::finalize_submission_bundle` (summing sub-game rows), and its own validator enforced the *uncredited* raw sum as the expected `final_result.total_score`.
+
+**The fix (all three layers, kept consistent):**
+1. `domain/league.py::apply_tie_rule` now returns `(own + tie_score, opponent + tie_score)` on an exact tie.
+2. `services/network_match.py::NetworkMatchSeriesRunner.run()` applies `apply_tie_rule` to the series totals before writing `team_scores`, so the internal aggregate and the reference-format bundle agree.
+3. `services/submission_artifacts.py`: `finalize_submission_bundle` credits `FIXED_TIE_SCORE` (new constant in `shared/game_config.py`, Table 17 row 5, fixed at 2) to each side when `series_tie` is true, and `validate_submission_directory`'s derived-value check now expects the credited totals -- a tied bundle claiming raw totals is rejected as `derived_value_mismatch`.
+
+`series_tie`/`winner_group` semantics are unchanged (the credit is symmetric). Per-sub-game scoring in `domain/scoring.py` is untouched -- Table 17's tie row is a cumulative-level rule.
+
+**Tests:** `test_league.py` tie cases updated to the additive semantics (including the literal 75-75 -> 77-77 case); `test_submission_artifacts.py` gained a tied-series bundle test (25-25 raw -> 27-27 reported, validator clean) and a negative test proving the validator rejects a tied bundle missing the credit. The identical fix and tests were mirrored to the sibling thief repo so both peers' independently-computed aggregates agree (a mismatch would look like tampering in the paired reports). While there, fixed the thief-only `test_network_match_terms.py` to read `setting` from the agreed config (`params.world.map_area`) instead of a hardcoded "New York" -- it had been failing since the team agreed on "Haifa".
+
+**Quality gate results:** cop: 566 passed, 1 skipped; ruff clean. Thief: 578 passed; ruff clean.
+
+**Status:** awaiting review before committing.

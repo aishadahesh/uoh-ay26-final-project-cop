@@ -15,6 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from police_thief.shared.game_config import FIXED_TIE_SCORE
+
 SCHEMA_VERSION = "1.1"
 ALLOWED_ROLES = {"police", "thief"}
 ALLOWED_RESULTS = {"capture", "survival", "technical_loss"}
@@ -202,7 +204,7 @@ def finalize_submission_bundle(
             for key, value in row["roles"].items()
         }
         score = dict(row.get("score") or {})
-        tokens = dict(row.get("tokens") or {key: 0 for key in participants})
+        tokens = dict(row.get("tokens") or dict.fromkeys(participants, 0))
         winner = None if len(set(score.values())) == 1 else max(score, key=score.get)
         summary = {
             "sub_game_number": number,
@@ -236,7 +238,7 @@ def finalize_submission_bundle(
             },
             "tokens": tokens,
             "score": score,
-            "log_files": {key: log_name for key in participants},
+            "log_files": dict.fromkeys(participants, log_name),
             "audit": {"log_verified": bool(row.get("mutual_sign_off", True)), "tampered": False},
         })
 
@@ -246,6 +248,11 @@ def finalize_submission_bundle(
     }
     ties = sum(item["tie"] for item in result_rows)
     series_tie = len(set(totals.values())) == 1
+    if series_tie:
+        # Tie Rule (Sec. 9.2.8-9.2.9 / Appendix F Table 17 row 5): a tied
+        # cumulative series credits each side the fixed tie score on top of
+        # its raw subtotal, so e.g. 75-75 is reported as 77-77.
+        totals = {key: value + FIXED_TIE_SCORE for key, value in totals.items()}
     winner = None if series_tie else max(totals, key=totals.get)
     token_totals = {
         key: sum(int(item["tokens"].get(key, 0)) for item in result_rows)
@@ -416,6 +423,10 @@ def validate_submission_directory(
         else:
             _validate_result_rows(result_name, rows, group_ids, errors)
             totals = {key: sum(row["score"].get(key, 0) for row in rows) for key in group_ids}
+            if len(set(totals.values())) == 1:
+                # Tie Rule: a tied cumulative series must carry the fixed
+                # tie-score credit for each side (Table 17 row 5).
+                totals = {key: value + FIXED_TIE_SCORE for key, value in totals.items()}
             received = (result.get("final_result") or {}).get("total_score")
             if received != totals:
                 errors.append(_error(result_name, "final_result.total_score", totals, received, "derived_value_mismatch"))

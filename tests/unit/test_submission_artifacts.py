@@ -50,7 +50,7 @@ def _record(step, role, move):
     return {"payload": payload, "nonce": nonce, "h_commit": commit}
 
 
-def _bundle(tmp_path):
+def _bundle(tmp_path, scores=None):
     participants = {
         key: public_participant(_identity(key)) for key in ("alpha", "beta")
     }
@@ -66,7 +66,10 @@ def _bundle(tmp_path):
             "started_at": f"2026-08-06T10:0{number}:00+03:00",
             "ended_at": f"2026-08-06T10:0{number}:10+03:00",
             "outcome": "capture" if number == 1 else "survival",
-            "score": {"alpha": 20 if number == 1 else 10, "beta": 5},
+            "score": (
+                scores[number - 1] if scores
+                else {"alpha": 20 if number == 1 else 10, "beta": 5}
+            ),
             "tokens": {"alpha": 100, "beta": 200},
             "mutual_sign_off": True,
         })
@@ -141,6 +144,31 @@ def test_validator_rejects_private_information(tmp_path):
     path.write_text(json.dumps(data), encoding="utf-8")
     errors, _ = validate_submission_directory(tmp_path, "G1")
     assert any(item.code == "private_information_exposed" for item in errors)
+
+
+def test_tied_series_totals_carry_the_fixed_tie_credit(tmp_path):
+    # Tie Rule (Sec. 9.2.8-9.2.9 / Appendix F Table 17 row 5): a tied
+    # cumulative series credits each side +2 on top of its raw subtotal.
+    _bundle(tmp_path, scores=[{"alpha": 20, "beta": 5}, {"alpha": 5, "beta": 20}])
+    result = json.loads((tmp_path / "result_G1.json").read_text(encoding="utf-8"))
+    final = result["final_result"]
+    assert final["series_tie"] is True
+    assert final["winner_group"] is None
+    assert final["total_score"] == {"alpha": 27, "beta": 27}
+    errors, _ = validate_submission_directory(tmp_path, "G1")
+    assert errors == []
+
+
+def test_validator_rejects_a_tied_series_missing_the_tie_credit(tmp_path):
+    _bundle(tmp_path, scores=[{"alpha": 20, "beta": 5}, {"alpha": 5, "beta": 20}])
+    path = tmp_path / "result_G1.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["final_result"]["total_score"] = {"alpha": 25, "beta": 25}
+    path.write_text(json.dumps(data), encoding="utf-8")
+    errors, _ = validate_submission_directory(tmp_path, "G1")
+    error = next(item for item in errors if item.field == "final_result.total_score")
+    assert error.code == "derived_value_mismatch"
+    assert error.expected == {"alpha": 27, "beta": 27}
 
 
 def test_six_game_email_contains_only_the_aggregate_result():

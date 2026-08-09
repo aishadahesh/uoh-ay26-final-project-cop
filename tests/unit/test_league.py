@@ -85,8 +85,14 @@ def test_verify_game_count_declaration_false_on_a_false_declaration():
     assert verify_game_count_declaration(5, record) is False
 
 
-def test_apply_tie_rule_awards_tie_score_to_both_sides_on_an_exact_tie():
-    assert apply_tie_rule(10, 10, tie_score=2) == (2, 2)
+def test_apply_tie_rule_credits_tie_score_on_top_of_each_tied_subtotal():
+    assert apply_tie_rule(10, 10, tie_score=2) == (12, 12)
+
+
+def test_apply_tie_rule_turns_a_75_75_series_into_77_77():
+    # The exact all-captures six-game series from the reviewed G001 match:
+    # 3 x capture_cop (20) + 3 x capture_thief (5) = 75 for each side.
+    assert apply_tie_rule(75, 75, tie_score=2) == (77, 77)
 
 
 def test_apply_tie_rule_leaves_scores_unchanged_when_not_tied():

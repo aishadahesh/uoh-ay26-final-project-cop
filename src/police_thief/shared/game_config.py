@@ -38,6 +38,7 @@ DEFAULT_NUM_GAMES = 6
 FIXED_DIVERSITY_REWARD = 10
 FIXED_MIN_GAMES_TO_PASS = 2
 FIXED_MAX_GAMES_PER_TEAM = 10
+FIXED_TIE_SCORE = 2  # Appendix F Table 17 row 5: fixed, credited to each side on a tied series
 SUPPORTED_SCHEMA_VERSIONS = frozenset({"1.00"})
 _FIXED_SCENT_CONFIG = ScentConfig()  # docs/tasks.md Sec. 4.2: fixed, not a minimum floor
 

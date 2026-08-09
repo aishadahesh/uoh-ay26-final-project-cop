@@ -81,8 +81,10 @@ def verify_game_count_declaration(declared_games_played: int, actual: LeagueReco
 
 
 def apply_tie_rule(own_total: int, opponent_total: int, tie_score: int) -> tuple[int, int]:
-    """Sec. 9.2.8-9.2.9: an exact tie in accumulated score between two teams
-    awards both sides `tie_score` -- no rematch is needed or permitted."""
+    """Sec. 9.2.8-9.2.9 / Appendix F Table 17 row 5: when the cumulative
+    score of all sub-games against one rival ends in an exact tie, each side
+    receives the tie score as a credit ON TOP of its cumulative subtotal
+    (e.g. 75-75 becomes 77-77) -- no rematch is needed or permitted."""
     if own_total == opponent_total:
-        return tie_score, tie_score
+        return own_total + tie_score, opponent_total + tie_score
     return own_total, opponent_total
