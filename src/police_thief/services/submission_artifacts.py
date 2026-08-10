@@ -64,6 +64,47 @@ def canonical_hash(value: Any) -> str:
     return hashlib.sha256(canonical_bytes(value)).hexdigest()
 
 
+def series_consensus_payload(
+    game_id: str, game_uid: str, series_result: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the stable, cross-peer series adjudication preimage.
+
+    Local timestamps, token counters, filenames and email metadata are
+    intentionally excluded: peers can agree on the game without generating
+    those local observations byte-for-byte.
+    """
+    rows: list[dict[str, Any]] = []
+    for row in sorted(
+        series_result["sub_games"], key=lambda item: int(item["sub_game_number"]),
+    ):
+        roles = {
+            key: ("police" if value == "cop" else value)
+            for key, value in row["roles"].items()
+        }
+        score = dict(sorted(row["score"].items()))
+        winner = None if len(set(score.values())) == 1 else max(score, key=score.get)
+        rows.append({
+            "sub_game_number": int(row["sub_game_number"]),
+            "result": row["outcome"],
+            "roles": dict(sorted(roles.items())),
+            "score": score,
+            "winner_group": winner,
+        })
+    if not rows:
+        raise ValueError("series consensus requires at least one sub-game")
+    return {
+        "game_id": game_id,
+        "game_uid": game_uid,
+        "sub_games": rows,
+    }
+
+
+def series_consensus_hash(
+    game_id: str, game_uid: str, series_result: dict[str, Any],
+) -> str:
+    return canonical_hash(series_consensus_payload(game_id, game_uid, series_result))
+
+
 def derive_game_uid(terms: dict[str, Any], group_ids: list[str]) -> str:
     pair = sorted(group_ids)
     seed = canonical_bytes(terms) + b"|" + "|".join(pair).encode("utf-8")
@@ -266,10 +307,7 @@ def finalize_submission_bundle(
         "series_tie": series_tie,
         "tokens_total_series": token_totals,
     }
-    consensus = {
-        "game_id": game_id, "game_uid": game_uid,
-        "sub_games": result_rows, "final_result": final,
-    }
+    consensus_sha = series_consensus_hash(game_id, game_uid, series_result)
     result_doc = {
         **base,
         "report_type": "final_game_result",
@@ -279,8 +317,8 @@ def finalize_submission_bundle(
         "sub_games": result_rows,
         "final_result": final,
         "mutual_agreement": {
-            "sha256": canonical_hash(consensus),
-            "confirmed": all(bool(row.get("mutual_sign_off", True)) for row in series_result["sub_games"]),
+            "sha256": consensus_sha,
+            "confirmed": bool(series_result.get("consensus_confirmed", False)),
         },
     }
     paths.append(_write(directory / links["result"], result_doc))

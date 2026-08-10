@@ -61,9 +61,11 @@ from police_thief.services.step0 import (
 )
 from police_thief.services.submission_artifacts import (
     SubmissionBundleError,
+    derive_game_uid,
     finalize_submission_bundle,
     public_participant,
     save_submission_validation_report,
+    series_consensus_hash,
     validate_submission_directory,
 )
 from police_thief.shared.constants import AgentRole
@@ -1147,35 +1149,34 @@ class NetworkMatchRunner:
         if trajectory.capture_step is not None:
             if outcome is not MatchOutcome.CAPTURE:
                 emit(
-                    f"Final audit corrected the outcome to capture: signed positions "
-                    f"first coincide at step {trajectory.capture_step} after the "
-                    f"{trajectory.capture_after_role} move"
+                    "Final audit corrected the outcome to capture: the signed "
+                    f"capture claim at step {trajectory.capture_step} after the "
+                    f"{trajectory.capture_after_role} move received caught=true"
                 )
             outcome = MatchOutcome.CAPTURE
             if trajectory.trailing_moves:
                 semantic_audit_clean = False
                 emit(
                     f"Final audit found {trajectory.trailing_moves} move(s) after the "
-                    f"terminal collision at step {trajectory.capture_step}; retaining "
+                    f"successful capture at step {trajectory.capture_step}; retaining "
                     "the signed log but disabling mutual sign-off"
                 )
 
         peer_claim_matches = peer_audit.result_claim == outcome.value
-        if not peer_claim_matches and trajectory.capture_step is None:
-            emit(
-                "Opponent result claim does not match local result; recording "
-                "technical loss with mutual_sign_off=false"
-            )
-            self._send_control("status", "AUDIT_FAILED")
-            return self._write_technical_loss_result(
-                params, own_records, peer_identity, emit,
-            )
         if not peer_claim_matches:
-            emit(
-                f"Opponent claimed {peer_audit.result_claim!r}, but the signed revealed "
-                f"trajectory proves {outcome.value!r}; saving the evidence-derived "
-                "result without mutual sign-off"
-            )
+            if trajectory.capture_step is not None:
+                emit(
+                    f"Opponent claimed {peer_audit.result_claim!r}, but the complete "
+                    f"signed capture exchange proves {outcome.value!r}; saving the "
+                    "evidence-derived result without mutual sign-off"
+                )
+            else:
+                emit(
+                    f"Opponent claimed {peer_audit.result_claim!r}, but the signed "
+                    "artifacts do not establish a successful capture exchange; "
+                    f"retaining the live {outcome.value!r} outcome without mutual "
+                    "sign-off"
+                )
         mutual_sign_off = bool(re.fullmatch(
             r"[0-9a-f]{40}", str(peer_identity.get("git_commit_hash", "")),
         )) and peer_claim_matches and semantic_audit_clean and not missing_claim_response
@@ -1795,12 +1796,53 @@ class NetworkMatchSeriesRunner:
             "team_scores": ordered_totals,
             "winner": winners[0] if len(winners) == 1 else "tie",
         }
-        path = save_series_result(series_result, self.settings.output_dir, self.settings.game_id)
         if participants is None:
             raise RuntimeError("series completed without participant metadata")
         terms = NetworkMatchRunner(
             self.settings, self.inboxes, self.gemini_advisor, self.transport,
         )._terms(params)
+        game_uid = derive_game_uid(terms, list(participants))
+        local_consensus_sha = series_consensus_hash(
+            self.settings.game_id, game_uid, series_result,
+        )
+        subgames_mutually_verified = bool(
+            subgames and all(bool(row["mutual_sign_off"]) for row in subgames)
+        )
+        consensus_confirmed = False
+        try:
+            peer_consensus = AuditPayload.from_dict(self.transport.exchange_audit(
+                AuditPayload(
+                    sender=WIRE_ROLES[self.settings.role.value],
+                    records=[],
+                    result_claim="series_consensus",
+                    consensus_sha=local_consensus_sha,
+                ).to_dict(),
+                params.network_league.response_timeout_sec,
+            ))
+            expected_sender = WIRE_ROLES[
+                AgentRole.THIEF.value
+                if self.settings.role is AgentRole.COP
+                else AgentRole.COP.value
+            ]
+            consensus_confirmed = bool(
+                subgames_mutually_verified
+                and peer_consensus.sender == expected_sender
+                and peer_consensus.records == []
+                and peer_consensus.result_claim == "series_consensus"
+                and peer_consensus.consensus_sha == local_consensus_sha
+            )
+            if not consensus_confirmed:
+                emit(
+                    "Final series consensus was not mutually confirmed; "
+                    f"local_sha={local_consensus_sha}, "
+                    f"peer_sha={peer_consensus.consensus_sha or 'missing'}"
+                )
+        except (PeerClientError, NetworkProtocolError) as exc:
+            emit(f"Final series consensus exchange failed: {exc}")
+        series_result["consensus_sha"] = local_consensus_sha
+        series_result["consensus_confirmed"] = consensus_confirmed
+        series_result["mutual_sign_off"] = consensus_confirmed
+        path = save_series_result(series_result, self.settings.output_dir, self.settings.game_id)
         try:
             submission_paths = finalize_submission_bundle(
                 self.settings.output_dir,

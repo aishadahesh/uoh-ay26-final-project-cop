@@ -8,6 +8,7 @@ from police_thief.services.submission_artifacts import (
     finalize_submission_bundle,
     public_participant,
     save_submission_validation_report,
+    series_consensus_payload,
     validate_submission_directory,
 )
 
@@ -56,7 +57,8 @@ def _bundle(tmp_path, scores=None):
     }
     rows = []
     for number in (1, 2):
-        (tmp_path / f"log_G1_g{number:02d}.json").write_text(
+        log_path = tmp_path / f"log_G1_g{number:02d}.json"
+        log_path.write_text(
             json.dumps([_record(number, "thief", "E"), _record(number, "police", "S")]),
             encoding="utf-8",
         )
@@ -72,13 +74,65 @@ def _bundle(tmp_path, scores=None):
             ),
             "tokens": {"alpha": 100, "beta": 200},
             "mutual_sign_off": True,
+            "log_sha256": hashlib.sha256(log_path.read_bytes()).hexdigest(),
         })
-    series = {"num_games": 2, "sub_games": rows}
+    series = {
+        "num_games": 2,
+        "sub_games": rows,
+        "consensus_confirmed": True,
+    }
     return finalize_submission_bundle(
         tmp_path, game_id="G1", terms=_terms(), participants=participants,
         series_result=series, game_started_at="2026-08-06T10:00:00+03:00",
         token_budget=200000,
     )
+
+
+def test_series_consensus_payload_matches_exact_cross_team_preimage():
+    series = {
+        "sub_games": [
+            {
+                "sub_game_number": 2,
+                "outcome": "capture",
+                "roles": {"beta": "cop", "alpha": "thief"},
+                "score": {"beta": 20, "alpha": 5},
+                "log_sha256": "b" * 64,
+                "steps": 14,
+                "tokens": {"alpha": 1, "beta": 2},
+            },
+            {
+                "sub_game_number": 1,
+                "outcome": "survival",
+                "roles": {"beta": "thief", "alpha": "cop"},
+                "score": {"beta": 5, "alpha": 10},
+                "log_sha256": "a" * 64,
+                "steps": 35,
+            },
+        ],
+        "team_scores": {"alpha": 15, "beta": 25},
+        "winner": "beta",
+    }
+
+    assert series_consensus_payload("G002", "shared-uid", series) == {
+        "game_id": "G002",
+        "game_uid": "shared-uid",
+        "sub_games": [
+            {
+                "sub_game_number": 1,
+                "result": "survival",
+                "roles": {"alpha": "police", "beta": "thief"},
+                "score": {"alpha": 10, "beta": 5},
+                "winner_group": "alpha",
+            },
+            {
+                "sub_game_number": 2,
+                "result": "capture",
+                "roles": {"alpha": "thief", "beta": "police"},
+                "score": {"alpha": 5, "beta": 20},
+                "winner_group": "beta",
+            },
+        ],
+    }
 
 
 def test_finalize_builds_and_validates_all_required_json(tmp_path):

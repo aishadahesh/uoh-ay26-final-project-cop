@@ -3,6 +3,7 @@
 import pytest
 
 from police_thief.services.network_protocol import (
+    AuditPayload,
     NetworkProtocolError,
     TurnMessage,
     audit_records,
@@ -12,6 +13,34 @@ from police_thief.services.network_protocol import (
     verify_agreement,
     verify_record,
 )
+
+
+def test_audit_payload_omits_unset_consensus_sha() -> None:
+    payload = AuditPayload("police", [], "survival").to_dict()
+    assert "consensus_sha" not in payload
+
+
+def test_audit_payload_accepts_valid_consensus_sha() -> None:
+    digest = "a" * 64
+    payload = AuditPayload("police", [], "series_consensus", consensus_sha=digest)
+    assert AuditPayload.from_dict(payload.to_dict()).consensus_sha == digest
+
+
+@pytest.mark.parametrize("digest", ["A" * 64, "a" * 63, "g" * 64, 123])
+def test_audit_payload_rejects_invalid_consensus_sha(digest) -> None:
+    with pytest.raises(NetworkProtocolError, match="consensus_sha"):
+        AuditPayload.from_dict({
+            "sender": "police", "records": [],
+            "result_claim": "series_consensus", "consensus_sha": digest,
+        })
+
+
+def test_audit_payload_still_rejects_unagreed_unknown_fields() -> None:
+    with pytest.raises(NetworkProtocolError, match="malformed audit payload"):
+        AuditPayload.from_dict({
+            "sender": "police", "records": [], "result_claim": "survival",
+            "future_unagreed_field": True,
+        })
 
 
 def test_signed_negotiation_round_trip():

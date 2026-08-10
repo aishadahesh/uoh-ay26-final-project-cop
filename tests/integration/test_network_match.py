@@ -175,6 +175,7 @@ def test_two_peers_play_agreed_series_with_role_alternation(
 
     results = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
     assert all(result["mutual_agreement"]["confirmed"] for result in results)
+    assert len({result["mutual_agreement"]["sha256"] for result in results}) == 1
     assert all(result["num_sub_games"] == num_games for result in results)
     assert results[0]["game_uid"] == results[1]["game_uid"]
     assert results[0]["final_result"]["total_score"] == results[1]["final_result"]["total_score"]
@@ -206,17 +207,6 @@ def test_two_peers_play_agreed_series_with_role_alternation(
         trajectories.add(
             tuple((move["role"], move["move"], tuple(move["position"])) for move in moves)
         )
-        latest: dict[str, tuple[int, int]] = {}
-        collision_index = None
-        for index, move in enumerate(moves):
-            latest[move["role"]] = tuple(move["position"])
-            if latest.get("police") == latest.get("thief"):
-                collision_index = index
-        # A collision is terminal only when it remains the final audited
-        # state. Earlier crossings can be hidden by commit-reveal, and a
-        # capture can also be established by the separate boxed-in rule.
-        if collision_index is not None:
-            assert collision_index == len(moves) - 1, "no move may occur after capture"
     assert len(trajectories) >= min(2, num_games), (
         "multi-game series must not replay one identical trajectory"
     )
