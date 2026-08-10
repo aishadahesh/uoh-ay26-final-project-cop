@@ -478,18 +478,46 @@ def _revealed_move(value: object) -> Move | None:
 
 
 def _revealed_post_position(
-    payload: dict, previous: Position, grid_size: int,
+    payload: dict, previous: Position | None, grid_size: int,
 ) -> tuple[Position | None, str | None]:
-    """Normalize a signed move without assuming whether ``state`` is pre/post.
+    """Recover a position without imposing our sealed-action vocabulary.
 
     Our records publish pre-move ``state`` plus post-move ``position``.  The
     reviewed reference-compatible peer publishes its post-move cell inside
-    ``grid=...;self=[row,col]`` and uses ``MOVE:*`` actions.  Continuity from
-    the protected start position distinguishes both formats safely.
+    ``grid=...;self=[row,col]`` and may use private action spellings such as
+    ``MOVE:*`` or ``BARRIER:*``.  The payload schema is not an interoperability
+    constraint: known moves are checked exactly, while unknown action names
+    are judged only by the position evidence they actually provide.
     """
     move = _revealed_move(payload.get("move"))
+    explicit = _revealed_coordinate(payload.get("position"))
+    state = _revealed_coordinate(payload.get("state"))
+
+    # A prior unparseable record breaks continuity.  Re-anchor from strict
+    # coordinate evidence without inventing a transition across the gap.
+    if previous is None:
+        candidate = explicit or state
+        if candidate is None:
+            return None, None
+        if not (0 <= candidate.row < grid_size and 0 <= candidate.col < grid_size):
+            return None, f"revealed position {candidate} leaves the board"
+        return candidate, None
+
     if move is None:
-        return None, f"unsupported move {payload.get('move')!r}"
+        candidate = explicit or state
+        if candidate is None:
+            return None, None
+        if not (0 <= candidate.row < grid_size and 0 <= candidate.col < grid_size):
+            return None, f"revealed position {candidate} leaves the board"
+        if explicit is not None and state is not None and state not in (previous, explicit):
+            return None, f"state {state} is inconsistent with {previous}->{explicit}"
+        distance = abs(candidate.row - previous.row) + abs(candidate.col - previous.col)
+        if distance > 1:
+            return None, (
+                f"position jumps {previous}->{candidate}: more than one orthogonal step"
+            )
+        return candidate, None
+
     delta = {
         Move.NORTH: (-1, 0), Move.SOUTH: (1, 0),
         Move.EAST: (0, 1), Move.WEST: (0, -1), Move.STAY: (0, 0),
@@ -498,8 +526,6 @@ def _revealed_post_position(
     if not (0 <= expected.row < grid_size and 0 <= expected.col < grid_size):
         return None, f"move {move.value} from {previous} leaves the board"
 
-    explicit = _revealed_coordinate(payload.get("position"))
-    state = _revealed_coordinate(payload.get("state"))
     if explicit is not None:
         if explicit != expected:
             return None, f"position {explicit} does not match {move.value} from {previous}"
@@ -521,8 +547,15 @@ def _audit_revealed_trajectory(
     cop_start: Position,
     thief_start: Position,
     grid_size: int,
+    *,
+    allow_terminal_record: bool = False,
 ) -> _RevealedTrajectoryAudit:
-    """Replay signed public records and find the first physical collision."""
+    """Replay supported signed evidence and find the first physical collision.
+
+    Unknown payload vocabularies degrade to position-only verification.  One
+    immediate zero-displacement final record is tolerated after collision only
+    when the live protocol already supplied a valid positive capture response.
+    """
     decorated: list[tuple[str, dict]] = []
     for source_role, records in ((own_role, own_records), (peer_role, peer_records)):
         for record in records:
@@ -539,12 +572,16 @@ def _audit_revealed_trajectory(
 
     decorated.sort(key=sort_key)
 
-    positions = {"police": cop_start, "thief": thief_start}
+    positions: dict[str, Position | None] = {
+        "police": cop_start,
+        "thief": thief_start,
+    }
     seen: set[tuple[str, int]] = set()
     errors: list[str] = []
     capture_step: int | None = None
     capture_after_role: str | None = None
     trailing_moves = 0
+    terminal_record_consumed = False
     for source_role, payload in decorated:
         role = "police" if source_role == "cop" else source_role
         try:
@@ -563,15 +600,37 @@ def _audit_revealed_trajectory(
             errors.append(f"duplicate {role} move at step {step}")
             continue
         seen.add(key)
-        position, error = _revealed_post_position(payload, positions[role], grid_size)
-        if error is not None or position is None:
+        previous = positions[role]
+        position, error = _revealed_post_position(payload, previous, grid_size)
+        if error is not None:
             errors.append(f"step {step} {role}: {error}")
+            continue
+        if position is None:
+            # This peer disclosed no parseable position for this record.  Its
+            # seal can still verify; suspend trajectory checks until a strict
+            # coordinate lets us re-anchor.
+            positions[role] = None
             continue
         positions[role] = position
         if capture_step is not None:
+            is_terminal_record = (
+                allow_terminal_record
+                and not terminal_record_consumed
+                and capture_after_role == "police"
+                and role == "thief"
+                and step == capture_step + 1
+                and previous is not None
+                and position == previous
+            )
+            if is_terminal_record:
+                terminal_record_consumed = True
+                continue
             trailing_moves += 1
             continue
-        if positions["police"] == positions["thief"]:
+        if (
+            positions["police"] is not None
+            and positions["police"] == positions["thief"]
+        ):
             capture_step = step
             capture_after_role = role
 
@@ -656,6 +715,7 @@ class NetworkMatchRunner:
         capture_evidence_reliable = True
         rejected_belief_claim_until: dict[tuple[int, int], int] = {}
         missing_claim_response = False
+        capture_acknowledged = False
         known_cop_position = (
             params.cop_start if self.settings.role is AgentRole.THIEF else None
         )
@@ -1013,6 +1073,7 @@ class NetworkMatchRunner:
                                 "at that cell are paused for two Cop turns"
                             )
                         if message.claim_response.get("caught"):
+                            capture_acknowledged = True
                             outcome = MatchOutcome.CAPTURE
                             break
                     outstanding_capture_claims = []
@@ -1061,6 +1122,7 @@ class NetworkMatchRunner:
             params.cop_start,
             params.thief_start,
             params.board.grid_size,
+            allow_terminal_record=capture_acknowledged,
         )
         semantic_audit_clean = not trajectory.errors
         if trajectory.errors:

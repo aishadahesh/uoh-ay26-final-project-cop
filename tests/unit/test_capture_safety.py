@@ -228,6 +228,105 @@ def test_final_audit_detects_recorded_step_13_collision_across_peer_formats():
     assert audit.trailing_moves == 2
 
 
+def test_final_audit_accepts_stationary_barrier_action_vocabulary():
+    audit = _audit_revealed_trajectory(
+        [
+            {"payload": {
+                "step": 1, "role": "police", "state": "grid=7;self=[1, 0]",
+                "move": "MOVE:S", "intent": "truth",
+            }},
+            {"payload": {
+                "step": 2, "role": "police", "state": "grid=7;self=[1, 0]",
+                "move": "BARRIER:E", "intent": "truth",
+            }},
+            {"payload": {
+                "step": 3, "role": "police", "state": "grid=7;self=[1, 1]",
+                "move": "MOVE:E", "intent": "truth",
+            }},
+        ],
+        [],
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(3, 3),
+        7,
+    )
+
+    assert audit.errors == ()
+    assert audit.capture_step is None
+
+
+def test_final_audit_rejects_unknown_action_with_diagonal_position_jump():
+    audit = _audit_revealed_trajectory(
+        [{"payload": {
+            "step": 1, "role": "police", "state": "grid=7;self=[1, 1]",
+            "move": "PRIVATE_ACTION", "intent": "truth",
+        }}],
+        [],
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(3, 3),
+        7,
+    )
+
+    assert "more than one orthogonal step" in audit.errors[0]
+
+
+def test_final_audit_allows_one_acknowledged_stationary_terminal_record():
+    police_records = [
+        {"payload": {
+            "step": 1, "role": "police", "state": {"row": 0, "col": 0},
+            "position": [0, 1], "move": "E", "intent": True,
+        }},
+        {"payload": {
+            "step": 2, "role": "police", "state": {"row": 0, "col": 1},
+            "position": [0, 2], "move": "E", "intent": True,
+        }},
+    ]
+    thief_records = [
+        {"payload": {
+            "step": step, "role": "thief", "state": "grid=7;self=[0, 2]",
+            "move": "STAY", "intent": "truth",
+        }}
+        for step in (1, 2, 3)
+    ]
+
+    audit = _audit_revealed_trajectory(
+        police_records,
+        thief_records,
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(0, 2),
+        7,
+        allow_terminal_record=True,
+    )
+
+    assert audit.errors == ()
+    assert audit.capture_step == 2
+    assert audit.capture_after_role == "police"
+    assert audit.trailing_moves == 0
+
+    audit_with_extra_move = _audit_revealed_trajectory(
+        police_records,
+        [
+            *thief_records,
+            {"payload": {
+                "step": 4, "role": "thief", "state": "grid=7;self=[1, 2]",
+                "move": "MOVE:S", "intent": "truth",
+            }},
+        ],
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(0, 2),
+        7,
+        allow_terminal_record=True,
+    )
+    assert audit_with_extra_move.trailing_moves == 1
+
+
 def test_final_audit_rejects_a_discontinuous_revealed_position():
     audit = _audit_revealed_trajectory(
         [{
