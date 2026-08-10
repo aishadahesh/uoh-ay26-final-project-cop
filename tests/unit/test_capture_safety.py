@@ -31,14 +31,6 @@ class _CertainBelief:
         return ((self.position, 1.0),)
 
 
-class _WeightedBelief:
-    def __init__(self, ranked: tuple[tuple[Position, float], ...]) -> None:
-        self.ranked = ranked
-
-    def top_positions(self, limit: int = 5):
-        return self.ranked[:limit]
-
-
 class _UnsafeGemini:
     def __init__(self) -> None:
         self.context = None
@@ -112,57 +104,15 @@ def test_confirmed_cop_may_occupy_its_own_newly_blocked_barrier_cell():
     assert belief.belief_at(target) == 0.0
 
 
-def test_cop_challenges_capture_on_any_publicly_plausible_occupied_cell():
+def test_police_always_claims_its_post_move_cell_without_belief_gate():
     cop = Position(3, 3)
 
-    assert _truthful_capture_claim(
-        AgentRole.COP, cop, (Position(3, 4),),
-    ) is None
-    assert _truthful_capture_claim(
-        AgentRole.COP, cop, (cop, Position(3, 4)),
-    ) == [3, 3]
-    assert _truthful_capture_claim(AgentRole.COP, cop, (cop,)) == [3, 3]
-    assert _truthful_capture_claim(AgentRole.THIEF, cop, (cop,)) is None
+    assert _truthful_capture_claim(AgentRole.COP, cop) == [3, 3]
+    assert _truthful_capture_claim(AgentRole.THIEF, cop) is None
 
 
-def test_cop_claims_recorded_step_13_collision_despite_scent_ambiguity():
-    """The reviewed G002 g01 collision was missed because saturated scent
-    left both corner cells plausible.  Occupying either candidate must trigger
-    the signed challenge so the real thief can acknowledge capture immediately.
-    """
-    cop = Position(5, 6)
-    saturated_corner_candidates = (Position(5, 6), Position(6, 6))
-
-    assert _truthful_capture_claim(
-        AgentRole.COP, cop, saturated_corner_candidates,
-    ) == [5, 6]
-
-
-def test_cop_challenges_recorded_collision_from_strong_belief_without_scent_candidate():
-    cop = Position(5, 6)
-    belief = _WeightedBelief((
-        (Position(6, 6), 0.208),
-        (cop, 0.192),
-        (Position(5, 5), 0.180),
-    ))
-
-    assert _truthful_capture_claim(
-        AgentRole.COP, cop, (), belief=belief,
-    ) == [5, 6]
-
-
-def test_cop_does_not_challenge_weak_or_low_rank_belief_cell():
-    cop = Position(5, 6)
-    weak = _WeightedBelief(((cop, 0.14), (Position(6, 6), 0.13)))
-    low_rank = _WeightedBelief((
-        (Position(6, 6), 0.30),
-        (Position(5, 5), 0.25),
-        (cop, 0.24),
-    ))
-
-    assert _truthful_capture_claim(AgentRole.COP, cop, (), belief=weak) is None
-    assert _truthful_capture_claim(AgentRole.COP, cop, (), belief=low_rank) is None
-    assert _truthful_capture_claim(AgentRole.THIEF, cop, (), belief=weak) is None
+def test_cop_claims_recorded_step_13_post_move_cell():
+    assert _truthful_capture_claim(AgentRole.COP, Position(5, 6)) == [5, 6]
 
 
 def test_final_audit_detects_recorded_step_13_collision_across_peer_formats():

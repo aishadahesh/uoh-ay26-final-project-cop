@@ -389,46 +389,17 @@ def _cornered_candidate_barrier(
 def _truthful_capture_claim(
     role: AgentRole,
     own_position: Position,
-    plausible_opponent_positions: tuple[Position, ...],
-    *,
-    belief: BeliefMap | None = None,
-    minimum_belief: float = 0.15,
-    peak_ratio: float = 0.75,
 ) -> list[int] | None:
-    """Issue a conservative, evidence-based capture challenge.
+    """Challenge the Police post-move cell after every Police movement.
 
-    A saturated scent can legitimately leave several current thief candidates.
-    Requiring a singleton in that situation lets the cop move onto the real
-    thief without issuing the claim that asks the thief to acknowledge capture.
-    If direct scent inference is unavailable, a cell may also be challenged
-    when it is one of the two strongest belief cells, has at least 15% mass,
-    and remains close to the belief peak.  This covers the reviewed step-11
-    and step-13 collisions without broadcasting the cop's position every turn.
-    The thief's signed response remains authoritative.
+    Capture correctness must not depend on an imperfect private belief or a
+    uniquely localizable scent peak.  A wrong challenge is legal and receives
+    ``caught=false``; a matching challenge receives the Thief's signed
+    ``caught=true`` response and terminates the game.
     """
     if role is not AgentRole.COP:
         return None
-    candidates = tuple(dict.fromkeys(plausible_opponent_positions))
-    if own_position in candidates:
-        return [own_position.row, own_position.col]
-    if belief is None:
-        return None
-    ranked = belief.top_positions(limit=2)
-    if not ranked:
-        return None
-    peak = float(ranked[0][1])
-    own_probability = next(
-        (float(probability) for position, probability in ranked if position == own_position),
-        0.0,
-    )
-    if (
-        math.isfinite(peak)
-        and math.isfinite(own_probability)
-        and own_probability >= minimum_belief
-        and own_probability >= peak * peak_ratio
-    ):
-        return [own_position.row, own_position.col]
-    return None
+    return [own_position.row, own_position.col]
 
 
 _REVEALED_SELF_POSITION = re.compile(
@@ -740,9 +711,6 @@ class NetworkMatchRunner:
         peer_commits: dict[int, str] = {}
         pending_claim_response: dict | None = None
         outstanding_capture_claims: list[list[int]] = []
-        outstanding_evidence_claim: list[int] | None = None
-        capture_evidence_reliable = True
-        rejected_belief_claim_until: dict[tuple[int, int], int] = {}
         missing_claim_response = False
         capture_acknowledged = False
         known_cop_position = (
@@ -850,33 +818,11 @@ class NetworkMatchRunner:
                 capture_claim = _truthful_capture_claim(
                     self.settings.role,
                     own_position,
-                    (
-                        public_thief_candidates
-                        if capture_evidence_reliable
-                        else ()
-                    ),
-                    belief=belief if capture_evidence_reliable else None,
                 )
-                public_capture_evidence = own_position in public_thief_candidates
-                if (
-                    capture_claim is not None
-                    and not public_capture_evidence
-                    and rejected_belief_claim_until.get(tuple(capture_claim), 0) >= step
-                ):
-                    emit(
-                        f"Step {step}: suppressing repeated belief-only capture challenge "
-                        f"at {own_position} during its rejection cooldown"
-                    )
-                    capture_claim = None
                 if capture_claim is not None:
-                    if public_capture_evidence:
-                        evidence = "public scent candidate"
-                    else:
-                        evidence = f"belief confidence={belief.belief_at(own_position):.3f}"
                     emit(
-                        f"Step {step}: cop occupies an evidence-supported thief cell "
-                        f"{own_position} ({evidence}); requesting signed capture "
-                        "acknowledgement"
+                        f"Step {step}: requesting signed capture acknowledgement "
+                        f"for the cop's post-move cell {own_position}"
                     )
                 win_claim = (
                     {"type": "boxed_in"} if self.settings.role is AgentRole.THIEF and thief_boxed_in
@@ -920,9 +866,6 @@ class NetworkMatchRunner:
                         list(claim) for claim in (capture_claim, barrier_placed)
                         if claim is not None
                     ]
-                    outstanding_evidence_claim = (
-                        list(capture_claim) if capture_claim is not None else None
-                    )
                     public_thief_candidates = ()
                 elif pending_claim_response and not pending_claim_response.get("caught"):
                     # A negative acknowledgement answers one public claim only;
@@ -1064,35 +1007,20 @@ class NetworkMatchRunner:
                 if self.settings.role is AgentRole.COP and outstanding_capture_claims:
                     if message.claim_response is None:
                         missing_claim_response = True
-                        capture_evidence_reliable = False
                         emit(
                             f"Step {step}: opponent omitted the required response to "
-                            f"capture claim(s) {outstanding_capture_claims}; disabling "
-                            "evidence-based capture claims for this sub-game"
+                            f"capture claim(s) {outstanding_capture_claims}; mutual "
+                            "sign-off will be disabled"
                         )
                     else:
                         validate_claim_response(
                             message.claim_response, outstanding_capture_claims,
                         )
-                        if (
-                            outstanding_evidence_claim is not None
-                            and message.claim_response.get("claim")
-                            == outstanding_evidence_claim
-                            and not message.claim_response.get("caught")
-                        ):
-                            rejected_cell = tuple(outstanding_evidence_claim)
-                            rejected_belief_claim_until[rejected_cell] = step + 1
-                            emit(
-                                f"Step {step}: opponent rejected evidence-based capture "
-                                f"claim {outstanding_evidence_claim}; belief-only repeats "
-                                "at that cell are paused for two Cop turns"
-                            )
                         if message.claim_response.get("caught"):
                             capture_acknowledged = True
                             outcome = MatchOutcome.CAPTURE
                             break
                     outstanding_capture_claims = []
-                    outstanding_evidence_claim = None
                 elif self.settings.role is AgentRole.COP and message.claim_response:
                     raise NetworkProtocolError(
                         "opponent sent an unsolicited capture response"
