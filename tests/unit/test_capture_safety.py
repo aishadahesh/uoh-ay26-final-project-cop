@@ -223,9 +223,10 @@ def test_final_audit_detects_recorded_step_13_collision_across_peer_formats():
     )
 
     assert audit.errors == ()
-    assert audit.capture_step == 13
-    assert audit.capture_after_role == "police"
-    assert audit.trailing_moves == 2
+    assert audit.coincidence_step == 13
+    assert audit.coincidence_after_role == "police"
+    assert audit.capture_step is None
+    assert audit.trailing_moves == 0
 
 
 def test_final_audit_accepts_stationary_barrier_action_vocabulary():
@@ -282,6 +283,7 @@ def test_final_audit_allows_one_acknowledged_stationary_terminal_record():
         {"payload": {
             "step": 2, "role": "police", "state": {"row": 0, "col": 1},
             "position": [0, 2], "move": "E", "intent": True,
+            "capture_claim": [0, 2],
         }},
     ]
     thief_records = [
@@ -289,8 +291,13 @@ def test_final_audit_allows_one_acknowledged_stationary_terminal_record():
             "step": step, "role": "thief", "state": "grid=7;self=[0, 2]",
             "move": "STAY", "intent": "truth",
         }}
-        for step in (1, 2, 3)
+        for step in (1, 2)
     ]
+    thief_records.append({"payload": {
+        "step": 3, "role": "thief", "state": "grid=7;self=[0, 2]",
+        "position": [0, 2], "terminal_ack": "capture",
+        "claim_response": {"claim": [0, 2], "caught": True},
+    }})
 
     audit = _audit_revealed_trajectory(
         police_records,

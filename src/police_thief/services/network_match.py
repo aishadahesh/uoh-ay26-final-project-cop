@@ -438,6 +438,8 @@ _REVEALED_SELF_POSITION = re.compile(
 class _RevealedTrajectoryAudit:
     capture_step: int | None = None
     capture_after_role: str | None = None
+    coincidence_step: int | None = None
+    coincidence_after_role: str | None = None
     trailing_moves: int = 0
     errors: tuple[str, ...] = ()
 
@@ -550,17 +552,21 @@ def _audit_revealed_trajectory(
     *,
     allow_terminal_record: bool = False,
 ) -> _RevealedTrajectoryAudit:
-    """Replay supported signed evidence and find the first physical collision.
+    """Replay signed evidence and verify the Capture Claim handshake.
 
     Unknown payload vocabularies degrade to position-only verification.  One
-    immediate zero-displacement final record is tolerated after collision only
-    when the live protocol already supplied a valid positive capture response.
+    coordinate coincidence is only a capture opportunity: Table 2 requires the
+    police to declare Capture Claim on that cell, followed by the thief's
+    truthful ``caught=true`` response.  Only that complete exchange is terminal.
     """
     decorated: list[tuple[str, dict]] = []
     for source_role, records in ((own_role, own_records), (peer_role, peer_records)):
         for record in records:
             payload = record.get("payload") if isinstance(record, dict) else None
-            if not isinstance(payload, dict) or "move" not in payload:
+            if not isinstance(payload, dict) or not any(
+                field in payload
+                for field in ("move", "terminal_ack", "capture_claim", "claim_response")
+            ):
                 continue
             decorated.append((source_role, payload))
     def sort_key(item: tuple[str, dict]) -> tuple[int, int]:
@@ -580,8 +586,10 @@ def _audit_revealed_trajectory(
     errors: list[str] = []
     capture_step: int | None = None
     capture_after_role: str | None = None
+    coincidence_step: int | None = None
+    coincidence_after_role: str | None = None
     trailing_moves = 0
-    terminal_record_consumed = False
+    pending_capture_claim: tuple[int, Position] | None = None
     for source_role, payload in decorated:
         role = "police" if source_role == "cop" else source_role
         try:
@@ -613,29 +621,48 @@ def _audit_revealed_trajectory(
             continue
         positions[role] = position
         if capture_step is not None:
-            is_terminal_record = (
-                allow_terminal_record
-                and not terminal_record_consumed
-                and capture_after_role == "police"
-                and role == "thief"
-                and step == capture_step + 1
-                and previous is not None
-                and position == previous
-            )
-            if is_terminal_record:
-                terminal_record_consumed = True
-                continue
-            trailing_moves += 1
+            if "move" in payload:
+                trailing_moves += 1
             continue
-        if (
+        coincides = (
             positions["police"] is not None
             and positions["police"] == positions["thief"]
-        ):
-            capture_step = step
-            capture_after_role = role
+        )
+        if coincides and coincidence_step is None:
+            coincidence_step = step
+            coincidence_after_role = role
+
+        response = payload.get("claim_response")
+        if role == "thief" and pending_capture_claim is not None:
+            claim_step, claim_cell = pending_capture_claim
+            if isinstance(response, dict) and response.get("caught") is True:
+                response_cell = _revealed_coordinate(response.get("claim"))
+                if response_cell == claim_cell:
+                    capture_step = claim_step
+                    capture_after_role = "police"
+                else:
+                    errors.append(
+                        f"step {step} thief caught=true names {response.get('claim')!r}, "
+                        f"not the police claim {[claim_cell.row, claim_cell.col]}"
+                    )
+            pending_capture_claim = None
+
+        claim = payload.get("capture_claim")
+        if role == "police" and claim is not None:
+            claim_cell = _revealed_coordinate(claim)
+            # A belief-based challenge is legal and may be truthfully rejected.
+            # It becomes a capture candidate only when the reveal proves that
+            # the police declared the actual co-located post-move cell.
+            if coincides and claim_cell == position:
+                pending_capture_claim = (step, position)
 
     return _RevealedTrajectoryAudit(
-        capture_step, capture_after_role, trailing_moves, tuple(errors),
+        capture_step=capture_step,
+        capture_after_role=capture_after_role,
+        coincidence_step=coincidence_step,
+        coincidence_after_role=coincidence_after_role,
+        trailing_moves=trailing_moves,
+        errors=tuple(errors),
     )
 
 
@@ -812,20 +839,6 @@ class NetworkMatchRunner:
                     # Do not carry that exact candidate set across another cop
                     # move; the fresh scent/public declaration will replace it.
                     public_cop_candidates = ()
-                if (
-                    self.settings.role is AgentRole.THIEF
-                    and known_cop_position is not None
-                    and own_position == known_cop_position
-                ):
-                    pending_claim_response = {
-                        "claim": [known_cop_position.row, known_cop_position.col],
-                        "caught": True,
-                        "reason": "thief_entered_cop_cell",
-                    }
-                    emit(
-                        f"Step {step}: thief entered the cop cell {known_cop_position}; "
-                        "capture confirmed before the cop may move"
-                    )
                 own_scent.decay()
                 own_scent.emit(own_position)
                 barrier_placed = self._maybe_place_barrier(
