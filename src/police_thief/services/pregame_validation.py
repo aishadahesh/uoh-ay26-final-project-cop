@@ -60,8 +60,7 @@ _TOP_LEVEL = {"schema_version", "agreed_between", *_SCHEMA}
 # York setting, and the series size are signed shared terms that may be changed
 # by agreement; they are type/range checked and peer-compared rather than pinned.
 _PROTECTED: dict[str, Any] = {
-    "schema_version": "1.00",
-    "agreed_between": ["cop", "thief"],
+    "schema_version": "1.2",
     "board_and_agents.grid_size": 7,
     "board_and_agents.num_agents": 2,
     "board_and_agents.thief_start": [3, 3],
@@ -157,8 +156,25 @@ def validate_shared_game(data: Any, *, scope: str = "local") -> list[ValidationI
         issues.append(_issue(scope, file, key, "unexpected_field", "not present", data[key]))
     if "schema_version" in data and not _strict_type(data["schema_version"], str):
         issues.append(_issue(scope, file, "schema_version", "wrong_type", "string", type(data["schema_version"]).__name__))
-    if "agreed_between" in data and not _strict_type(data["agreed_between"], list):
-        issues.append(_issue(scope, file, "agreed_between", "wrong_type", "array", type(data["agreed_between"]).__name__))
+    agreed_between = data.get("agreed_between")
+    if not _strict_type(agreed_between, list):
+        if "agreed_between" in data:
+            issues.append(_issue(scope, file, "agreed_between", "wrong_type", "array", type(agreed_between).__name__))
+    elif (
+        len(agreed_between) != 2
+        or any(not isinstance(group, str) or not group.strip() for group in agreed_between)
+        or len(set(agreed_between)) != 2
+    ):
+        issues.append(
+            _issue(
+                scope,
+                file,
+                "agreed_between",
+                "invalid_participants",
+                "exactly two unique non-empty group IDs",
+                agreed_between,
+            )
+        )
     for section, fields in _SCHEMA.items():
         value = data.get(section)
         if not isinstance(value, dict):

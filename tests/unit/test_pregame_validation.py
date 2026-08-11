@@ -42,6 +42,13 @@ def test_official_shared_config_passes_strict_schema():
     assert validate_shared_game(_game()) == []
 
 
+def test_agreed_between_requires_two_distinct_group_ids():
+    data = _game()
+    data["agreed_between"] = ["uoh-ay26", "uoh-ay26"]
+    issues = validate_shared_game(data)
+    assert any(i.field == "agreed_between" and i.code == "invalid_participants" for i in issues)
+
+
 def test_protected_type_and_unknown_field_are_rejected():
     data = _game()
     data["board_and_agents"]["grid_size"] = "7"

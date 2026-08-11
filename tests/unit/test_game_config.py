@@ -9,8 +9,8 @@ from police_thief.domain.board import Position
 from police_thief.shared.game_config import GameConfigError, load_match_parameters
 
 VALID_CONFIG: dict = {
-    "schema_version": "1.00",
-    "agreed_between": ["cop", "thief"],
+    "schema_version": "1.2",
+    "agreed_between": ["uoh-ay26", "sharNamr"],
     "board_and_agents": {
         "grid_size": 7,
         "num_agents": 2,

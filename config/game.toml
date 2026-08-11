@@ -11,8 +11,8 @@ repos = { cop = "https://github.com/aishadahesh/uoh-ay26-final-project-cop", thi
 
 [network]
 my_port = 8801
-opponent_url = "http://127.0.0.1:8802/mcp"
-turn_timeout_seconds = 30
+opponent_url = "https://screens-margaret-creatures-integration.trycloudflare.com/mcp"
+turn_timeout_seconds = 120
 
 [strategy]
 # cop_class = "my_team.strategy:MyCopBrain"
