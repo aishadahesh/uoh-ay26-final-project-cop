@@ -356,6 +356,8 @@ def _pursuit_barrier(
     board: Board,
     own_position: Position,
     public_thief_candidates: tuple[Position, ...],
+    *,
+    candidates_are_moving: bool = False,
 ) -> Position | None:
     """Turn close public scent evidence into a safe containment action.
 
@@ -393,6 +395,14 @@ def _pursuit_barrier(
         target = candidates[0]
         return target if target in open_neighbors else None
 
+    # A translated multi-cell blob is ambiguous motion evidence, not a stable
+    # hiding region.  Spending the whole turn on one of its trailing cells was
+    # the root cause of all five stationary Police turns in G004 g01.  Keep
+    # moving to intercept it; barrier placement becomes useful again when the
+    # public set stabilizes/lingers or collapses to a fresh singleton.
+    if candidates_are_moving:
+        return None
+
     scored: list[tuple[int, int, int, int, Position]] = []
     for target in open_neighbors:
         direct_candidates = sum(target == candidate for candidate in candidates)
@@ -426,6 +436,28 @@ def _pursuit_barrier(
     if not scored:
         return None
     return max(scored, key=lambda item: (*item[:-1], -item[-1].row, -item[-1].col))[-1]
+
+
+def _public_candidate_set_is_moving(
+    previous: tuple[Position, ...],
+    current: tuple[Position, ...],
+) -> bool:
+    """Detect a directional shift using public candidate sets only.
+
+    Centroids are compared without rounding so translated capped-scent blobs
+    are recognized even when their membership changes at the board edge.
+    The function deliberately says nothing about the hidden true position.
+    """
+    if not previous or not current:
+        return False
+    previous_rows = sum(position.row for position in previous) / len(previous)
+    previous_cols = sum(position.col for position in previous) / len(previous)
+    current_rows = sum(position.row for position in current) / len(current)
+    current_cols = sum(position.col for position in current) / len(current)
+    return (
+        abs(current_rows - previous_rows) >= 0.5
+        or abs(current_cols - previous_cols) >= 0.5
+    )
 
 
 def _truthful_capture_claim(
@@ -805,6 +837,7 @@ class NetworkMatchRunner:
         )
         public_cop_candidates: tuple[Position, ...] = ()
         public_thief_candidates: tuple[Position, ...] = ()
+        public_thief_candidates_are_moving = False
         previous_peer_scent: dict[str, float] = {}
         last_inferred_opponent_positions = (
             (
@@ -870,6 +903,7 @@ class NetworkMatchRunner:
                 barrier_placed = self._maybe_place_barrier(
                     board, own_position, belief, brain, emit, step,
                     public_thief_candidates=public_thief_candidates,
+                    candidates_are_moving=public_thief_candidates_are_moving,
                 )
                 if barrier_placed is not None:
                     move = Move.STAY
@@ -968,6 +1002,7 @@ class NetworkMatchRunner:
                         if claim is not None
                     ]
                     public_thief_candidates = ()
+                    public_thief_candidates_are_moving = False
                 elif pending_claim_response and not pending_claim_response.get("caught"):
                     # A negative acknowledgement answers one public claim only;
                     # do not repeat it on unrelated later turns.
@@ -1107,6 +1142,9 @@ class NetworkMatchRunner:
                         thief_boxed_in = True
                         emit(f"Step {step}: no legal move remains -- boxed in (Sec. 3.3.5)")
                 elif self.settings.role is AgentRole.COP:
+                    previous_public_thief_candidates = (
+                        last_inferred_opponent_positions
+                    )
                     if inferred_scent_center is not None:
                         public_thief_candidates = (inferred_scent_center,)
                         last_inferred_opponent_positions = (inferred_scent_center,)
@@ -1132,6 +1170,19 @@ class NetworkMatchRunner:
                     else:
                         public_thief_candidates = ()
                         last_inferred_opponent_positions = ()
+                    public_thief_candidates_are_moving = (
+                        len(public_thief_candidates) > 1
+                        and _public_candidate_set_is_moving(
+                            previous_public_thief_candidates,
+                            public_thief_candidates,
+                        )
+                    )
+                    if public_thief_candidates_are_moving:
+                        emit(
+                            f"Step {step}: public thief candidate set is moving; "
+                            "continuing minimax interception instead of blocking "
+                            "an aging trail cell"
+                        )
                 if self.settings.role is AgentRole.COP and outstanding_capture_claims:
                     if message.claim_response is None:
                         missing_claim_response = True
@@ -1479,6 +1530,7 @@ class NetworkMatchRunner:
     def _maybe_place_barrier(
         self, board, own_position, belief, brain, emit, step,
         public_thief_candidates: tuple[Position, ...] = (),
+        candidates_are_moving: bool = False,
     ) -> list[int] | None:
         """Cop-only: the "core spatial-engineering advantage" (Sec. 3.3.3).
 
@@ -1498,8 +1550,13 @@ class NetworkMatchRunner:
         """
         if self.settings.role is not AgentRole.COP or board.remaining_barrier_budget <= 0:
             return None
-        target = _pursuit_barrier(board, own_position, public_thief_candidates)
-        if target is None:
+        target = _pursuit_barrier(
+            board,
+            own_position,
+            public_thief_candidates,
+            candidates_are_moving=candidates_are_moving,
+        )
+        if target is None and not candidates_are_moving:
             target = brain._pick_move(board, own_position, belief)
         if target is None or board.remaining_barrier_budget <= 0:
             return None

@@ -326,13 +326,33 @@ class TacticalPlanner:
             # is actionable even though each cell has only 0.25 mass, while a
             # diffuse belief fallback must not perturb the established sweep.
             if evidence_backed:
-                # Interception: a fleeing thief does not wait on its scent
-                # peak.  Also score the destination against each believed
-                # cell's best one-step flight from our CURRENT cell, so the
-                # cop cuts the corner instead of following decayed scent.
+                # Interception: evaluate the worst legal one-step flight from
+                # EACH proposed destination.  The former implementation chose
+                # one evasive reply relative to the cop's current cell and
+                # reused it for every action.  That made the cop follow a
+                # moving scent peak one step behind instead of selecting the
+                # move that covers the whole escape frontier.
                 intercept_distance = sum(
                     probability
-                    * _shortest_distance(board, destination, _evasive_reply(board, target, own))
+                    * max(
+                        _shortest_distance(board, destination, reply)
+                        for reply in set(board.legal_moves(target).values())
+                    )
+                    for target, probability in targets
+                ) / weight
+                # Occupying an exit is useful even on an otherwise open board,
+                # where reachable-area containment is identical for almost
+                # every move.  Count the local escape edges that remain after
+                # the proposed destination is treated as the cop's capture
+                # cell; fewer routes means genuine pressure rather than trail
+                # following.
+                escape_routes = sum(
+                    probability
+                    * sum(
+                        reply != destination
+                        for reply in set(board.legal_moves(target).values())
+                        if reply != target
+                    )
                     for target, probability in targets
                 ) / weight
                 # Containment: the escape space the believed thief keeps if
@@ -351,6 +371,7 @@ class TacticalPlanner:
                 + 1.4 * mobility
                 + 2.0 * future_value
                 - 0.35 * containment
+                - 3.5 * escape_routes
                 - revisit_penalty
                 - loop_penalty
                 - 0.4 * dead_end_penalty
@@ -497,16 +518,6 @@ class TacticalPlanner:
             # Higher is better, so negate the shortest continuation distance.
             return -min(future_distances)
         return max(future_distances)
-
-
-def _evasive_reply(board: Board, target: Position, chaser: Position) -> Position:
-    """The believed thief's best one-step flight from `chaser`: the legal
-    destination maximizing BFS distance, with a deterministic tie-break."""
-    options = set(board.legal_moves(target).values())
-    return max(
-        options,
-        key=lambda cell: (_shortest_distance(board, chaser, cell), -cell.row, -cell.col),
-    )
 
 
 def _expected_distance(

@@ -7,7 +7,11 @@ from police_thief.domain.board import Board, BoardConfig, Position
 from police_thief.domain.scent import ScentConfig, ScentField
 from police_thief.domain.strategy.manhattan_brain import ManhattanHeuristicBrain
 from police_thief.services.mcp_server import PeerInboxes
-from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
+from police_thief.services.network_match import (
+    NetworkMatchRunner,
+    NetworkMatchSettings,
+    _public_candidate_set_is_moving,
+)
 from police_thief.shared.constants import AgentRole
 
 
@@ -172,6 +176,76 @@ def test_saturated_boundary_candidates_get_a_multi_cell_containment_barrier():
         )
         >= 2
     )
+
+
+def test_moving_ambiguous_blob_keeps_pursuing_instead_of_blocking_its_trail():
+    """G004 g01 placed five barriers while the scent blob translated.
+
+    A stable copy of the same set remains actionable (covered above), but a
+    moving ambiguous set must not consume the Police movement turn.
+    """
+    runner = _runner(AgentRole.COP)
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = _belief_peaked_at(board, Position(6, 3))
+    brain = ManhattanHeuristicBrain(role=AgentRole.COP)
+
+    result = runner._maybe_place_barrier(
+        board,
+        Position(5, 3),
+        belief,
+        brain,
+        _noop_emit,
+        step=13,
+        public_thief_candidates=(
+            Position(5, 3),
+            Position(6, 2),
+            Position(6, 3),
+            Position(6, 4),
+        ),
+        candidates_are_moving=True,
+    )
+
+    assert result is None
+    assert board.remaining_barrier_budget == 14
+
+
+def test_public_candidate_motion_uses_only_set_translation():
+    previous = (
+        Position(5, 4),
+        Position(6, 3),
+        Position(6, 4),
+        Position(6, 5),
+    )
+    translated_west = (
+        Position(5, 3),
+        Position(6, 2),
+        Position(6, 3),
+        Position(6, 4),
+    )
+
+    assert _public_candidate_set_is_moving(previous, translated_west) is True
+    assert _public_candidate_set_is_moving(previous, previous) is False
+
+
+def test_moving_fresh_singleton_still_gets_capture_challenge():
+    runner = _runner(AgentRole.COP)
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = _belief_peaked_at(board, Position(3, 4))
+    brain = ManhattanHeuristicBrain(role=AgentRole.COP)
+
+    result = runner._maybe_place_barrier(
+        board,
+        Position(3, 3),
+        belief,
+        brain,
+        _noop_emit,
+        step=10,
+        public_thief_candidates=(Position(3, 4),),
+        candidates_are_moving=True,
+    )
+
+    assert result == [3, 4]
+    assert board.is_blocked(Position(3, 4))
 
 
 def test_diffuse_public_candidates_do_not_spend_a_barrier():

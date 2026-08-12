@@ -41,6 +41,25 @@ def test_four_candidate_public_set_activates_interception_and_containment():
 
     assert any(item.intercept_distance > 0.0 for item in plan.evaluations)
     assert any(item.containment > 0.0 for item in plan.evaluations)
+    assert any(item.escape_routes > 0.0 for item in plan.evaluations)
+
+
+def test_cop_interception_scores_each_destination_against_full_escape_frontier():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    target = Position(6, 3)
+    plan = TacticalPlanner(AgentRole.COP).evaluate(
+        board,
+        Position(4, 3),
+        BeliefMap(board),
+        plausible_opponent_positions=(target,),
+    )
+
+    south = next(item for item in plan.evaluations if item.move is Move.SOUTH)
+    east = next(item for item in plan.evaluations if item.move is Move.EAST)
+
+    assert south.intercept_distance < east.intercept_distance
+    assert south.escape_routes < east.escape_routes
+    assert plan.selected is Move.SOUTH
 
 
 def test_diffuse_belief_does_not_activate_public_evidence_pursuit_terms():
