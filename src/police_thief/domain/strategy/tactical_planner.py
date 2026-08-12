@@ -134,8 +134,36 @@ class TacticalPlanner:
         # An active cop must keep searching whenever at least one movement is
         # possible.  STAY remains legal for protocol correctness, but is not a
         # strategic candidate unless barriers have genuinely boxed the cop in.
-        if self.role is AgentRole.COP and any(move is not Move.STAY for move in legal):
-            hard_excluded.add(Move.STAY)
+        if self.role is AgentRole.COP:
+            mobile_moves = tuple(
+                item
+                for item in evaluations
+                if item.move is not Move.STAY and item.mobility > 0
+            )
+            if any(move is not Move.STAY for move in legal):
+                hard_excluded.add(Move.STAY)
+            if mobile_moves:
+                # A barrier may legally be placed on the cop's occupied cell.
+                # After leaving that blocked cell, however, the cop cannot move
+                # back through it.  Entering a pocket with zero onward moves
+                # therefore boxes the cop in permanently and forces STAY for
+                # every remaining turn.  Treat that as a safety constraint,
+                # not a score penalty, whenever a mobile route exists.
+                #
+                # The sole exception is an exact, publicly established
+                # opponent position: landing there is an immediate capture
+                # opportunity and must not be discarded merely because the
+                # capture cell itself is a dead end.  A scent/belief peak is
+                # not exact evidence and cannot invoke this exception.
+                hard_excluded.update(
+                    item.move
+                    for item in evaluations
+                    if (
+                        item.move is not Move.STAY
+                        and item.mobility == 0
+                        and item.destination != known_opponent_position
+                    )
+                )
         if self.role is AgentRole.THIEF:
             # Risk is a constraint, not merely a score.  The former planner
             # hard-filtered danger only when the cop published an exact cell;

@@ -582,6 +582,22 @@ def _audit_revealed_trajectory(
             continue
         seen.add(key)
         previous = positions[role]
+        barrier_cell = _revealed_coordinate(payload.get("barrier_placed"))
+        if payload.get("barrier_placed") is not None:
+            if role != "police":
+                errors.append(f"step {step} thief illegally declared a barrier")
+            if barrier_cell is None:
+                errors.append(
+                    f"step {step} police barrier has invalid target "
+                    f"{payload.get('barrier_placed')!r}"
+                )
+            elif not (
+                0 <= barrier_cell.row < grid_size
+                and 0 <= barrier_cell.col < grid_size
+            ):
+                errors.append(
+                    f"step {step} police barrier target {barrier_cell} leaves the board"
+                )
         position, error = _revealed_post_position(payload, previous, grid_size)
         if error is not None:
             errors.append(f"step {step} {role}: {error}")
@@ -592,6 +608,21 @@ def _audit_revealed_trajectory(
             # coordinate lets us re-anchor.
             positions[role] = None
             continue
+        if barrier_cell is not None and role == "police" and previous is not None:
+            if position != previous:
+                errors.append(
+                    f"step {step} police moved {previous}->{position} while placing "
+                    "a barrier; barrier placement must consume the movement turn"
+                )
+            barrier_distance = (
+                abs(barrier_cell.row - previous.row)
+                + abs(barrier_cell.col - previous.col)
+            )
+            if barrier_distance > 1:
+                errors.append(
+                    f"step {step} police barrier target {barrier_cell} is not its "
+                    f"current cell {previous} or an orthogonal neighbor"
+                )
         positions[role] = position
         if capture_step is not None:
             if "move" in payload:
@@ -621,7 +652,16 @@ def _audit_revealed_trajectory(
             pending_capture_claim = None
 
         claim = payload.get("capture_claim")
-        if role == "police" and claim is not None:
+        if (
+            role == "police"
+            and barrier_cell is not None
+            and positions["thief"] == barrier_cell
+        ):
+            # A stationary barrier placed on the Thief's cell is also a
+            # capture action. The same truthful response handshake makes it
+            # terminal and auditable.
+            pending_capture_claim = (step, barrier_cell)
+        elif role == "police" and claim is not None:
             claim_cell = _revealed_coordinate(claim)
             # A belief-based challenge is legal and may be truthfully rejected.
             # It becomes a capture candidate only when the reveal proves that
@@ -774,47 +814,61 @@ class NetworkMatchRunner:
                     outcome = MatchOutcome.CAPTURE
                     break
                 self._send_control("status", "THINKING")
-                fallback = brain._decide_move(
-                    board,
-                    own_position,
-                    belief,
-                    known_opponent_position=known_cop_position,
-                    plausible_opponent_positions=(
-                        public_cop_candidates
-                        if self.settings.role is AgentRole.THIEF
-                        else public_thief_candidates
-                    ),
-                )
-                move, _private_reason = self._choose_move(
-                    board, belief, own_position, fallback, step, params.max_moves, emit,
-                    plan=brain.last_plan,
-                    known_opponent_position=known_cop_position,
-                    plausible_opponent_positions=(
-                        public_cop_candidates
-                        if self.settings.role is AgentRole.THIEF
-                        else public_thief_candidates
-                    ),
-                )
-                # Gemini's rationale is private reasoning and may mention local
-                # truth.  Only a bounded direction claim crosses the wire.
                 state_before = own_position
-                public_hint = self._generate_public_hint(
-                    hint_provider, board, state_before, move, step,
-                )
-                hint = public_hint.text
-                own_position = board.apply_move(own_position, move)
-                brain.record_move(state_before, move, own_position)
-                if self.settings.role is AgentRole.THIEF:
-                    # Barrier evidence describes the cop before its next turn.
-                    # Do not carry that exact candidate set across another cop
-                    # move; the fresh scent/public declaration will replace it.
-                    public_cop_candidates = ()
-                own_scent.decay()
-                own_scent.emit(own_position)
+                # Sec. 3.4 defines a barrier as the Police's action for this
+                # turn: placing it forfeits movement.  Decide that action from
+                # the pre-turn cell, before asking either planner or Gemini for
+                # a movement.  This prevents the former illegal move+barrier
+                # payload and keeps the signed position stationary.
                 barrier_placed = self._maybe_place_barrier(
                     board, own_position, belief, brain, emit, step,
                     public_thief_candidates=public_thief_candidates,
                 )
+                if barrier_placed is not None:
+                    move = Move.STAY
+                    public_hint = hint_provider.generate(move, tell_truth=True)
+                    hint = public_hint.text
+                    emit(
+                        f"Step {step}: barrier placement consumed the Police turn; "
+                        f"position remains {own_position}"
+                    )
+                else:
+                    fallback = brain._decide_move(
+                        board,
+                        own_position,
+                        belief,
+                        known_opponent_position=known_cop_position,
+                        plausible_opponent_positions=(
+                            public_cop_candidates
+                            if self.settings.role is AgentRole.THIEF
+                            else public_thief_candidates
+                        ),
+                    )
+                    move, _private_reason = self._choose_move(
+                        board, belief, own_position, fallback, step, params.max_moves, emit,
+                        plan=brain.last_plan,
+                        known_opponent_position=known_cop_position,
+                        plausible_opponent_positions=(
+                            public_cop_candidates
+                            if self.settings.role is AgentRole.THIEF
+                            else public_thief_candidates
+                        ),
+                    )
+                    # Gemini's rationale is private reasoning and may mention local
+                    # truth. Only a bounded direction claim crosses the wire.
+                    public_hint = self._generate_public_hint(
+                        hint_provider, board, state_before, move, step,
+                    )
+                    hint = public_hint.text
+                    own_position = board.apply_move(own_position, move)
+                    brain.record_move(state_before, move, own_position)
+                    if self.settings.role is AgentRole.THIEF:
+                        # Barrier evidence describes the cop before its next turn.
+                        # Do not carry that exact candidate set across another cop
+                        # move; the fresh scent/public declaration will replace it.
+                        public_cop_candidates = ()
+                own_scent.decay()
+                own_scent.emit(own_position)
                 capture_claim = _truthful_capture_claim(
                     self.settings.role,
                     own_position,
@@ -901,7 +955,34 @@ class NetworkMatchRunner:
                 barrier_cop_candidates: tuple[Position, ...] = ()
                 barrier_target: Position | None = None
                 if message.barrier_placed is not None:
+                    if active_role is not AgentRole.COP:
+                        raise NetworkProtocolError(
+                            "thief illegally declared a barrier"
+                        )
                     barrier_target = Position(*message.barrier_placed)
+                    declared_cop_position = (
+                        Position(*message.capture_claim)
+                        if message.capture_claim is not None
+                        else None
+                    )
+                    if (
+                        declared_cop_position is not None
+                        and known_cop_position is not None
+                        and declared_cop_position != known_cop_position
+                    ):
+                        raise NetworkProtocolError(
+                            "police changed position while placing a barrier; "
+                            "the barrier must consume its movement turn"
+                        )
+                    if (
+                        declared_cop_position is not None
+                        and barrier_target != declared_cop_position
+                        and barrier_target not in board.neighbors(declared_cop_position)
+                    ):
+                        raise NetworkProtocolError(
+                            "police declared a barrier outside its current or "
+                            "orthogonally adjacent cell"
+                        )
                     barrier_cop_candidates = _public_barrier_cop_candidates(
                         board, barrier_target,
                     )
@@ -1327,9 +1408,9 @@ class NetworkMatchRunner:
     ) -> list[int] | None:
         """Cop-only: the "core spatial-engineering advantage" (Sec. 3.3.3).
 
-        Runs after the cop's move above, not instead of it -- Sec. 3.3.3
-        lists "its own current cell" as a legal barrier target, which only
-        makes sense as the cell the cop just moved to. Reuses
+        Runs before movement selection because Sec. 3.4 makes barrier
+        placement the Police's entire action for the turn.  The target is the
+        Police's current cell or an orthogonally adjacent cell. Reuses
         `ManhattanHeuristicBrain._pick_move` (Chapter 6), the same barrier-
         selection heuristic already shipped and tested; deliberately kept
         deterministic rather than Gemini-advised for this pass (see

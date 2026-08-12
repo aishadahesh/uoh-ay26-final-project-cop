@@ -204,6 +204,15 @@ def test_two_peers_play_agreed_series_with_role_alternation(
             for record in records
             if record.get("payload", {}).get("move")
         ]
+        for move in moves:
+            if "barrier_placed" not in move:
+                continue
+            assert move["role"] == "police"
+            assert move["move"] == "STAY"
+            assert move["state"] == {
+                "row": move["position"][0],
+                "col": move["position"][1],
+            }
         trajectories.add(
             tuple((move["role"], move["move"], tuple(move["position"])) for move in moves)
         )

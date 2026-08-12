@@ -146,6 +146,64 @@ def test_cop_never_stays_while_a_search_move_is_available():
     assert plan.selected is not Move.STAY
 
 
+def test_cop_rejects_recorded_corner_self_trap_after_leaving_own_barrier():
+    """A blocked current cell makes the move into (0, 0) irreversible.
+
+    This reproduces the G003 failure: after placing a barrier at (0, 1),
+    the cop moved west into a corner whose other exit, (1, 0), was already
+    blocked.  It then had no legal movement for the rest of the game.
+    """
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    board.apply_declared_barrier(Position(1, 0))
+    board.apply_declared_barrier(Position(0, 1))
+
+    plan = TacticalPlanner(AgentRole.COP).evaluate(
+        board,
+        Position(0, 1),
+        _belief_at(board, Position(0, 0)),
+    )
+
+    west = next(item for item in plan.evaluations if item.move is Move.WEST)
+    assert west.destination == Position(0, 0)
+    assert west.mobility == 0
+    assert Move.WEST in plan.excluded_moves
+    assert Move.WEST not in plan.allowed_moves
+    assert Move.STAY not in plan.allowed_moves
+    assert plan.selected in (Move.EAST, Move.SOUTH)
+
+
+def test_cop_may_enter_a_dead_end_for_an_exact_capture_opportunity():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    board.apply_declared_barrier(Position(1, 0))
+    board.apply_declared_barrier(Position(0, 1))
+
+    plan = TacticalPlanner(AgentRole.COP).evaluate(
+        board,
+        Position(0, 1),
+        BeliefMap(board),
+        known_opponent_position=Position(0, 0),
+    )
+
+    assert plan.selected is Move.WEST
+    assert Move.WEST in plan.allowed_moves
+    assert Move.WEST not in plan.excluded_moves
+
+
+def test_cop_stays_when_barriers_have_genuinely_boxed_it_in():
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    board.apply_declared_barrier(Position(0, 1))
+    board.apply_declared_barrier(Position(1, 0))
+
+    plan = TacticalPlanner(AgentRole.COP).evaluate(
+        board,
+        Position(0, 0),
+        _belief_at(board, Position(6, 6)),
+    )
+
+    assert plan.selected is Move.STAY
+    assert plan.allowed_moves == (Move.STAY,)
+
+
 def test_thief_uses_confirmed_cop_position_to_avoid_repeated_corner_capture():
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
     plan = TacticalPlanner(AgentRole.THIEF).evaluate(
@@ -155,11 +213,11 @@ def test_thief_uses_confirmed_cop_position_to_avoid_repeated_corner_capture():
         known_opponent_position=Position(4, 1),
     )
 
-    assert plan.selected is Move.STAY
-    assert plan.allowed_moves == (Move.STAY,)
+    assert plan.selected in (Move.NORTH, Move.EAST)
+    assert Move.STAY not in plan.allowed_moves
 
 
-def test_thief_accounts_for_move_then_barrier_capture_footprint():
+def test_thief_does_not_invent_an_illegal_move_then_barrier_capture_range():
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
     plan = TacticalPlanner(AgentRole.THIEF).evaluate(
         board,
@@ -170,8 +228,7 @@ def test_thief_accounts_for_move_then_barrier_capture_footprint():
 
     west = next(item for item in plan.evaluations if item.move is Move.WEST)
     assert west.destination == Position(3, 5)
-    assert west.proximity_risk == 1.0
-    assert Move.WEST not in plan.allowed_moves
+    assert west.proximity_risk == 0.0
 
     no_barrier_board = Board(BoardConfig(grid_size=7, max_barriers=0))
     no_barrier_plan = TacticalPlanner(AgentRole.THIEF).evaluate(
@@ -183,7 +240,7 @@ def test_thief_accounts_for_move_then_barrier_capture_footprint():
     no_barrier_west = next(
         item for item in no_barrier_plan.evaluations if item.move is Move.WEST
     )
-    assert no_barrier_west.proximity_risk == 0.0
+    assert no_barrier_west.proximity_risk == west.proximity_risk
 
 
 def test_thief_treats_belief_proximity_as_a_hard_constraint():
@@ -194,10 +251,12 @@ def test_thief_treats_belief_proximity_as_a_hard_constraint():
         _belief_at(board, Position(2, 5)),
     )
 
-    # WEST, SOUTH, and STAY are all inside the cop's move-then-barrier capture
-    # footprint.  NORTH is the sole destination at a safe graph distance.
-    assert plan.allowed_moves == (Move.NORTH,)
-    assert plan.selected is Move.NORTH
+    # WEST, SOUTH, and STAY are within the Police's one-action capture
+    # footprint. NORTH is the sole destination at a safe graph distance.
+    assert Move.WEST not in plan.allowed_moves
+    assert Move.SOUTH not in plan.allowed_moves
+    assert plan.allowed_moves == (Move.STAY,)
+    assert plan.selected is Move.STAY
 
 
 def test_public_barrier_evidence_breaks_recorded_step_11_capture_route():

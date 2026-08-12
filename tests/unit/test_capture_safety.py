@@ -207,6 +207,90 @@ def test_final_audit_accepts_stationary_barrier_action_vocabulary():
     assert audit.capture_step is None
 
 
+def test_final_audit_accepts_stationary_declared_barrier():
+    audit = _audit_revealed_trajectory(
+        [{"payload": {
+            "step": 1, "role": "police",
+            "state": {"row": 0, "col": 0},
+            "position": [0, 0], "move": "STAY", "intent": True,
+            "barrier_placed": [0, 1], "capture_claim": [0, 0],
+        }}],
+        [],
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(3, 3),
+        7,
+    )
+
+    assert audit.errors == ()
+
+
+def test_final_audit_rejects_move_and_barrier_in_the_same_turn():
+    audit = _audit_revealed_trajectory(
+        [{"payload": {
+            "step": 1, "role": "police",
+            "state": {"row": 0, "col": 0},
+            "position": [0, 1], "move": "E", "intent": True,
+            "barrier_placed": [0, 0], "capture_claim": [0, 1],
+        }}],
+        [],
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(3, 3),
+        7,
+    )
+
+    assert any("barrier placement must consume" in error for error in audit.errors)
+
+
+def test_final_audit_rejects_a_thief_barrier_declaration():
+    audit = _audit_revealed_trajectory(
+        [],
+        [{"payload": {
+            "step": 1, "role": "thief",
+            "state": {"row": 3, "col": 3},
+            "position": [3, 3], "move": "STAY", "intent": True,
+            "barrier_placed": [3, 4],
+        }}],
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(3, 3),
+        7,
+    )
+
+    assert any("thief illegally declared a barrier" in error for error in audit.errors)
+
+
+def test_stationary_barrier_capture_requires_and_accepts_truthful_response():
+    audit = _audit_revealed_trajectory(
+        [{"payload": {
+            "step": 1, "role": "police",
+            "state": {"row": 0, "col": 0},
+            "position": [0, 0], "move": "STAY", "intent": True,
+            "barrier_placed": [0, 1], "capture_claim": [0, 0],
+        }}],
+        [{"payload": {
+            "step": 2, "role": "thief",
+            "state": {"row": 0, "col": 1},
+            "position": [0, 1], "terminal_ack": "capture",
+            "claim_response": {"claim": [0, 1], "caught": True},
+        }}],
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(0, 1),
+        7,
+        allow_terminal_record=True,
+    )
+
+    assert audit.errors == ()
+    assert audit.capture_step == 1
+    assert audit.capture_after_role == "police"
+
+
 def test_final_audit_rejects_unknown_action_with_diagonal_position_jump():
     audit = _audit_revealed_trajectory(
         [{"payload": {
@@ -325,7 +409,7 @@ def test_confirmed_cop_cell_is_excluded_and_unsafe_gemini_is_rejected(tmp_path):
     assert any("confirmed current cell" in message for message in messages)
 
 
-def test_thief_exposes_only_guaranteed_safe_action_to_gemini(tmp_path):
+def test_thief_exposes_all_safe_actions_under_one_action_capture_range(tmp_path):
     advisor = _NextTurnUnsafeGemini()
     runner = _runner(tmp_path, advisor)
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
@@ -342,9 +426,9 @@ def test_thief_exposes_only_guaranteed_safe_action_to_gemini(tmp_path):
         known_opponent_position=Position(4, 1),
     )
 
-    assert advisor.context.legal_moves == (Move.STAY,)
-    assert move is Move.STAY
-    assert any("capturable on the cop's next turn" in message for message in messages)
+    assert advisor.context.legal_moves == (Move.NORTH, Move.EAST, Move.STAY)
+    assert move in advisor.context.legal_moves
+    assert not any("capturable on the cop's next turn" in message for message in messages)
 
 
 def test_public_barrier_candidates_keep_unsafe_actions_away_from_gemini(tmp_path):
@@ -383,7 +467,7 @@ def test_public_barrier_candidates_keep_unsafe_actions_away_from_gemini(tmp_path
     }
     assert advisor.context.legal_moves == (Move.WEST,)
     assert move is Move.WEST
-    assert any("publicly plausible current cop cell" in message for message in messages)
+    assert any("capturable on the cop's next turn" in message for message in messages)
 
 
 def test_fresh_scent_innovation_tracks_recorded_cop_path_not_old_trail():
