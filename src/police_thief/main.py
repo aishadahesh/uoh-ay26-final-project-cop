@@ -16,9 +16,10 @@ wire-role string) is unrelated to what you type in your own terminal, and
 is unchanged by this naming.
 
 Commands:
-  peer --role police       Play one real sub-game as the Cop: starts this
-                           side's FastMCP server and drives a full
-                           negotiate/turn/audit match against whatever
+  peer --role police       Coordinate the complete real six-game series:
+                           launches fresh fixed-role Cop and Thief child
+                           processes and drives each negotiate/turn/audit
+                           match against whatever
                            opponent config/network_match.json names --
                            e.g. your own group's thief repo, run the same
                            way on its own machine/port. Connection details
@@ -85,6 +86,7 @@ from police_thief.gui.replay_gui import ReplayGUI
 from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
 from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
 from police_thief.services.network_match_config import load_network_defaults, validate_peer_defaults
+from police_thief.services.series_coordinator import mark_subgame_finished, run_series
 from police_thief.shared.config import load_network_config
 from police_thief.shared.constants import AgentRole
 from police_thief.shared.game_config import load_match_parameters
@@ -106,6 +108,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Only 'police' is supported -- this repo has no thief config to run as 'thief' with",
     )
     peer.add_argument("--config-root", type=Path, default=DEFAULT_CONFIG_ROOT)
+    peer.add_argument("--single-subgame", action="store_true", help=argparse.SUPPRESS)
+    peer.add_argument("--sub-game-number", type=int, help=argparse.SUPPRESS)
+    peer.add_argument("--output-directory", type=Path, help=argparse.SUPPRESS)
+    peer.add_argument("--series-state", type=Path, help=argparse.SUPPRESS)
+    peer.add_argument("--finalize-series", action="store_true", help=argparse.SUPPRESS)
+    peer.add_argument(
+        "--series-first-role", choices=["police", "thief"], default="police",
+        help=argparse.SUPPRESS,
+    )
+    peer.add_argument(
+        "--sibling-repo", type=Path,
+        default=DEFAULT_CONFIG_ROOT.parent.parent / "uoh-ay26-final-project-thief",
+        help="Path to this team's independent Thief repository.",
+    )
 
     simulate = subparsers.add_parser("simulate", help="Run a local placeholder-policy match")
     simulate.add_argument("--game-config", type=Path, default=DEFAULT_GAME_CONFIG)
@@ -135,9 +151,24 @@ def _peer(args: argparse.Namespace) -> None:
     before running to point at a real opponent, e.g. your own group's
     thief repo run the same way on its own machine/port.
     """
-    network = load_network_config(AgentRole.COP, args.config_root)
     project_root = args.config_root.parent
     defaults = load_network_defaults(args.config_root / "network_match.json", project_root)
+    if not args.single_subgame:
+        first_role = (
+            AgentRole.COP if args.series_first_role == "police" else AgentRole.THIEF
+        )
+        run_series(
+            current_role=AgentRole.COP,
+            first_role=first_role,
+            current_repo=project_root,
+            sibling_repo=args.sibling_repo,
+            config_root=args.config_root,
+            output_dir=Path(defaults["output"]),
+            game_id=defaults["game"],
+            first_sub_game=int(defaults["subgame"]),
+        )
+        return
+    network = load_network_config(AgentRole.COP, args.config_root)
     try:
         validate_peer_defaults(defaults, network.opponent_url)
     except ValueError as exc:
@@ -154,8 +185,9 @@ def _peer(args: argparse.Namespace) -> None:
     settings = NetworkMatchSettings(
         role=AgentRole.COP, local_port=network.my_port, opponent_url=network.opponent_url,
         public_url=defaults["public"], game_id=defaults["game"],
-        sub_game_number=int(defaults["subgame"]),
-        shared_config=args.config_root / "game.json", output_dir=Path(defaults["output"]),
+        sub_game_number=args.sub_game_number or int(defaults["subgame"]),
+        shared_config=args.config_root / "game.json",
+        output_dir=args.output_directory or Path(defaults["output"]),
         team_name=defaults["team1_name"],
         members=(defaults["team1_member1"], defaults["team1_member2"]),
         opponent_team_name=defaults["team2_name"],
@@ -180,11 +212,27 @@ def _peer(args: argparse.Namespace) -> None:
     # Keep the submitted Cop and Thief as independent live processes.  This
     # Cop entry point runs exactly one configured sub-game and never changes
     # its role in-process; the sibling Thief repository owns thief-role games.
-    settings = replace(settings, email_mode="series_deferred")
+    child_settings = replace(settings, email_mode="series_deferred")
     result_path = NetworkMatchRunner(
-        settings, inboxes, gemini_advisor=gemini_advisor,
+        child_settings, inboxes, gemini_advisor=gemini_advisor,
     ).run(threading.Event(), emit=print)
+    if args.series_state is not None:
+        mark_subgame_finished(
+            args.series_state, settings.game_id, settings.sub_game_number,
+        )
     print(f"Cop sub-game complete -- result saved to {result_path}")
+    if args.finalize_series:
+        if args.series_state is None:
+            raise RuntimeError("--finalize-series requires --series-state")
+        from police_thief.services.network_match import finalize_completed_series
+
+        first_role = (
+            AgentRole.COP if args.series_first_role == "police" else AgentRole.THIEF
+        )
+        final_path = finalize_completed_series(
+            settings, inboxes, args.series_state, first_role, emit=print,
+        )
+        print(f"Final series result saved to {final_path}")
 
 
 def _simulate(args: argparse.Namespace) -> None:

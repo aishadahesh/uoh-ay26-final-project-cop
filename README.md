@@ -219,7 +219,7 @@ Runs the board, movement, scent, capture, and scoring pipeline in one process.
 uv run python -m police_thief peer --role police
 ```
 
-Starts this repository as the Cop, opens its local FastMCP server, and runs exactly the configured sub-game. It never switches to the Thief role in-process. Run the independent Thief repository for this team's Thief-role sub-games.
+Starts a role-safe six-game coordinator. It launches a fresh Cop process for games 1/3/5 and a fresh process from the sibling Thief repository for games 2/4/6, advances the sub-game number, preserves verified completed games when resuming, and performs final series consensus after game 6. Neither child process changes role or reads the sibling role's private configuration.
 
 ### Replay an audited log
 
@@ -323,7 +323,7 @@ uv run python -m police_thief peer --role police
 uv run python -m police_thief peer --role thief
 ```
 
-This Cop process handles one Police-role sub-game only. After its audited result is saved, use the independent Thief repository and endpoint for the next sub-game assigned to this team as Thief. The two repositories do not share process memory or private role configuration.
+The public command coordinates the full series automatically. Each child still handles exactly one fixed-role sub-game; the parent alternates between the independent repositories without sharing their private role configuration or process memory.
 
 ### Values that must agree
 

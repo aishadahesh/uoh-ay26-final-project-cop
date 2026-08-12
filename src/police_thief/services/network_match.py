@@ -1710,6 +1710,175 @@ def role_for_subgame(natural_role: AgentRole, series_index: int) -> AgentRole:
     return natural_role
 
 
+def finalize_completed_series(
+    settings: NetworkMatchSettings,
+    inboxes: PeerInboxes,
+    state_path: Path,
+    first_role: AgentRole,
+    emit: EventSink = lambda _message: None,
+) -> Path:
+    """Aggregate separately-run fixed-role children and exchange final consensus."""
+    params = load_match_parameters(settings.shared_config)
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"cannot load series coordinator state {state_path}: {exc}") from exc
+    if state.get("game_id") != settings.game_id:
+        raise RuntimeError("series coordinator state belongs to a different game")
+
+    subgames: list[dict] = []
+    participants: dict[str, dict] | None = None
+    for number in range(1, params.network_league.num_games + 1):
+        result_path = settings.output_dir / f"result_{settings.game_id}_g{number:02d}.json"
+        try:
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"cannot finalize without {result_path}: {exc}") from exc
+        if result.get("game_id") != settings.game_id or int(
+            result.get("sub_game_number", -1)
+        ) != number:
+            raise RuntimeError(f"sub-game identity mismatch in {result_path}")
+        current_participants = result.get("participants")
+        if not isinstance(current_participants, dict) or len(current_participants) != 2:
+            raise RuntimeError(f"participant metadata is incomplete in {result_path}")
+        if participants is None:
+            participants = current_participants
+        elif set(participants) != set(current_participants):
+            raise RuntimeError(f"participant identities changed in {result_path}")
+        else:
+            for group_id, identity in current_participants.items():
+                participants[group_id].setdefault("mcp_servers", {}).update(
+                    identity.get("mcp_servers", {})
+                )
+
+        own_group = next(
+            (
+                key for key, value in current_participants.items()
+                if str(value.get("group_name", "")).casefold()
+                == settings.team_name.casefold()
+            ),
+            None,
+        )
+        if own_group is None:
+            raise RuntimeError(f"our configured team is absent from {result_path}")
+        peer_group = next(key for key in current_participants if key != own_group)
+        role = first_role if number % 2 == 1 else (
+            AgentRole.THIEF if first_role is AgentRole.COP else AgentRole.COP
+        )
+        own_score_key = "cop_score" if role is AgentRole.COP else "thief_score"
+        peer_score_key = "thief_score" if role is AgentRole.COP else "cop_score"
+        game_state = state.get("games", {}).get(str(number), {})
+        subgames.append({
+            "sub_game_number": number,
+            "roles": {
+                own_group: role.value,
+                peer_group: (
+                    AgentRole.THIEF.value if role is AgentRole.COP else AgentRole.COP.value
+                ),
+            },
+            "started_at": game_state.get(
+                "started_at", state.get("series_started_at", now_iso())
+            ),
+            "ended_at": game_state.get("ended_at", now_iso()),
+            "outcome": result["outcome"],
+            "score": {
+                own_group: int(result[own_score_key]),
+                peer_group: int(result[peer_score_key]),
+            },
+            "tokens": result.get("token_usage_by_group") or dict.fromkeys(
+                current_participants, 0
+            ),
+            "mutual_sign_off": bool(result.get("mutual_sign_off", False)),
+            "cop_score": int(result["cop_score"]),
+            "thief_score": int(result["thief_score"]),
+            "log_sha256": result["log_sha256"],
+            "result_file": result_path.name,
+        })
+
+    if participants is None:
+        raise RuntimeError("series completed without participant metadata")
+    totals = {
+        group: sum(int(row["score"].get(group, 0)) for row in subgames)
+        for group in participants
+    }
+    group_a, group_b = totals
+    totals[group_a], totals[group_b] = apply_tie_rule(
+        totals[group_a], totals[group_b], params.scoring.tie_score,
+    )
+    ordered_totals = dict(sorted(totals.items(), key=lambda item: item[0].casefold()))
+    highest = max(ordered_totals.values())
+    winners = [team for team, score in ordered_totals.items() if score == highest]
+    series_result = {
+        "schema_version": "1.00",
+        "game_id": settings.game_id,
+        "num_games": params.network_league.num_games,
+        "first_sub_game_number": 1,
+        "mutual_sign_off": all(row["mutual_sign_off"] for row in subgames),
+        "sub_games": subgames,
+        "team_scores": ordered_totals,
+        "winner": winners[0] if len(winners) == 1 else "tie",
+    }
+    transport = McpPeerTransport(
+        settings.opponent_url, inboxes, sender=settings.role.value,
+    )
+    terms = NetworkMatchRunner(settings, inboxes, transport=transport)._terms(params)
+    game_uid = derive_game_uid(terms, list(participants))
+    local_sha = series_consensus_hash(settings.game_id, game_uid, series_result)
+    consensus_confirmed = False
+    try:
+        peer = AuditPayload.from_dict(transport.exchange_audit(
+            AuditPayload(
+                sender=WIRE_ROLES[settings.role.value], records=[],
+                result_claim="series_consensus", consensus_sha=local_sha,
+            ).to_dict(),
+            params.network_league.response_timeout_sec,
+        ))
+        expected_sender = WIRE_ROLES[
+            AgentRole.THIEF.value
+            if settings.role is AgentRole.COP
+            else AgentRole.COP.value
+        ]
+        consensus_confirmed = bool(
+            series_result["mutual_sign_off"]
+            and peer.sender == expected_sender
+            and peer.records == []
+            and peer.result_claim == "series_consensus"
+            and peer.consensus_sha == local_sha
+        )
+    except (PeerClientError, NetworkProtocolError) as exc:
+        emit(f"Final series consensus exchange failed: {exc}")
+    series_result["consensus_sha"] = local_sha
+    series_result["consensus_confirmed"] = consensus_confirmed
+    series_result["mutual_sign_off"] = consensus_confirmed
+    save_series_result(series_result, settings.output_dir, settings.game_id)
+    try:
+        paths = finalize_submission_bundle(
+            settings.output_dir,
+            game_id=settings.game_id,
+            terms=terms,
+            participants=participants,
+            series_result=series_result,
+            game_started_at=state.get("series_started_at", now_iso()),
+            token_budget=params.network_league.token_budget_per_series,
+        )
+    except SubmissionBundleError as exc:
+        errors, _ = validate_submission_directory(settings.output_dir, settings.game_id)
+        report = save_submission_validation_report(
+            settings.output_dir, settings.game_id, errors, str(exc),
+        )
+        path = settings.output_dir / f"result_{settings.game_id}.json"
+        emit(f"WARNING: final bundle invalid; details saved to {report}")
+        _deliver_unverified_result(path, params, settings, emit)
+        return path
+    path = settings.output_dir / f"result_{settings.game_id}.json"
+    emit(f"Series complete; {len(paths)} validated submission JSON files are ready")
+    if settings.email_mode == "real":
+        _try_email_result(path, params, settings, emit)
+    else:
+        emit("Email mode is dry_run; aggregate JSON created but not sent")
+    return path
+
+
 class NetworkMatchSeriesRunner:
     """Fail closed instead of changing a submitted repository's live role."""
 
