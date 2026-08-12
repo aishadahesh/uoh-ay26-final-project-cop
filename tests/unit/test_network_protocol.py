@@ -11,8 +11,28 @@ from police_thief.services.network_protocol import (
     seal_payload,
     validate_claim_response,
     verify_agreement,
+    verify_audit_records,
     verify_record,
 )
+
+
+def test_structurally_invalid_step0_is_unverified_but_not_tampering() -> None:
+    verdict = verify_audit_records(
+        [{"payload": {"hardware": "declared"}, "nonce": "n", "commit": "c"}],
+        {},
+        require_step0=True,
+    )
+    assert verdict.verified is False
+    assert verdict.failed_steps == (-1, 0)
+    assert verdict.cryptographic_failure is False
+
+
+def test_changed_live_commit_is_cryptographic_failure() -> None:
+    record = seal_payload({"step": 1, "role": "police", "move": "E"})
+    verdict = verify_audit_records([record], {1: "0" * 64})
+    assert verdict.verified is False
+    assert verdict.failed_steps == (1,)
+    assert verdict.cryptographic_failure is True
 
 
 def test_audit_payload_omits_unset_consensus_sha() -> None:

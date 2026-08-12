@@ -275,7 +275,10 @@ def finalize_submission_bundle(
             "tie": winner is None and any(score.values()),
             "steps": summary["steps"],
             "github_commit": {
-                key: participants[key]["github_commit"] for key in participants
+                key: (row.get("github_commit") or {}).get(
+                    key, participants[key]["github_commit"],
+                )
+                for key in participants
             },
             "tokens": tokens,
             "score": score,
@@ -520,6 +523,12 @@ def _validate_result_rows(filename: str, rows: list[dict[str, Any]], group_ids: 
             errors.append(_error(filename, f"{field}.score", f"numeric map for {group_ids}", row.get("score"), "invalid_value"))
         if set(row.get("tokens") or {}) != set(group_ids):
             errors.append(_error(filename, f"{field}.tokens", f"integer map for {group_ids}", row.get("tokens"), "invalid_value"))
+        commits = row.get("github_commit") or {}
+        if set(commits) != set(group_ids) or any(
+            not GIT_RE.fullmatch(str(commits.get(group_id, "")))
+            for group_id in group_ids
+        ):
+            errors.append(_error(filename, f"{field}.github_commit", f"40-hex map for {group_ids}", commits, "invalid_value"))
         for timestamp in ("started_at", "ended_at"):
             if not _iso(row.get(timestamp)):
                 errors.append(_error(filename, f"{field}.{timestamp}", "ISO-8601 timestamp", row.get(timestamp), "invalid_value"))

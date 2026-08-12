@@ -148,6 +148,40 @@ def test_finalize_builds_and_validates_all_required_json(tmp_path):
     assert len(uids) == 1
 
 
+def test_final_result_uses_each_subgames_actual_commit_hashes(tmp_path):
+    participants = {
+        key: public_participant(_identity(key)) for key in ("alpha", "beta")
+    }
+    rows = []
+    for number in (1, 2):
+        log_path = tmp_path / f"log_G1_g{number:02d}.json"
+        log_path.write_text(
+            json.dumps([_record(number, "thief", "E")]), encoding="utf-8",
+        )
+        rows.append({
+            "sub_game_number": number,
+            "roles": {"alpha": "cop", "beta": "thief"},
+            "started_at": f"2026-08-06T10:0{number}:00+03:00",
+            "ended_at": f"2026-08-06T10:0{number}:10+03:00",
+            "outcome": "survival",
+            "score": {"alpha": 5, "beta": 10},
+            "tokens": {"alpha": 0, "beta": 0},
+            "mutual_sign_off": True,
+            "github_commit": {
+                "alpha": str(number) * 40,
+                "beta": ("a" if number == 1 else "b") * 40,
+            },
+        })
+    finalize_submission_bundle(
+        tmp_path, game_id="G1", terms=_terms(), participants=participants,
+        series_result={"num_games": 2, "sub_games": rows, "consensus_confirmed": True},
+        game_started_at="2026-08-06T10:00:00+03:00", token_budget=200000,
+    )
+    result = json.loads((tmp_path / "result_G1.json").read_text(encoding="utf-8"))
+    assert result["sub_games"][0]["github_commit"] == rows[0]["github_commit"]
+    assert result["sub_games"][1]["github_commit"] == rows[1]["github_commit"]
+
+
 def test_submission_files_are_pretty_printed_without_changing_canonical_data(tmp_path):
     paths = _bundle(tmp_path)
 

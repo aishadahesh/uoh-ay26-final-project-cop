@@ -192,6 +192,21 @@ class AuditPayload:
 
 
 @dataclass(frozen=True)
+class AuditVerification:
+    """Detailed audit verdict without conflating syntax with tampering.
+
+    ``cryptographic_failure`` is true only when a live commitment cannot be
+    revealed faithfully (missing reveal, changed commitment, or invalid
+    nonce/hash).  A structurally incompatible record remains unverified, but
+    is not by itself proof of cryptographic forgery.
+    """
+
+    verified: bool
+    failed_steps: tuple[int, ...]
+    cryptographic_failure: bool
+    errors: tuple[str, ...]
+
+@dataclass(frozen=True)
 class ControlMessage:
     kind: str
     sender: str
@@ -232,36 +247,86 @@ def audit_records(
     because it is never sent as a turn, so it is validated separately while
     all positive steps must still match the exact commitments received live.
     """
+    verdict = verify_audit_records(
+        records, expected_commits, require_step0=require_step0,
+    )
+    return verdict.verified, list(verdict.failed_steps)
+
+
+def verify_audit_records(
+    records: list[dict],
+    expected_commits: dict[int, str],
+    *,
+    require_step0: bool = False,
+) -> AuditVerification:
+    """Return an evidence-rich audit verdict.
+
+    The caller needs this distinction to apply the rulebook correctly:
+    cryptographic forgery/incomplete reveal is a technical loss, whereas a
+    wire-envelope parse incompatibility preserves the played outcome with
+    mutual sign-off disabled.
+    """
     failed: list[int] = []
+    errors: list[str] = []
+    cryptographic_failure = False
     seen: set[int] = set()
     saw_step0 = False
-    for record in records:
+    for index, record in enumerate(records):
         try:
             step = int(record["payload"]["step"])
             commit = str(record["commit"])
         except (KeyError, TypeError, ValueError):
             failed.append(-1)
+            errors.append(
+                f"records[{index}] must contain payload.step and top-level commit"
+            )
             continue
         if step == 0:
-            valid_step0 = (
-                not saw_step0
-                and record["payload"].get("type") == "system_spec"
-                and verify_record(record)
-            )
+            duplicate_step0 = saw_step0
+            correct_type = record["payload"].get("type") == "system_spec"
+            valid_commit = verify_record(record)
+            valid_step0 = not duplicate_step0 and correct_type and valid_commit
             saw_step0 = True
             if not valid_step0:
                 failed.append(0)
+                if duplicate_step0:
+                    errors.append("duplicate Step-0 system_spec record")
+                if not correct_type:
+                    errors.append("Step 0 must have payload.type='system_spec'")
+                if not valid_commit:
+                    cryptographic_failure = True
+                    errors.append("Step-0 nonce/commit verification failed")
             continue
         if step in seen:
             failed.append(step)
+            errors.append(f"duplicate revealed step {step}")
             continue
         seen.add(step)
-        if (
-            expected_commits.get(step) != commit
-            or not verify_record(record)
-        ):
+        expected = expected_commits.get(step)
+        if expected is None:
             failed.append(step)
-    failed.extend(sorted(set(expected_commits) - seen))
+            errors.append(f"unexpected revealed step {step} had no live commitment")
+            continue
+        if expected != commit:
+            failed.append(step)
+            cryptographic_failure = True
+            errors.append(f"step {step} does not match its live commitment")
+            continue
+        if not verify_record(record):
+            failed.append(step)
+            cryptographic_failure = True
+            errors.append(f"step {step} nonce/commit verification failed")
+    missing = sorted(set(expected_commits) - seen)
+    if missing:
+        failed.extend(missing)
+        cryptographic_failure = True
+        errors.extend(f"missing reveal for committed step {step}" for step in missing)
     if require_step0 and not saw_step0:
         failed.append(0)
-    return not failed, failed
+        errors.append("required Step-0 system_spec record is missing")
+    return AuditVerification(
+        verified=not failed,
+        failed_steps=tuple(failed),
+        cryptographic_failure=cryptographic_failure,
+        errors=tuple(errors),
+    )

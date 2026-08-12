@@ -198,6 +198,7 @@ class MatchResult:
     team_b: ResultTeamIdentity | None = None
     participants: dict | None = None
     token_usage_by_group: dict[str, int] | None = None
+    audit: dict | None = None
 
 
 def build_match_result(
@@ -214,6 +215,7 @@ def build_match_result(
     team_b: ResultTeamIdentity | None = None,
     participants: dict | None = None,
     token_usage_by_group: dict[str, int] | None = None,
+    audit: dict | None = None,
 ) -> MatchResult:
     return MatchResult(
         game_id=game_id,
@@ -229,6 +231,7 @@ def build_match_result(
         team_b=team_b,
         participants=participants,
         token_usage_by_group=token_usage_by_group,
+        audit=audit,
     )
 
 
