@@ -31,6 +31,7 @@ class ActionEvaluation:
     intercept_distance: float = 0.0
     containment: float = 0.0
     escape_space: float = 0.0
+    boundary_penalty: float = 0.0
 
     def summary(self) -> str:
         return (
@@ -40,7 +41,8 @@ class ActionEvaluation:
             f"dead_end={self.dead_end_penalty:.2f}, variation={self.variation_bonus:.2f}, "
             f"direct_capture_risk={self.direct_capture_risk:.3f}, "
             f"proximity_risk={self.proximity_risk:.3f}, "
-            f"escape_routes={self.escape_routes:.2f}, trap_risk={self.trap_risk:.3f}"
+            f"escape_routes={self.escape_routes:.2f}, trap_risk={self.trap_risk:.3f}, "
+            f"boundary={self.boundary_penalty:.2f}"
         )
 
 
@@ -193,6 +195,27 @@ class TacticalPlanner:
                 hard_excluded.update(
                     item.move for item in safety_pool if item.trap_risk > 0.0
                 )
+                safety_pool = trap_safe
+            # A currently safe boundary move can still hand the Police an
+            # irreversible two-barrier corner trap. If an equally safe option
+            # remains farther from the boundary, keep the Thief in that tier.
+            # This is a hard strategic constraint because Gemini may otherwise
+            # override a small numeric preference with a near-tied edge move.
+            clearances = {
+                item.move: min(
+                    item.destination.row,
+                    item.destination.col,
+                    board.config.grid_size - 1 - item.destination.row,
+                    board.config.grid_size - 1 - item.destination.col,
+                )
+                for item in safety_pool
+            }
+            if clearances and not loop_detected:
+                best_clearance = max(clearances.values())
+                hard_excluded.update(
+                    move for move, clearance in clearances.items()
+                    if clearance < best_clearance
+                )
 
         excluded: set[Move] = set(hard_excluded)
         if loop_detected and len(evaluations) > 1:
@@ -294,6 +317,7 @@ class TacticalPlanner:
         intercept_distance = 0.0
         containment = 0.0
         escape_space = 0.0
+        boundary_penalty = 0.0
         if self.role is AgentRole.COP:
             current_distance = _expected_distance(board, own, targets)
             progress = current_distance - expected_distance
@@ -345,6 +369,23 @@ class TacticalPlanner:
                 * (0.0 if destination == target else board.reachable_area(destination, extra_blocked=target))
                 for target, probability in targets
             ) / weight
+            # Current mobility overvalues an arena edge. The Police may spend
+            # its turn permanently removing one adjacent cell, so three legal
+            # moves at an edge can become one irreversible exit in two turns.
+            # Prefer interior escape space while it is safe to do so; the hard
+            # capture-risk filters above still take priority.
+            boundary_clearance = min(
+                destination.row,
+                destination.col,
+                board.config.grid_size - 1 - destination.row,
+                board.config.grid_size - 1 - destination.col,
+            )
+            edge_count = int(
+                destination.row in (0, board.config.grid_size - 1)
+            ) + int(destination.col in (0, board.config.grid_size - 1))
+            boundary_penalty = 20.0 * edge_count
+            if boundary_clearance == 1:
+                boundary_penalty += 6.0
             total = (
                 9.0 * capture_margin
                 + 3.0 * future_value
@@ -358,6 +399,7 @@ class TacticalPlanner:
                 - 1000.0 * direct_capture_risk
                 - 250.0 * proximity_risk
                 - 300.0 * trap_risk
+                - boundary_penalty
             )
         return ActionEvaluation(
             move=move,
@@ -377,6 +419,7 @@ class TacticalPlanner:
             intercept_distance=intercept_distance,
             containment=containment,
             escape_space=escape_space,
+            boundary_penalty=boundary_penalty,
         )
 
     def _escape_outlook(

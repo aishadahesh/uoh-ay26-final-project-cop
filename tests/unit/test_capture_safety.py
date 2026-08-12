@@ -567,12 +567,6 @@ def test_saturated_oscillation_tracks_the_true_cell_across_consecutive_turns():
     for turn in range(8, 14):
         current_center = spots[turn % 2]
         current_grid = _opponent_capped_step(previous_grid, current_center)
-        if turn == 9:
-            assert _infer_public_scent_candidates(
-                board, previous_grid, current_grid,
-                decay_rate=0.10, min_center_intensity=0.5, emission_cap=0.9,
-                previous_positions=anchors,
-            ) == ()
         candidates = _infer_public_scent_candidates(
             board, previous_grid, current_grid,
             decay_rate=0.10, min_center_intensity=0.5, emission_cap=0.9,
@@ -583,6 +577,34 @@ def test_saturated_oscillation_tracks_the_true_cell_across_consecutive_turns():
         assert current_center in candidates
         anchors = candidates
         previous_grid = current_grid
+
+
+def test_default_saturated_scent_tracking_keeps_up_to_eight_candidates():
+    """The live policy must use the ambiguity level proven safe above.
+
+    The previous default of four contradicted the saturated-trail regression:
+    a valid five-to-eight-cell support was discarded in live games even though
+    the same helper was already tested successfully with ``max_ambiguity=8``.
+    """
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    grid: dict[str, float] = {}
+    spots = (Position(6, 6), Position(5, 6))
+    for turn in range(8):
+        grid = _opponent_capped_step(grid, spots[turn % 2])
+    anchors = (spots[7 % 2],)
+
+    for turn in range(8, 14):
+        center = spots[turn % 2]
+        current = _opponent_capped_step(grid, center)
+        candidates = _infer_public_scent_candidates(
+            board, grid, current,
+            decay_rate=0.10, min_center_intensity=0.5, emission_cap=0.9,
+            previous_positions=anchors,
+        )
+        assert candidates
+        assert len(candidates) <= 8
+        assert center in candidates
+        anchors, grid = candidates, current
 
 
 def test_saturated_scent_without_an_anchor_stays_silent():

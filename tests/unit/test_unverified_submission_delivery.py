@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import police_thief.services.network_match as network_match
 
 
-def test_unverified_aggregate_result_is_forwarded_in_real_email_mode(
+def test_unverified_aggregate_result_is_not_forwarded_in_real_email_mode(
     tmp_path, monkeypatch,
 ) -> None:
     required = [
@@ -26,9 +26,9 @@ def test_unverified_aggregate_result_is_forwarded_in_real_email_mode(
         required[-1], object(), SimpleNamespace(email_mode="real"), messages.append,
     )
 
-    assert sent is True
-    assert delivered == [required[-1]]
-    assert any("no values were fabricated or confirmed" in item for item in messages)
+    assert sent is False
+    assert delivered == []
+    assert any("not sent" in item for item in messages)
 
 
 def test_unverified_result_is_not_sent_when_the_result_file_is_missing(
