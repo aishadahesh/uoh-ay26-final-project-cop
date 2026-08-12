@@ -84,7 +84,7 @@ The deterministic board engine remains authoritative. Out-of-bounds moves and mo
 
 ### 3. Spatial engineering with barriers
 
-Movement catches up; barriers change the future. On its turn, the cop chooses either to move or to forfeit movement and place one public barrier on its current or an orthogonally adjacent cell. The strategy examines candidates and favors placements that shrink the reachable region around the believed thief rather than spending the finite budget every turn.
+Movement catches up; barriers change the future. On its turn, the cop chooses either to move or to forfeit movement and place one public barrier on its current or an orthogonally adjacent cell. The strategy examines candidates, uses focused fresh scent evidence to challenge an adjacent suspected cell or close a shared escape flank, and otherwise favors placements that shrink the reachable region around the believed thief. Every proactive placement preserves at least two Police exits, so containment cannot turn into self-confinement.
 
 This gives the cop several tactical modes:
 

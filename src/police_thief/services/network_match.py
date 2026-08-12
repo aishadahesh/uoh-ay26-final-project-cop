@@ -352,39 +352,80 @@ def _infer_public_scent_candidates(
     return tuple(candidates)
 
 
-def _cornered_candidate_barrier(
+def _pursuit_barrier(
     board: Board,
     own_position: Position,
     public_thief_candidates: tuple[Position, ...],
 ) -> Position | None:
-    """Endgame closer: when the single fresh public thief candidate is
-    adjacent to the cop AND already cornered (at most two open exits beyond
-    the cop's own cell), wall that cell.  Either the thief is still on it (a
-    capture claim, Sec. 3.3.4) or its hiding pocket just lost the doorway
-    and the next approach boxes it in.  In an open-field chase the candidate
-    has three or four exits, so this rule stays silent and can never wall
-    off the cop's own pursuit path with a one-turn-stale scent center."""
-    candidates = tuple(dict.fromkeys(public_thief_candidates))
-    if len(candidates) != 1:
+    """Turn close public scent evidence into a safe containment action.
+
+    Equal-speed movement alone cannot catch a thief that keeps orbiting one
+    cell ahead.  The Police's legal asymmetric tool is a public barrier on
+    its own or an adjacent cell.  Use that tool when the fresh scent evidence
+    is focused enough to support either:
+
+    * an adjacent one-cell capture challenge; or
+    * one adjacent cell that constrains at least two cells in a small
+      saturated-scent candidate set.
+
+    The policy never reads the revealed trajectory or a private Thief state,
+    and it always preserves at least two open Police exits.  Wide or distant
+    beliefs stay under the normal movement planner rather than spending the
+    finite barrier budget speculatively.
+    """
+    candidates = tuple(
+        candidate
+        for candidate in dict.fromkeys(public_thief_candidates)
+        if candidate != own_position and not board.is_blocked(candidate)
+    )
+    if not candidates or len(candidates) > 4:
         return None
-    target = candidates[0]
     open_neighbors = [
-        neighbor
-        for neighbor in board.neighbors(own_position)
-        if not board.is_blocked(neighbor)
+        neighbor for neighbor in board.neighbors(own_position) if not board.is_blocked(neighbor)
     ]
-    # Never seal the cop's own last escape route (the reviewed G001 failure
-    # that forced ten consecutive STAY turns).
-    if target == own_position or target not in open_neighbors or len(open_neighbors) < 3:
+    # Blocking one adjacent cell must still leave two movement choices.  This
+    # prevents repeating the reviewed self-boxing failure that forced STAY for
+    # the rest of a game.
+    if len(open_neighbors) < 3:
         return None
-    target_exits = [
-        neighbor
-        for neighbor in board.neighbors(target)
-        if not board.is_blocked(neighbor) and neighbor != own_position
-    ]
-    if len(target_exits) > 2:
+
+    if len(candidates) == 1:
+        target = candidates[0]
+        return target if target in open_neighbors else None
+
+    scored: list[tuple[int, int, int, int, Position]] = []
+    for target in open_neighbors:
+        direct_candidates = sum(target == candidate for candidate in candidates)
+        constrained_candidates = sum(
+            target in board.neighbors(candidate) for candidate in candidates
+        )
+        influence = direct_candidates + constrained_candidates
+        if influence < 2:
+            continue
+        # Prefer a possible direct capture, then the cell which removes an
+        # escape edge from the largest part of the candidate set.  Boundary
+        # pressure resolves strategic ties in favour of the smaller escape
+        # region, while row/column keep the result deterministic.
+        boundary_pressure = sum(
+            4 - sum(not board.is_blocked(neighbor) for neighbor in board.neighbors(candidate))
+            for candidate in candidates
+            if target == candidate or target in board.neighbors(candidate)
+        )
+        scored.append(
+            (
+                direct_candidates,
+                influence,
+                boundary_pressure,
+                -sum(
+                    abs(target.row - candidate.row) + abs(target.col - candidate.col)
+                    for candidate in candidates
+                ),
+                target,
+            )
+        )
+    if not scored:
         return None
-    return target
+    return max(scored, key=lambda item: (*item[:-1], -item[-1].row, -item[-1].col))[-1]
 
 
 def _truthful_capture_claim(
@@ -1430,7 +1471,7 @@ class NetworkMatchRunner:
         """
         if self.settings.role is not AgentRole.COP or board.remaining_barrier_budget <= 0:
             return None
-        target = _cornered_candidate_barrier(board, own_position, public_thief_candidates)
+        target = _pursuit_barrier(board, own_position, public_thief_candidates)
         if target is None:
             target = brain._pick_move(board, own_position, belief)
         if target is None or board.remaining_barrier_budget <= 0:

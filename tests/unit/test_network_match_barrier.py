@@ -13,9 +13,14 @@ from police_thief.shared.constants import AgentRole
 
 def _runner(role: AgentRole) -> NetworkMatchRunner:
     settings = NetworkMatchSettings(
-        role=role, local_port=8801, opponent_url="https://peer.example/mcp",
-        public_url="https://local.example/mcp", game_id="UNIT-TEST", sub_game_number=1,
-        shared_config=Path("config/game.json"), output_dir=Path("unused"),
+        role=role,
+        local_port=8801,
+        opponent_url="https://peer.example/mcp",
+        public_url="https://local.example/mcp",
+        game_id="UNIT-TEST",
+        sub_game_number=1,
+        shared_config=Path("config/game.json"),
+        output_dir=Path("unused"),
     )
     return NetworkMatchRunner(settings, PeerInboxes(), transport=object())
 
@@ -90,25 +95,102 @@ def test_cornered_adjacent_public_candidate_is_walled():
     belief = _belief_peaked_at(board, Position(1, 0))
     brain = ManhattanHeuristicBrain(role=AgentRole.COP)
     result = runner._maybe_place_barrier(
-        board, Position(1, 1), belief, brain, _noop_emit, step=30,
+        board,
+        Position(1, 1),
+        belief,
+        brain,
+        _noop_emit,
+        step=30,
         public_thief_candidates=(Position(1, 0),),
     )
     assert result == [1, 0]
     assert board.is_blocked(Position(1, 0))
 
 
-def test_open_field_public_candidate_is_not_walled():
-    """Mid-chase the one-turn-stale scent center sits in open space (three
-    or four exits); walling it would block the cop's own pursuit path, so
-    the endgame rule must stay silent and defer to the brain heuristic."""
+def test_adjacent_singleton_public_candidate_is_challenged_in_open_space():
+    """Fresh focused evidence must close a distance-one chase.
+
+    Pure movement lets an equally fast thief remain one cell ahead forever.
+    A legal barrier on the adjacent candidate both issues a capture challenge
+    and permanently removes that escape cell if the inference was stale.
+    """
     runner = _runner(AgentRole.COP)
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
     belief = _belief_peaked_at(board, Position(5, 5))
     brain = ManhattanHeuristicBrain(role=AgentRole.COP)
     result = runner._maybe_place_barrier(
-        board, Position(3, 3), belief, brain, _noop_emit, step=10,
+        board,
+        Position(3, 3),
+        belief,
+        brain,
+        _noop_emit,
+        step=10,
         public_thief_candidates=(Position(3, 4),),
     )
+    assert result == [3, 4]
+    assert board.is_blocked(Position(3, 4))
+    assert board.remaining_barrier_budget == 13
+
+
+def test_saturated_boundary_candidates_get_a_multi_cell_containment_barrier():
+    """Regression for the G003 Police losses.
+
+    The capped public scent can truthfully narrow the Thief only to a small
+    cluster.  The old singleton-only closer ignored this evidence and followed
+    the Thief around the boundary at distance one.  Blocking (6,5) both
+    challenges one candidate and removes an escape edge from (6,4)/(6,6).
+    """
+    runner = _runner(AgentRole.COP)
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = _belief_peaked_at(board, Position(6, 6))
+    brain = ManhattanHeuristicBrain(role=AgentRole.COP)
+
+    result = runner._maybe_place_barrier(
+        board,
+        Position(5, 5),
+        belief,
+        brain,
+        _noop_emit,
+        step=11,
+        public_thief_candidates=(
+            Position(5, 5),
+            Position(6, 4),
+            Position(6, 5),
+            Position(6, 6),
+        ),
+    )
+
+    assert result == [6, 5]
+    assert board.is_blocked(Position(6, 5))
+    assert (
+        len(
+            [
+                neighbor
+                for neighbor in board.neighbors(Position(5, 5))
+                if not board.is_blocked(neighbor)
+            ]
+        )
+        >= 2
+    )
+
+
+def test_diffuse_public_candidates_do_not_spend_a_barrier():
+    """A small set alone is insufficient when no target constrains the set."""
+    runner = _runner(AgentRole.COP)
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = _belief_peaked_at(board, Position(0, 0))
+    brain = ManhattanHeuristicBrain(role=AgentRole.COP)
+
+    result = runner._maybe_place_barrier(
+        board,
+        Position(3, 3),
+        belief,
+        brain,
+        _noop_emit,
+        step=10,
+        public_thief_candidates=(Position(0, 0), Position(0, 6)),
+    )
+
     assert result is None
     assert board.remaining_barrier_budget == 14
 
@@ -124,7 +206,12 @@ def test_cornered_candidate_is_not_walled_when_it_would_seal_the_cop():
     belief = _belief_peaked_at(board, Position(1, 0))
     brain = ManhattanHeuristicBrain(role=AgentRole.COP)
     result = runner._maybe_place_barrier(
-        board, Position(1, 1), belief, brain, _noop_emit, step=30,
+        board,
+        Position(1, 1),
+        belief,
+        brain,
+        _noop_emit,
+        step=30,
         public_thief_candidates=(Position(1, 0),),
     )
     assert result is None
