@@ -219,7 +219,7 @@ Runs the board, movement, scent, capture, and scoring pipeline in one process.
 uv run python -m police_thief peer --role police
 ```
 
-Starts this repository in its natural role for the first sub-game, opens the local FastMCP server, negotiates with the thief, and runs the agreed match or series.
+Starts this repository as the Cop, opens its local FastMCP server, and runs exactly the configured sub-game. It never switches to the Thief role in-process. Run the independent Thief repository for this team's Thief-role sub-games.
 
 ### Replay an audited log
 
@@ -289,7 +289,7 @@ On both machines:
 1. Run `uv sync`.
 2. Copy `.env-example` to `.env` and configure Gemini.
 3. Ensure both repositories use byte-identical `config/game.json` files.
-4. Configure team identities, repository links, match ID, secret, output directory, and email preference in `config/network_match.json`.
+4. Configure team identities, repository links, match ID, current sub-game number, secret, output directory, and email preference in `config/network_match.json`.
 5. Set the cop’s opponent URL in `config/cop/game.toml`.
 6. Start the project's **Cloudflare Tunnel (cloudflared)** for the local cop MCP port.
 
@@ -322,6 +322,8 @@ uv run python -m police_thief peer --role police
 # Thief computer
 uv run python -m police_thief peer --role thief
 ```
+
+This Cop process handles one Police-role sub-game only. After its audited result is saved, use the independent Thief repository and endpoint for the next sub-game assigned to this team as Thief. The two repositories do not share process memory or private role configuration.
 
 ### Values that must agree
 

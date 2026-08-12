@@ -16,9 +16,8 @@ wire-role string) is unrelated to what you type in your own terminal, and
 is unchanged by this naming.
 
 Commands:
-  peer --role police       Play a complete, real match series, starting as
-                           the cop (not just an idle listener): starts this side's
-                           FastMCP server and drives a full
+  peer --role police       Play one real sub-game as the Cop: starts this
+                           side's FastMCP server and drives a full
                            negotiate/turn/audit match against whatever
                            opponent config/network_match.json names --
                            e.g. your own group's thief repo, run the same
@@ -30,7 +29,8 @@ Commands:
                            before running). Only "police" is accepted --
                            this repo has no thief config to run as the
                            thief with. Multi-game series alternate the live
-                           wire role automatically after every sub-game.
+                           role. Run the sibling Thief repository as a
+                           separate process for this team's Thief games.
   simulate                 Run a single-process local match with placeholder
                            policies and print the result (Chapter 3). No
                            live opponent config is read -- both sides are
@@ -69,6 +69,7 @@ from __future__ import annotations
 import argparse
 import threading
 import tkinter as tk
+from dataclasses import replace
 from pathlib import Path
 from tkinter import messagebox
 
@@ -82,7 +83,7 @@ from police_thief.domain.simulation import run_local_match
 from police_thief.gui.live_gui import LiveGUI
 from police_thief.gui.replay_gui import ReplayGUI
 from police_thief.services.mcp_server import PeerInboxes, build_peer_server, run_peer_server
-from police_thief.services.network_match import NetworkMatchSeriesRunner, NetworkMatchSettings
+from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
 from police_thief.services.network_match_config import load_network_defaults, validate_peer_defaults
 from police_thief.shared.config import load_network_config
 from police_thief.shared.constants import AgentRole
@@ -176,10 +177,14 @@ def _peer(args: argparse.Namespace) -> None:
     )
     server_thread.start()
     print(f"MCP server listening on 0.0.0.0:{network.my_port}/mcp")
-    result_path = NetworkMatchSeriesRunner(
+    # Keep the submitted Cop and Thief as independent live processes.  This
+    # Cop entry point runs exactly one configured sub-game and never changes
+    # its role in-process; the sibling Thief repository owns thief-role games.
+    settings = replace(settings, email_mode="series_deferred")
+    result_path = NetworkMatchRunner(
         settings, inboxes, gemini_advisor=gemini_advisor,
     ).run(threading.Event(), emit=print)
-    print(f"Match series complete -- result saved to {result_path}")
+    print(f"Cop sub-game complete -- result saved to {result_path}")
 
 
 def _simulate(args: argparse.Namespace) -> None:
