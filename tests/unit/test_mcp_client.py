@@ -93,3 +93,22 @@ def test_exchange_agreement_accepts_inline_reference_agreement(monkeypatch):
 
     monkeypatch.setattr(transport, "_call_async", call_once)
     assert transport.exchange_agreement(agreement, timeout=0.1) == agreement
+
+
+def test_exchange_agreement_uses_one_deadline_for_both_phases(monkeypatch):
+    agreement = {"identity": {}, "nonce": "n", "signature": "s", "terms": {}}
+    transport = McpPeerTransport("https://peer.example/mcp", PeerInboxes())
+    now = iter([100.0, 130.0])
+    observed = []
+
+    class Agreements:
+        def get(self, *, timeout):
+            observed.append(timeout)
+            return agreement
+
+    transport.inboxes.agreements = Agreements()
+    monkeypatch.setattr("police_thief.services.mcp_client.time.monotonic", lambda: next(now))
+    monkeypatch.setattr(transport, "_send", lambda *_args: {"ok": True})
+
+    assert transport.exchange_agreement(agreement, timeout=100.0) == agreement
+    assert observed == [70.0]

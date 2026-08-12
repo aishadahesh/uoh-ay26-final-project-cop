@@ -72,6 +72,7 @@ from police_thief.shared.constants import AgentRole
 from police_thief.shared.game_config import config_fingerprint, load_match_parameters
 
 EventSink = Callable[[str], None]
+NEGOTIATION_TIMEOUT_SECONDS = 600.0
 
 
 @dataclass(frozen=True)
@@ -714,7 +715,7 @@ class NetworkMatchRunner:
         terms = self._terms(params)
         emit("Negotiating peer session")
         peer_agreement = self.transport.exchange_agreement(
-            create_agreement(terms, own_identity), timeout,
+            create_agreement(terms, own_identity), NEGOTIATION_TIMEOUT_SECONDS,
         )
         peer_identity = verify_agreement(peer_agreement, terms)
         emit(f"Peer session established with {peer_identity.get('group_name', 'opponent')}")

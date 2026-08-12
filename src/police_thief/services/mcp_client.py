@@ -107,6 +107,7 @@ class McpPeerTransport:
         )
 
     def exchange_agreement(self, message: dict, timeout: float) -> dict:
+        deadline = time.monotonic() + timeout
         response = self._send("negotiate", "message", message, timeout)
         required = {"identity", "nonce", "signature", "terms"}
         for candidate in (
@@ -114,8 +115,11 @@ class McpPeerTransport:
         ):
             if isinstance(candidate, dict) and required <= set(candidate):
                 return candidate
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise PeerClientError("opponent negotiation timed out")
         try:
-            return self.inboxes.agreements.get(timeout=timeout)
+            return self.inboxes.agreements.get(timeout=remaining)
         except queue.Empty as exc:
             raise PeerClientError("opponent negotiation timed out") from exc
 
