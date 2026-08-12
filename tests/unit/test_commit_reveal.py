@@ -1,6 +1,8 @@
 """Unit tests for the commit-reveal cryptographic protocol (Chapter 5)."""
 
 import dataclasses
+import hashlib
+import json
 
 import pytest
 
@@ -93,6 +95,25 @@ def test_audit_log_passes_on_a_fully_untampered_log():
         for i in range(5)
     ]
     assert audit_log(entries) == AuditResult(verified=True)
+
+
+def test_network_payload_without_optional_state_or_intent_still_verifies():
+    payload = {
+        "step": 2,
+        "role": "police",
+        "position": [2, 3],
+        "move": "E",
+    }
+    nonce = "peer-nonce"
+    serialized = json.dumps(
+        payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+    )
+    digest = hashlib.sha256(f"{serialized}|{nonce}".encode()).hexdigest()
+    entry = LogEntry(
+        state=None, move="E", intent=None, nonce=nonce,
+        h_commit=digest, payload=payload,
+    )
+    assert audit_log([entry]) == AuditResult(verified=True)
 
 
 def test_audit_log_catches_the_first_tampered_entry_and_reports_its_index():

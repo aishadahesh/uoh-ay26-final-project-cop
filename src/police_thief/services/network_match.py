@@ -1630,8 +1630,14 @@ class NetworkMatchRunner:
         )
         return [
             LogEntry(
-                state=record["payload"]["state"], move=record["payload"]["move"],
-                intent=record["payload"]["intent"], nonce=record["nonce"],
+                # ``state`` and ``intent`` are legacy replay/display mirrors.
+                # The signed payload is authoritative and some compatible
+                # peers omit either mirror.  Preserve that absence as None;
+                # never fabricate data that was not committed by the peer.
+                state=record["payload"].get("state"),
+                move=record["payload"]["move"],
+                intent=record["payload"].get("intent"),
+                nonce=record["nonce"],
                 h_commit=record["commit"], payload=record["payload"],
             )
             for _role, record in records

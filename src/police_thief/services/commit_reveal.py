@@ -110,9 +110,9 @@ def audit_log(entries: list[LogEntry]) -> AuditResult:
             valid = verify(entry.state, entry.move, entry.intent, entry.nonce, entry.h_commit)
         else:
             mirrors_payload = (
-                entry.state == entry.payload.get("state")
+                ("state" not in entry.payload or entry.state == entry.payload["state"])
                 and entry.move == entry.payload.get("move")
-                and entry.intent == entry.payload.get("intent")
+                and ("intent" not in entry.payload or entry.intent == entry.payload["intent"])
             )
             serialized = json.dumps(
                 entry.payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
