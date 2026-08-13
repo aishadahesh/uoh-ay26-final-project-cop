@@ -579,12 +579,11 @@ def test_saturated_oscillation_tracks_the_true_cell_across_consecutive_turns():
         previous_grid = current_grid
 
 
-def test_default_saturated_scent_tracking_keeps_up_to_eight_candidates():
-    """The live policy must use the ambiguity level proven safe above.
+def test_default_saturated_scent_tracking_keeps_bounded_candidates():
+    """The live policy retains a bounded capped-field support.
 
-    The previous default of four contradicted the saturated-trail regression:
-    a valid five-to-eight-cell support was discarded in live games even though
-    the same helper was already tested successfully with ``max_ambiguity=8``.
+    A 5x5 capped field can yield more than eight reachable cells while the
+    agent crosses its own trail. Discarding them made a trail cell look exact.
     """
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
     grid: dict[str, float] = {}
@@ -602,8 +601,40 @@ def test_default_saturated_scent_tracking_keeps_up_to_eight_candidates():
             previous_positions=anchors,
         )
         assert candidates
-        assert len(candidates) <= 8
+        assert len(candidates) <= 16
         assert center in candidates
+        anchors, grid = candidates, current
+
+
+def test_capped_g005_route_never_promotes_a_trail_cell_over_true_center():
+    """Regression for both G005 Cop losses against sharNamr's capped field."""
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    grid: dict[str, float] = {}
+    anchors = (Position(3, 3),)
+    route = (
+        Position(4, 3), Position(5, 3), Position(5, 4), Position(5, 5),
+        Position(6, 5), Position(5, 5), Position(6, 5), Position(5, 5),
+        Position(6, 5), Position(6, 4), Position(6, 3), Position(6, 2),
+        Position(6, 1), Position(5, 1), Position(4, 1), Position(3, 1),
+        Position(2, 1), Position(1, 1), Position(1, 2), Position(1, 3),
+        Position(1, 4), Position(1, 5), Position(0, 5), Position(1, 5),
+        Position(2, 5), Position(3, 5), Position(4, 5), Position(5, 5),
+        Position(6, 5), Position(5, 5), Position(5, 4), Position(5, 5),
+        Position(6, 5), Position(6, 6),
+    )
+
+    for step, center in enumerate(route, 1):
+        current = _opponent_capped_step(grid, center)
+        candidates = _infer_public_scent_candidates(
+            board,
+            grid,
+            current,
+            decay_rate=0.10,
+            min_center_intensity=0.5,
+            emission_cap=0.9,
+            previous_positions=anchors,
+        )
+        assert center in candidates, f"lost true center at G005 step {step}"
         anchors, grid = candidates, current
 
 

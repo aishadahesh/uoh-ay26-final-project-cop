@@ -11,6 +11,7 @@ from police_thief.services.network_match import (
     NetworkMatchRunner,
     NetworkMatchSettings,
     _public_candidate_set_is_moving,
+    _updated_candidate_stability,
 )
 from police_thief.shared.constants import AgentRole
 
@@ -225,6 +226,53 @@ def test_public_candidate_motion_uses_only_set_translation():
 
     assert _public_candidate_set_is_moving(previous, translated_west) is True
     assert _public_candidate_set_is_moving(previous, previous) is False
+
+
+def test_shape_change_counts_as_moving_even_when_centroid_barely_changes():
+    previous = (
+        Position(3, 1), Position(3, 2), Position(4, 1), Position(4, 2),
+    )
+    reshaped_trail = (
+        Position(2, 2), Position(3, 1), Position(3, 2), Position(4, 1),
+    )
+
+    assert _public_candidate_set_is_moving(previous, reshaped_trail) is True
+
+
+def test_ambiguous_support_requires_two_stable_transitions_before_barrier():
+    support = (
+        Position(5, 5), Position(6, 4), Position(6, 5), Position(6, 6),
+    )
+
+    first = _updated_candidate_stability(support, support, 0)
+    second = _updated_candidate_stability(support, support, first)
+
+    assert first == 1
+    assert second == 2
+    assert _updated_candidate_stability(
+        support, support[:-1], second,
+    ) == 0
+
+
+def test_adjacent_belief_peak_alone_does_not_spend_a_barrier_turn():
+    """G005 regression: belief remains useful for pursuit, not certainty."""
+    runner = _runner(AgentRole.COP)
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    belief = _belief_peaked_at(board, Position(3, 4))
+    brain = ManhattanHeuristicBrain(role=AgentRole.COP)
+
+    result = runner._maybe_place_barrier(
+        board,
+        Position(3, 3),
+        belief,
+        brain,
+        _noop_emit,
+        step=20,
+        public_thief_candidates=(),
+    )
+
+    assert result is None
+    assert board.remaining_barrier_budget == 14
 
 
 def test_moving_fresh_singleton_still_gets_capture_challenge():

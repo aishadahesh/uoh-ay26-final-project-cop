@@ -291,7 +291,7 @@ def _infer_public_scent_candidates(
     min_center_intensity: float,
     emission_cap: float,
     previous_positions: tuple[Position, ...] = (),
-    max_ambiguity: int = 8,
+    max_ambiguity: int = 16,
 ) -> tuple[Position, ...]:
     """Cap-aware generalization of `_infer_public_scent_center`.
 
@@ -304,8 +304,10 @@ def _infer_public_scent_candidates(
     unique fresh center exists, this fallback returns the SMALL set of cells
     that (a) sit at the cap yet cannot be explained by pure retained trail
     -- staying at the cap requires a fresh deposit -- and (b) remain one
-    legal step from the last inferred candidate set. Ambiguity wider than
-    ``max_ambiguity`` cells returns () -- never fabricated certainty."""
+    legal step from the last inferred candidate set. A 5x5 capped field can
+    expose up to sixteen reachable support cells while crossing an old trail;
+    retaining that public support is safer than promoting a false singleton.
+    Wider ambiguity returns () -- never fabricated certainty."""
     center = _infer_public_scent_center(
         board,
         previous_grid,
@@ -314,16 +316,8 @@ def _infer_public_scent_candidates(
         min_center_intensity=min_center_intensity,
         previous_position=None,
     )
-    if center is not None:
-        reachable = {
-            destination
-            for position in previous_positions
-            for destination in board.legal_moves(position).values()
-        }
-        if not previous_positions or center in reachable:
-            return (center,)
     if not previous_positions:
-        return ()
+        return (center,) if center is not None else ()
     retained = 1.0 - decay_rate
     tolerance = 2e-5
     reachable = sorted(
@@ -347,6 +341,17 @@ def _infer_public_scent_candidates(
         innovation = current - retained * previous
         if current >= emission_cap - tolerance and innovation > tolerance:
             candidates.append(position)
+    # A capped field can make an old trail cell look like a unique fresh
+    # center while the true current cell remains pinned at the cap and adds
+    # only the small amount lost to decay.  G005 g01/g03 exposed this exact
+    # failure: the apparent singleton was treated as certainty and the Cop
+    # spent a whole turn walling the trail.  Preserve every reachable capped
+    # candidate alongside the innovation winner.  With an uncapped field the
+    # list is empty (or contains only the real center), so exact inference is
+    # unchanged.
+    if center is not None and center in reachable:
+        candidates.append(center)
+    candidates = list(dict.fromkeys(candidates))
     if not candidates or len(candidates) > max_ambiguity:
         return ()
     return tuple(candidates)
@@ -442,22 +447,33 @@ def _public_candidate_set_is_moving(
     previous: tuple[Position, ...],
     current: tuple[Position, ...],
 ) -> bool:
-    """Detect a directional shift using public candidate sets only.
+    """Detect a changing capped-scent support using public evidence only.
 
-    Centroids are compared without rounding so translated capped-scent blobs
-    are recognized even when their membership changes at the board edge.
-    The function deliberately says nothing about the hidden true position.
+    A centroid threshold missed the shape-changing trail in G005: membership
+    changed every turn while additions and removals happened on opposite sides
+    of a nearly stationary centroid.  Any support change is motion/age
+    ambiguity and is therefore unsafe evidence for spending an irreversible
+    barrier turn.  A genuinely stable hiding region remains actionable.
     """
     if not previous or not current:
         return False
-    previous_rows = sum(position.row for position in previous) / len(previous)
-    previous_cols = sum(position.col for position in previous) / len(previous)
-    current_rows = sum(position.row for position in current) / len(current)
-    current_cols = sum(position.col for position in current) / len(current)
-    return (
-        abs(current_rows - previous_rows) >= 0.5
-        or abs(current_cols - previous_cols) >= 0.5
-    )
+    return set(previous) != set(current)
+
+
+def _updated_candidate_stability(
+    previous: tuple[Position, ...],
+    current: tuple[Position, ...],
+    prior_stable_transitions: int,
+) -> int:
+    """Count consecutive identical ambiguous public supports.
+
+    One unchanged frame is insufficient: a moving agent can leave an
+    identical capped footprint for one turn. Only repeated identical supports
+    establish a lingering region suitable for containment barriers.
+    """
+    if len(current) <= 1 or set(previous) != set(current):
+        return 0
+    return prior_stable_transitions + 1
 
 
 def _truthful_capture_claim(
@@ -838,6 +854,7 @@ class NetworkMatchRunner:
         public_cop_candidates: tuple[Position, ...] = ()
         public_thief_candidates: tuple[Position, ...] = ()
         public_thief_candidates_are_moving = False
+        public_thief_candidate_stability = 0
         previous_peer_scent: dict[str, float] = {}
         last_inferred_opponent_positions = (
             (
@@ -1170,16 +1187,21 @@ class NetworkMatchRunner:
                     else:
                         public_thief_candidates = ()
                         last_inferred_opponent_positions = ()
-                    public_thief_candidates_are_moving = (
-                        len(public_thief_candidates) > 1
-                        and _public_candidate_set_is_moving(
+                    public_thief_candidate_stability = (
+                        _updated_candidate_stability(
                             previous_public_thief_candidates,
                             public_thief_candidates,
+                            public_thief_candidate_stability,
                         )
+                    )
+                    public_thief_candidates_are_moving = (
+                        len(public_thief_candidates) > 1
+                        and public_thief_candidate_stability < 2
                     )
                     if public_thief_candidates_are_moving:
                         emit(
-                            f"Step {step}: public thief candidate set is moving; "
+                            f"Step {step}: public thief candidate set is moving or "
+                            "not yet stable; "
                             "continuing minimax interception instead of blocking "
                             "an aging trail cell"
                         )
@@ -1557,7 +1579,13 @@ class NetworkMatchRunner:
             candidates_are_moving=candidates_are_moving,
         )
         if target is None and not candidates_are_moving:
-            target = brain._pick_move(board, own_position, belief)
+            # A probabilistic belief peak is useful for movement, but is not
+            # strong enough to justify consuming a turn on an adjacent cell.
+            # Retain only the structural doorway case where the Cop walls its
+            # own occupied cell; this cannot be a stale trail-cell challenge.
+            structural_target = brain._pick_move(board, own_position, belief)
+            if structural_target == own_position:
+                target = structural_target
         if target is None or board.remaining_barrier_budget <= 0:
             return None
         board.place_barrier(own_position, target)
