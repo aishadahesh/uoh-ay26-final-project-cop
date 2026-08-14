@@ -23,7 +23,7 @@ uv run pytest --cov     # run the test suite with coverage
 uv run ruff check .     # lint (must report zero violations)
 ```
 
-**Architecture note (see `docs/PLAN.md` ADR-011):** the cop and thief agents are developed as **one shared package** (`police_thief`), differentiated at runtime via a `--role cop`/`--role thief` flag and separate `config/cop/`/`config/thief/` directories, rather than as two duplicated repos from the first commit. This satisfies the rulebook's "no shared runtime state between the two sides" requirement (two OS processes running this package never share memory), while avoiding premature duplication of shared/generic code. The rulebook's mandatory **two separate GitHub repos** deliverable is produced later, at submission time, by exporting this codebase into two tagged repos (tracked in `docs/TODO.md` Section O).
+**Historical architecture note (see `docs/PLAN.md` ADR-011):** early development used one shared package to avoid drift. That phase is complete. The deliverable now consists of two independent public repositories with role-private configuration: `uoh-ay26-final-project-cop` and `uoh-ay26-final-project-thief`. Each live child process has one fixed role; the six-game parent coordinator alternates by launching the appropriate sibling repository without sharing private runtime state.
 
 ```bash
 # Try it: start one peer, call it from the other side's client
@@ -33,6 +33,31 @@ print(send_move('http://127.0.0.1:8801/mcp', signed_move='N', signature='abc123'
 ```
 
 ---
+
+## Current verified project status
+
+As of 2026-08-14, the team has completed three counted six-sub-game series
+against distinct opponents. Every aggregate listed below records
+`mutual_agreement.confirmed=true`.
+
+| Series | Opponent | uoh-ay26 sub-games | Score | Series result |
+|---|---|---:|---:|---|
+| G001 | `najamjad` | 0–6 | 30–90 | Loss |
+| G002 | `amireman` | 4–2 | 60–40 | Win |
+| G009 | `sharNamr` | 2–4 | 40–60 | Loss |
+| **Total** | 3 distinct teams | **6–12** | **130–190** | **1–2** |
+
+The current live path includes cross-machine FastMCP, Cloudflare endpoints,
+Step-0 attestation, sealed turns, end-game nonce reveal, signed Capture Claim
+responses, preserved gameplay outcomes on audit-envelope incompatibility,
+reciprocal six-game consensus SHA, submission validation, and gated JSON
+reporting. Earlier chapter entries remain an intentionally chronological record;
+phrases such as “no live match yet” describe that historical checkpoint, not the
+current implementation.
+
+The current operator documentation is `docs/RUNNING.md`; cross-team
+interoperability details are in `docs/OPPONENT_MATCH_GUIDE.md`. The README
+contains audited win/loss GIFs generated from real counted-series logs.
 
 ## Development Log
 

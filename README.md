@@ -32,6 +32,7 @@ The result is part game agent, part distributed system, and part cryptographic a
 - [Run modes](#run-modes)
 - [Animated game replay for the README](#animated-game-replay-for-the-readme)
 - [Two-computer match guide](#two-computer-match-guide)
+- [Verified match history](#verified-match-history)
 - [Configuration](#configuration)
 - [Results and automatic email](#results-and-automatic-email)
 - [Testing and quality](#testing-and-quality)
@@ -224,62 +225,35 @@ Starts a role-safe six-game coordinator. It launches a fresh Cop process for gam
 ### Replay an audited log
 
 ```bash
-uv run python -m police_thief replay --log results/network/log_G001_g01.json
+uv run python -m police_thief replay --log results/network/log_G009_g01.json
 ```
 
 The replay viewer recomputes commitments and clearly distinguishes verified from tampered logs.
 
 ## Animated game replay for the README
 
-Turn a saved game-result log into a polished, cryptographically annotated animation with `scripts/visualize_game_log.py`. The renderer discovers the recorded schema, reconstructs both agents step by step, highlights the latest movement, displays optional barriers/items/scores when present, and pauses on important events and the final state.
+`scripts/visualize_game_log.py` converts a signed network log into a cryptographically annotated GIF or MP4. It understands current wrapped audit records and earlier state-string logs, verifies commitments, reconstructs movement and barriers, and marks capture claims and terminal events.
 
-Generate the project demonstration GIF with a shell-independent single-line command:
-
-```powershell
-uv run python scripts/visualize_game_log.py --input "results/network/log_G001_g01.json" --output "docs/demo/cop_game_G001.gif"
-```
-
-For a readable multiline command in **PowerShell**, use the backtick (`` ` ``) continuation character—not a backslash:
+Generate a GIF from a saved log:
 
 ```powershell
-uv run python scripts/visualize_game_log.py `
-  --input "results/network/log_G001_g01.json" `
-  --output "docs/demo/cop_game_G001.gif"
+uv run python scripts/visualize_game_log.py --input "results/network/log_G009_g01.json" --output "docs/replays/my-cop-replay.gif"
 ```
 
-Control timing and resolution:
+### Cop win — G002 sub-game 3
 
-```powershell
-uv run python scripts/visualize_game_log.py `
-  --input "results/network/log_G001_g01.json" `
-  --output "docs/demo/cop_game_G001.gif" `
-  --format gif `
-  --duration 650 `
-  --resolution 1280x720 `
-  --scale 1.0
-```
+The Cop (`uoh-ay26`) completes the signed Capture Claim handshake after 15 steps against `amireman`.
 
-Optional MP4 export provides higher quality when `imageio`, `imageio-ffmpeg`, and `numpy` are installed:
+![Cop capture win from G002 sub-game 3](docs/replays/cop-win-G002-g03.gif)
 
-```powershell
-uv run python scripts/visualize_game_log.py `
-  --input "results/network/log_G001_g01.json" `
-  --output "docs/demo/cop_game_G001.mp4" `
-  --format mp4 `
-  --fps 2
-```
+### Cop loss — G009 sub-game 1
 
-Embed the generated GIF directly in GitHub Markdown:
+The opponent Thief survives the full 35-step limit. The animation is kept because losses are useful strategy evidence, not hidden from the report.
 
-```markdown
-![Cop game demonstration](docs/demo/cop_game_G001.gif)
-```
+![Cop survival loss from G009 sub-game 1](docs/replays/cop-loss-G009-g01.gif)
 
-### Replay demonstration
+Both examples come from mutually verified counted-series evidence. The full command reference is in [Running the project](docs/RUNNING.md#generate-a-replay-gif).
 
-![Cop game demonstration](docs/demo/cop_game_G001.gif)
-
-The included renderer accepts raw log arrays and common wrapped forms such as `steps`, `turns`, `records`, or `replay`. Missing optional entities are omitted rather than invented. Unsupported schemas fail with a specific error describing the missing structure.
 ## Two-computer match guide
 
 ### Before launching
@@ -298,7 +272,7 @@ On both machines:
 This project uses **Cloudflare Tunnel (`cloudflared`)** to expose each local FastMCP server securely over HTTPS without opening an inbound router port. Start the cop application first, then open another terminal and publish port `8801`:
 
 ```bash
-cloudflared tunnel --url http://localhost:8801
+cloudflared tunnel --url http://127.0.0.1:8801
 ```
 
 For a quick tunnel, `cloudflared` prints a temporary `https://<random>.trycloudflare.com` address. The MCP endpoint shared with the thief must append `/mcp`:
@@ -309,21 +283,24 @@ https://<random>.trycloudflare.com/mcp
 
 Put that full address in the thief peer's **Opponent public URL**. Put the thief's corresponding Cloudflare URL in this cop repository's opponent configuration. Keep the `cloudflared` process running for the entire match; restarting a quick tunnel generates a new URL that must be updated on the other peer.
 
-A named Cloudflare Tunnel and custom hostname may also be used for a stable URL. In either mode, Cloudflare carries the public HTTPS connection while FastMCP continues listening locally on `localhost:8801`.
+A named Cloudflare Tunnel and custom hostname may also be used for a stable URL. Use the explicit IPv4 origin `http://127.0.0.1:8801`; this avoids a Windows `localhost` IPv6 mismatch when the server is listening only on IPv4.
 
 ### Launch order
 
 Either peer may start first. Each waits at the negotiation boundary until the opponent is reachable:
 
 ```bash
-# Cop computer
+# Our team starts from this repository when Cop plays sub-games 1/3/5
 uv run python -m police_thief peer --role police
 
-# Thief computer
+# If our team is Thief in sub-games 1/3/5, run this from the sibling Thief repository
+cd ../uoh-ay26-final-project-thief
 uv run python -m police_thief peer --role thief
 ```
 
 The public command coordinates the full series automatically. Each child still handles exactly one fixed-role sub-game; the parent alternates between the independent repositories without sharing their private role configuration or process memory.
+
+For the exact launch order, dual-hostname tunnel example, resume behavior, and pre-match checks, use [Running the project](docs/RUNNING.md). Before playing a new team, exchange every item in the [Opponent match guide](docs/OPPONENT_MATCH_GUIDE.md).
 
 ### Values that must agree
 
@@ -349,17 +326,30 @@ Private API keys and OAuth tokens must never be shared.
 
 Treat the shared JSON as match law. Treat role TOML and secrets as local operational state.
 
+## Verified match history
+
+The team has completed **three counted six-sub-game series**. “Series W/L” is from `uoh-ay26`'s perspective.
+
+| Series | Opponent | Series W/L | Sub-games won | Score | Mutual agreement |
+|---|---|---:|---:|---:|---|
+| G001 | `najamjad` | Loss | 0–6 | 30–90 | Confirmed |
+| G002 | `amireman` | Win | 4–2 | 60–40 | Confirmed |
+| G009 | `sharNamr` | Loss | 2–4 | 40–60 | Confirmed |
+| **Total** | 3 opponents | **1–2** | **6–12** | **130–190** | 3 verified series |
+
+The table is derived from the saved aggregate result JSON files, not from screenshots or memory. Friendly/non-counted verification runs are excluded.
+
 ## Results and automatic email
 
 A completed series produces auditable artifacts such as:
 
 ```text
 results/network/
-├── declaration_G001.json
-├── config_G001_g01.json
-├── log_G001_g01.json
-├── result_G001_g01.json
-└── result_G001.json
+├── declaration_G009.json
+├── config_G009_g01.json
+├── log_G009_g01.json
+├── result_G009_g01.json
+└── result_G009.json
 ```
 
 Per-game files preserve the exact evidence for each sub-game; the aggregate result summarizes the complete series.
@@ -409,7 +399,7 @@ src/police_thief/
 └── main.py                   # CLI entry point
 ```
 
-Deeper engineering rationale lives in `docs/PRD_*.md`; the chronological build record is `ProgressDoc.md`.
+Start with [Running the project](docs/RUNNING.md) and the [Opponent match guide](docs/OPPONENT_MATCH_GUIDE.md). Deeper engineering rationale lives in `docs/PRD_*.md`; the chronological build record is `ProgressDoc.md`.
 
 ## Troubleshooting
 
@@ -419,7 +409,7 @@ Agent modes require `GEMINI_API_KEY` in `.env`. Human-vs-human remains available
 
 ### Opponent is unreachable
 
-Confirm `cloudflared` is running, the public URL ends with `/mcp`, port `8801` is the tunnel target, and the remote FastMCP server is listening. Quick-tunnel URLs change whenever `cloudflared` restarts.
+Confirm `cloudflared` is running, the public URL ends with `/mcp`, `http://127.0.0.1:8801` is the tunnel target, and the remote FastMCP server is listening. HTTP 502 normally means the hostname reaches Cloudflare but the local origin is unavailable; 530/1033 means no connected tunnel route. Quick-tunnel URLs change whenever `cloudflared` restarts.
 
 ### Negotiation rejects the match
 

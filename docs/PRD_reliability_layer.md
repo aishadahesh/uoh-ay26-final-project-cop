@@ -6,6 +6,14 @@
 
 ---
 
+> **Current implementation update (2026-08-14):** this PRD describes the legacy
+> single-turn `Orchestrator`. The production path is now
+> `NetworkMatchRunner` plus `series_coordinator`: it runs complete six-game
+> cross-machine series, persists completed sub-games, retries bounded peer
+> handoffs, refuses to fabricate later results after a failed child, and performs
+> final reciprocal consensus. The architectural duplication remains documented
+> in `docs/TODO.md` T0837; earlier “no full match loop” wording is historical.
+
 ## 1. Description & Theoretical Background
 
 Every prior chapter built a correct, independently-tested primitive — board physics (Ch.3), scent (Ch.4), commit-reveal crypto (Ch.5), strategy/belief (Ch.6), GUI/replay (Ch.7) — but none of them were wired to *run a turn end-to-end over the network*, and nothing enforced *legal sequencing* between them. A referee-less P2P match has two independent failure modes this chapter addresses:

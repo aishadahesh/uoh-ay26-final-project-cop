@@ -91,6 +91,13 @@ def parse_position(value: Any) -> tuple[int, int] | None:
         except (TypeError, ValueError):
             return None
     if isinstance(value, str):
+        own_cell = re.search(
+            r"self\s*=\s*\[\s*(-?\d+)\s*,\s*(-?\d+)\s*\]",
+            value,
+            re.IGNORECASE,
+        )
+        if own_cell:
+            return int(own_cell.group(1)), int(own_cell.group(2))
         numbers = re.findall(r"-?\d+", value)
         if len(numbers) >= 2:
             return int(numbers[0]), int(numbers[1])
@@ -126,10 +133,12 @@ def _records_from_root(root: Any) -> tuple[list[dict[str, Any]], dict[str, Any]]
     return records, metadata
 
 
-def _role(record: dict[str, Any]) -> str:
+def _role(record: dict[str, Any], fallback: str | None = None) -> str:
     payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
     raw = payload.get("role", record.get("role", record.get("actor", record.get("agent", ""))))
     role = ROLE_ALIASES.get(str(raw).strip().lower())
+    if role is None and not str(raw).strip() and fallback is not None:
+        return fallback
     if role is None:
         raise UnsupportedLogError(f"step has an unsupported or missing role: {raw!r}")
     return role
@@ -142,7 +151,9 @@ def _verify_record(record: dict[str, Any]) -> bool | None:
         return None
     payload = record.get("payload")
     if isinstance(payload, dict):
-        mirrors = all(record.get(key) == payload.get(key) for key in ("state", "move", "intent"))
+        mirrors = all(
+            record[key] == payload.get(key) for key in ("state", "move", "intent") if key in record
+        )
         canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
         actual = hashlib.sha256(f"{canonical}|{nonce}".encode()).hexdigest()
         return mirrors and actual == expected
@@ -208,6 +219,22 @@ def _events(record: dict[str, Any], payload: dict[str, Any]) -> list[str]:
             events.append("Invalid action rejected")
         if source.get("captured") or source.get("capture"):
             events.append("Capture confirmed")
+        if source.get("capture_claim") is not None:
+            events.append(f"Capture claim at {source['capture_claim']}")
+        response = source.get("claim_response")
+        if isinstance(response, dict):
+            events.append(
+                "Capture confirmed by Thief"
+                if response.get("caught") is True
+                else "Capture claim rejected truthfully"
+            )
+        if source.get("barrier_placed") is not None:
+            events.append(f"Barrier placed at {source['barrier_placed']}")
+        win_claim = source.get("win_claim")
+        if isinstance(win_claim, dict):
+            claim_type = str(win_claim.get("type", "")).replace("_", " ").strip()
+            if claim_type:
+                events.append(f"Terminal claim: {claim_type}")
         collected = source.get("collected", source.get("collected_items"))
         if collected:
             events.append(f"Collected {collected}")
@@ -227,8 +254,10 @@ def load_replay(path: Path) -> tuple[list[ReplayFrame], int, str]:
 
     records, metadata = _records_from_root(root)
     positions: dict[str, tuple[int, int]] = {}
+    known_obstacles: set[tuple[int, int]] = set()
     frames: list[ReplayFrame] = []
     seen_coordinates: list[tuple[int, int]] = []
+    recorded_board_sizes: list[int] = []
     filename_match = re.search(r"(?:log|result)_([^_]+)(?:_g\d+)?$", path.stem, re.I)
     inferred_game_id = filename_match.group(1) if filename_match else path.stem
     game_id = str(metadata.get("game_id", metadata.get("id", inferred_game_id)))
@@ -236,15 +265,47 @@ def load_replay(path: Path) -> tuple[list[ReplayFrame], int, str]:
 
     for index, record in enumerate(records):
         payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
-        actor = _role(record)
-        before = parse_position(payload.get("state")) or parse_position(record.get("state"))
+        # Official network logs are chronological and begin with the Thief.
+        # Some peer implementations omit ``role`` from otherwise valid sealed
+        # payloads, so use the protocol turn order only when no explicit role
+        # is available.
+        actor = _role(record, "thief" if index % 2 == 0 else "cop")
+        move = str(payload.get("move", record.get("move", "?"))).upper()
+        state_value = payload.get("state", record.get("state"))
         after = (
             parse_position(payload.get("position"))
             or parse_position(record.get("position"))
             or parse_position(payload.get("after"))
+            or (parse_position(state_value) if isinstance(state_value, str) else None)
         )
-        if before is None and actor in positions:
-            before = positions[actor]
+        before = positions.get(actor)
+        if isinstance(state_value, str):
+            grid_match = re.search(r"grid\s*=\s*(\d+)(?:\s*[xX]\s*\d+)?", state_value)
+            if grid_match:
+                recorded_board_sizes.append(int(grid_match.group(1)))
+        # Dict state snapshots in native logs describe the pre-move cell.
+        # ``grid=...;self=[r,c]`` peer snapshots describe the post-move cell,
+        # so derive the first pre-move cell from the declared action instead.
+        if before is None and isinstance(state_value, dict):
+            before = parse_position(state_value)
+        if before is None and after is not None:
+            direction = move.removeprefix("MOVE:")
+            deltas = {
+                "N": (-1, 0),
+                "NORTH": (-1, 0),
+                "S": (1, 0),
+                "SOUTH": (1, 0),
+                "E": (0, 1),
+                "EAST": (0, 1),
+                "W": (0, -1),
+                "WEST": (0, -1),
+                "STAY": (0, 0),
+            }
+            delta = deltas.get(direction, (0, 0) if move.startswith("BARRIER:") else None)
+            if delta is not None:
+                before = after[0] - delta[0], after[1] - delta[1]
+        if before is None:
+            before = parse_position(state_value)
         if before is None or after is None:
             raise UnsupportedLogError(
                 f"step {index + 1} does not provide usable pre/post positions"
@@ -257,7 +318,6 @@ def load_replay(path: Path) -> tuple[list[ReplayFrame], int, str]:
             turn = int(turn_value)
         except (TypeError, ValueError):
             turn = index + 1
-        move = str(payload.get("move", record.get("move", "?"))).upper()
         obstacles: set[tuple[int, int]] = set()
         goals: list[Entity] = []
         items: list[Entity] = []
@@ -272,6 +332,15 @@ def load_replay(path: Path) -> tuple[list[ReplayFrame], int, str]:
             items.extend(
                 _entity_positions(source, ("gems", "items", "collectibles", "coins"), "item")
             )
+        barrier_cell = parse_position(payload.get("barrier_placed")) or parse_position(
+            record.get("barrier_placed")
+        )
+        if barrier_cell is None and move.startswith("BARRIER:"):
+            barrier_cell = parse_position(move.split(":", 1)[1])
+        if barrier_cell is not None:
+            obstacles.add(barrier_cell)
+        known_obstacles.update(obstacles)
+        obstacles = set(known_obstacles)
         seen_coordinates.extend(obstacles)
         seen_coordinates.extend(entity.position for entity in (*goals, *items))
         scores = _find_mapping(payload, ("scores", "score")) or _find_mapping(
@@ -312,7 +381,11 @@ def load_replay(path: Path) -> tuple[list[ReplayFrame], int, str]:
         )
 
     final = frames[-1]
-    if final.positions.get("cop") == final.positions.get("thief") and "cop" in final.positions:
+    summary = metadata.get("summary") if isinstance(metadata, dict) else None
+    result = str(summary.get("result", "")).lower() if isinstance(summary, dict) else ""
+    if result == "capture":
+        final.events.append("CAPTURE — verified terminal result")
+    elif final.positions.get("cop") == final.positions.get("thief") and "cop" in final.positions:
         final.events.append("CAPTURE — cop and thief occupy the same cell")
     else:
         final.events.append("Replay complete — final recorded state")
@@ -329,7 +402,7 @@ def load_replay(path: Path) -> tuple[list[ReplayFrame], int, str]:
                 explicit_size = value
                 break
     inferred = max((max(position) for position in seen_coordinates), default=6) + 1
-    board_size = explicit_size or max(2, inferred)
+    board_size = explicit_size or max(recorded_board_sizes, default=max(2, inferred))
     return frames, board_size, game_id
 
 

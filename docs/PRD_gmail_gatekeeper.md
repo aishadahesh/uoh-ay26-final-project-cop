@@ -6,6 +6,14 @@
 
 ---
 
+> **Current implementation update (2026-08-14):** live series now create the
+> Appendix-F artifact bundle, validate it, exchange reciprocal consensus, and
+> invoke gated Gmail JSON reporting when automatic counted-match reporting is
+> enabled. The configured lecturer recipient is
+> `rmisegal+uoh26finalgame@gmail.com`; friendly/dry-run operation remains an
+> explicit mode. Earlier “no live report call site” notes record the original
+> Chapter-9 state and are superseded by this update.
+
 ## 1. Description & Theoretical Background
 
 Chapter 9 answers a question none of the earlier chapters needed to ask: what happens once a correct, well-tested agent is released into a live, adversarial, referee-less league against opponents built by other teams? Two distinct problems appear at that point.

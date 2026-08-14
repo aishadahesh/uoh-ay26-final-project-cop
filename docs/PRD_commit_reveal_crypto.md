@@ -6,6 +6,13 @@
 
 ---
 
+> **Current implementation update (2026-08-14):** the limitations below are a
+> historical Chapter-5 snapshot. The live `NetworkMatchRunner` now seals every
+> turn, exchanges complete nonce reveals after terminal gameplay, attaches the
+> signed `step: 0` / `type: "system_spec"` attestation, verifies peer records,
+> and gates mutual sign-off on matching result evidence. This path has completed
+> three mutually verified counted six-game series.
+
 ## 1. Description & Theoretical Background
 
 In a referee-less P2P match, the central cheating risk is "hindsight rewriting": changing a move, or denying a prior declaration, after the fact. The fix here is mathematical, not contractual — a **commitment** (Blum 1983's "coin-flipping over the telephone") cryptographically binds a side to `State + Move + Intent` *before* either side reveals anything, closing off the ability to change one's mind retroactively without breaking a previously-transmitted hash. The four-step protocol embodies a **Zero-Knowledge** flavor (Goldwasser–Micali–Rackoff 1989): at commit time, the opponent gets certainty a decision exists, with zero knowledge of its content — commitment is separated from disclosure.

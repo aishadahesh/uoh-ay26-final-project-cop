@@ -1,5 +1,22 @@
 # Strategy Log Analysis and Anti-Loop Upgrade
 
+## Counted-series evidence now available
+
+The original analysis below used the earliest supplied G001 logs. The repository
+now holds three mutually verified counted-series aggregates:
+
+| Series | Opponent | uoh-ay26 sub-games | Score |
+|---|---|---:|---:|
+| G001 | `najamjad` | 0–6 | 30–90 |
+| G002 | `amireman` | 4–2 | 60–40 |
+| G009 | `sharNamr` | 2–4 | 40–60 |
+
+These results show that legality and audit correctness do not imply a guaranteed
+strategy win. The README therefore includes both win and loss replays. Cop
+capture evidence is represented by G002/g03; G009/g01 is a full-limit Cop loss;
+G009/g02 is a Thief survival; and G009/g06 is a boxed-in Thief loss. The
+animations are diagnostic examples, while the signed JSON remains authoritative.
+
 ## Evidence from the supplied games
 
 The recorded state transitions were inspected directly rather than inferred
