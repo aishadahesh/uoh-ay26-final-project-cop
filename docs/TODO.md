@@ -561,7 +561,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [ ] T0417 Test GUI responsiveness under normal match pacing (no UI freeze during LLM calls) — not applicable: no LLM calls happen inside a live GUI loop yet
 - [ ] T0418 Run the GUI update loop on a separate thread/async task from network I/O to avoid blocking — deferred: no network I/O loop is wired to the GUI yet (Chapter 8)
 - [x] T0419 Write integration test: GUI correctly reflects a full match from start to finish without desync — `test_live_gui_stays_in_sync_across_a_real_multi_turn_match`, driving the real Chapter 6 strategy pipeline (single-process; live networked play is Chapter 8)
-- [ ] T0420 Take and save a screenshot of the belief-heatmap GUI for the README — not produced in this session: no tool available here captures native desktop window screenshots (only web-preview screenshots); correctness was instead verified via automated widget-state inspection. This remains a manual step for whoever runs the GUI locally before submission
+- [x] T0420 Take and save a screenshot of the belief-heatmap GUI for the README — shared GUI evidence committed as `assets/live_gui_belief_heatmap.png` and inserted into the academic report
 
 ### I.2 Replay Viewer Application
 - [x] T0421 Scaffold a standalone Replay Viewer application (CLI or GUI) — `python -m police_thief replay --log PATH`
@@ -578,7 +578,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [ ] T0432 Implement replay of scent/belief map state per step (optional enhancement) — explicitly marked optional in its own title; still not built
 - [x] T0433 Add a summary view: total steps, verification pass/fail count, final score — `ReplaySession.verified_count`/`tampered_count` + a summary label; "final score" is not included, since no live match yet produces a score tied to a log (Chapter 8/9)
 - [x] T0434 Write integration test: replay viewer runs against a real completed match log without crashing — `test_replay_viewer_against_a_real_commit_reveal_sealed_multi_turn_log`, built from real `commit()`-sealed board positions, not synthetic placeholders, including a real file-tampering round trip
-- [ ] T0435 Take and save a screenshot of the Replay Viewer showing "Verified OK" for the README — same tooling limitation as T0420; correctness verified via `status_label.cget("text")` assertions instead
+- [x] T0435 Take and save a screenshot of the Replay Viewer showing "Verified OK" for the README — committed as `assets/replay_verified_ok.png` and inserted into the academic report
 - [ ] T0436 Take and save a screenshot of the Replay Viewer showing "TAMPERED" against a deliberately corrupted test log — same limitation; covered by `test_replay_gui_shows_tampered_in_red_at_the_tampered_step`
 - [x] T0437 Package the Replay Viewer so it can be run independently from the live match code — `python -m police_thief replay`, verified to construct and render correctly standalone
 
@@ -882,17 +882,17 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 ## N. Documentation & Academic Report
 
 ### N.1 README.md — Academic Report (both repos)
-- [ ] T0661 Write the Dec-POMDP model section: state, action, observation spaces as implemented
-- [ ] T0662 Write the FastMCP orchestration dilemmas section: turn management, network-failure handling
-- [ ] T0663 Write the decision-mechanism section: heuristics/custom algorithm/RL details and parameters chosen
-- [ ] T0664 Write the Gatekeeper/Orchestrator role and parameter-choice discussion
-- [ ] T0665 Include learning-curve plots if RL was used, with a caption explaining convergence behavior
-- [ ] T0666 Insert the mandatory belief-heatmap GUI screenshot
-- [ ] T0667 Insert the mandatory Replay Viewer "Verified OK" screenshot
-- [ ] T0668 Insert the cross-link to the sibling repository (cop <-> thief)
-- [ ] T0669 Write a section explaining the scent/pheromone model and how uncertainty/deception were combined
+- [x] T0661 Write the Dec-POMDP model section: state, action, observation spaces as implemented — README `Formal problem formulation`
+- [x] T0662 Write the FastMCP orchestration dilemmas section: turn management, network-failure handling — README `Academic design notes`
+- [x] T0663 Write the decision-mechanism section: heuristics/custom algorithm/RL details and parameters chosen — README `Cop intelligence` and `Gemini integration`
+- [x] T0664 Write the Gatekeeper/Orchestrator role and parameter-choice discussion — README `Orchestrator and Gatekeeper responsibilities`
+- [x] T0665 Include learning-curve plots if RL was used, with a caption explaining convergence behavior — not applicable; README explicitly records that no RL policy was trained
+- [x] T0666 Insert the mandatory belief-heatmap GUI screenshot — `assets/live_gui_belief_heatmap.png`
+- [x] T0667 Insert the mandatory Replay Viewer "Verified OK" screenshot — `assets/replay_verified_ok.png`
+- [x] T0668 Insert the cross-link to the sibling repository (cop <-> thief) — banner and companion-repository link
+- [x] T0669 Write a section explaining the scent/pheromone model and how uncertainty/deception were combined — README `Formal problem formulation`
 - [x] T0670 Write a section summarizing league results — README records all three counted opponents and verified scores
-- [ ] T0671 Write a section documenting any book-contradiction interpretation choices made per the academic-freedom clause
+- [x] T0671 Write a section documenting any book-contradiction interpretation choices made per the academic-freedom clause — README `Specification interpretations`
 - [x] T0672 Proofread the README for clarity, spelling, and academic tone
 - [ ] T0673 Verify the README renders correctly on GitHub's web UI (formatting, images, links)
 

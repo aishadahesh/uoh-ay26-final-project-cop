@@ -11,6 +11,20 @@ This is the **cop-side repository** for the University of Haifa **Orchestration 
 
 The two applications are deliberately separate. Each process owns its private state, exposes a FastMCP endpoint, calls the opponent as an MCP client, validates the same signed rules, and independently derives the final result. There is no game server with privileged truth and no shared memory between agents.
 
+## Abstract
+
+This repository presents an evidence-driven autonomous pursuer for a decentralized, partially observable grid game. The engineering problem is broader than shortest-path search: two independently operated agents must coordinate turns over an unreliable public network, preserve private state during play, resist retrospective tampering, and still derive the same result without a trusted referee. The implementation therefore combines a probabilistic opponent model, deterministic legal-action and barrier analysis, bounded Gemini assistance, FastMCP orchestration, SHA-256 commit–reveal records, Step-0 environment attestation, mutual replay audit, and machine-readable reporting.
+
+The central design claim is that competitive strength and protocol integrity should reinforce one another. The Cop pursues a belief distribution rather than hidden truth; every proposed action is checked by deterministic board physics; and every outcome remains traceable to signed, replayable evidence. Three counted six-sub-game series against independent teams provide the empirical basis reported below. Both a successful capture and a failed pursuit are retained as reproducible artifacts so the report documents capability and limitation with equal transparency.
+
+### Contributions
+
+- A role-isolated Cop process that operates without access to the Thief's private state or implementation.
+- An interpretable pursuit policy combining belief peaks, legal-path pressure, anti-oscillation penalties, escape-space analysis, and selective barrier placement.
+- A fail-closed peer protocol that binds rules, identity, code revision, moves, claims, and final consensus to auditable records.
+- A reproducibility package containing paired signed JSON logs and generated GIFs for one Cop win and one Cop loss.
+- Empirical evaluation across 18 counted sub-games with mutually confirmed aggregate outcomes.
+
 ## Why this project is interesting
 
 A normal board game can ask a referee whether a move is legal. This project cannot. The cop must simultaneously solve four problems:
@@ -25,6 +39,8 @@ The result is part game agent, part distributed system, and part cryptographic a
 ## Contents
 
 - [System at a glance](#system-at-a-glance)
+- [Formal problem formulation](#formal-problem-formulation)
+- [Required interface evidence](#required-interface-evidence)
 - [Cop intelligence](#cop-intelligence)
 - [Gemini integration](#gemini-integration)
 - [Trust and protocol design](#trust-and-protocol-design)
@@ -33,12 +49,14 @@ The result is part game agent, part distributed system, and part cryptographic a
 - [Animated game replay for the README](#animated-game-replay-for-the-readme)
 - [Two-computer match guide](#two-computer-match-guide)
 - [Verified match history](#verified-match-history)
+- [Experimental methodology](#experimental-methodology)
 - [Configuration](#configuration)
 - [Results and automatic email](#results-and-automatic-email)
 - [Testing and quality](#testing-and-quality)
 - [Project map](#project-map)
 - [Troubleshooting](#troubleshooting)
 - [Academic design notes](#academic-design-notes)
+- [Limitations and future work](#limitations-and-future-work)
 
 ## System at a glance
 
@@ -64,6 +82,39 @@ The implementation is divided into four layers:
 | `services/` | MCP transport, wire protocol, commit–reveal, reliability, reporting |
 | `gui/` | Interactive game, live board, setup flow, replay viewer |
 | `shared/` | Configuration loading, constants, validation, versioning |
+
+## Formal problem formulation
+
+We model the match as a finite-horizon Dec-POMDP
+
+```text
+M = ⟨I, S, {Aᵢ}, T, R, {Ωᵢ}, O, H⟩
+```
+
+where `I = {cop, thief}`, `S` contains both positions, the public barrier set, turn index, role budgets, and terminal status, and `H = 35` is the survival horizon. The Cop action set contains legal orthogonal moves, `STAY`, and rule-compliant barrier placement. `T` is deterministic once both legal actions are fixed, while `R` is asymmetric: capture rewards the Cop and survival rewards the Thief.
+
+The Cop does not observe the full state. Its local observation `o_c ∈ Ω_c` contains its own position, shared board geometry, signed public declarations, scent evidence, and protocol events—but not the Thief's hidden coordinate. A normalized belief `b_c(s)` is therefore maintained over feasible Thief cells. Decision quality is evaluated against this belief, while legality is evaluated against the deterministic local board. This separation prevents an inference from silently becoming privileged ground truth.
+
+No reinforcement-learning policy was trained for this implementation, so learning curves are not applicable. The selected method is an interpretable Bayesian/heuristic controller augmented by a constrained language-model advisor. Its advantages are deterministic fallback, direct testability, and per-turn explanations that can be compared with replay evidence.
+
+Scent supplies the observation likelihood. For decay rate `ρ = 0.10`, the shared field follows
+
+```text
+τᵢⱼ(t+1) = max(0, (1 - ρ)τᵢⱼ(t) + Δτᵢⱼ)
+b'(s) ∝ Predict(b)(s) · (τ(s) + ε)
+```
+
+with center intensity `0.9` and a `5 × 5` footprint. The prediction term first propagates probability through every legal one-step transition; the likelihood term then weights feasible cells by observed scent. Blocked cells are removed and the posterior is normalized. Verbal hints may inform tactical reasoning, but cannot replace this physical evidence or legal transition model.
+
+## Required interface evidence
+
+The Live GUI exposes only the running agent's local truth and its belief heatmap; the hidden opponent coordinate is not rendered. The screenshot below was captured from the shared presentation layer during a Thief-role run, which is why the local marker is `T`; the same belief-map component is used by the Cop process.
+
+![Live local-truth belief heatmap](assets/live_gui_belief_heatmap.png)
+
+The Replay Viewer independently recomputes commitments and displays the integrity verdict. `Verified OK` is derived from the supplied log rather than hard-coded presentation text.
+
+![Replay Viewer showing Verified OK](assets/replay_verified_ok.png)
 
 ## Cop intelligence
 
@@ -99,7 +150,7 @@ Barrier declarations are intentionally public. Both peers apply the same placeme
 
 ### 4. Capture resolution
 
-Capture can be established through direct contact, a valid capture claim confirmed by the thief, or a boxed-in state. Both peers must agree on the audited outcome before the result receives mutual sign-off.
+Capture is established by a valid post-move Capture Claim confirmed truthfully by the Thief, or by a separate protocol-defined boxed-in/illegal-escape terminal condition. Coordinate equality without the required claim/response is nonterminal. Both peers must agree on the audited outcome before the result receives mutual sign-off.
 
 ## Gemini integration
 
@@ -237,22 +288,26 @@ The replay viewer recomputes commitments and clearly distinguishes verified from
 Generate a GIF from a saved log:
 
 ```powershell
-uv run python scripts/visualize_game_log.py --input "results/network/log_G009_g01.json" --output "docs/replays/my-cop-replay.gif"
+uv run python scripts/visualize_game_log.py --input "assets/replays/cop-loss-G009-g01.json" --output "assets/replays/my-cop-replay.gif"
 ```
 
 ### Cop win — G002 sub-game 3
 
 The Cop (`uoh-ay26`) completes the signed Capture Claim handshake after 15 steps against `amireman`.
 
-![Cop capture win from G002 sub-game 3](docs/replays/cop-win-G002-g03.gif)
+![Cop capture win from G002 sub-game 3](assets/replays/cop-win-G002-g03.gif)
+
+Reproduce it from [`cop-win-G002-g03.json`](assets/replays/cop-win-G002-g03.json).
 
 ### Cop loss — G009 sub-game 1
 
 The opponent Thief survives the full 35-step limit. The animation is kept because losses are useful strategy evidence, not hidden from the report.
 
-![Cop survival loss from G009 sub-game 1](docs/replays/cop-loss-G009-g01.gif)
+![Cop survival loss from G009 sub-game 1](assets/replays/cop-loss-G009-g01.gif)
 
-Both examples come from mutually verified counted-series evidence. The full command reference is in [Running the project](docs/RUNNING.md#generate-a-replay-gif).
+Reproduce it from [`cop-loss-G009-g01.json`](assets/replays/cop-loss-G009-g01.json).
+
+Both examples come from mutually verified counted-series evidence. The committed copies are intentionally isolated from the mutable `results/` workspace; their provenance and regeneration commands are recorded in [`assets/replays/README.md`](assets/replays/README.md). The full command reference is in [Running the project](docs/RUNNING.md#generate-a-replay-gif).
 
 ## Two-computer match guide
 
@@ -338,6 +393,14 @@ The team has completed **three counted six-sub-game series**. “Series W/L” i
 | **Total** | 3 opponents | **1–2** | **6–12** | **130–190** | 3 verified series |
 
 The table is derived from the saved aggregate result JSON files, not from screenshots or memory. Friendly/non-counted verification runs are excluded.
+
+## Experimental methodology
+
+The empirical evaluation uses three counted series against three independently implemented opponent teams. Each series contains six sub-games with alternating roles. A row enters the table only after the local aggregate and the opponent's aggregate agree on all six outcomes, scores, winner, and consensus digest; friendly and aborted runs are excluded.
+
+The primary outcome measures are sub-games won and role-correct score. Integrity is reported separately through mutual agreement rather than inferred from competitive outcome. This distinction matters: a legal loss with a verified audit is valid evidence, whereas an apparent win with unverifiable records is not. The 18-sub-game sample demonstrates cross-implementation compatibility and exposes strategy weaknesses, but it is too small and opponent-dependent to support a claim of statistical superiority.
+
+The replay cases use the same signed JSON consumed by the audit path. The visualization script verifies commitments, reconstructs positions and public barriers, and renders the event sequence. The GIF is therefore an explanatory view; the adjacent JSON remains the reproducible evidence source.
 
 ## Results and automatic email
 
@@ -429,15 +492,33 @@ The result is written before reporting. Inspect the emitted Gmail error and the 
 
 ## Academic design notes
 
-The game is modeled as a decentralized partially observable Markov decision process:
+### FastMCP orchestration dilemmas
 
-```text
-⟨agents, states, actions, transition, rewards, observations, observation model, γ⟩
-```
+The protocol has to solve a symmetry problem: each participant is simultaneously an MCP server, an MCP client, a strategist, and an auditor. Starting one role before the other, swapping repositories between sub-games, losing a tunnel route, or receiving a late final-audit envelope can otherwise create ambiguous ownership of progress. The implementation addresses this with explicit lifecycle states, bounded queues, retry windows, role-checked envelopes, independent per-sub-game processes, and a series coordinator that stops rather than fabricating later results.
 
-The full state contains both positions and barriers, but neither peer observes it globally. Each agent acts from local state and evidence. Deterministic physics plus signed configuration keep transitions consistent; scent and messages form the observation channels; asymmetric scores encode pursuit versus survival incentives.
+The second dilemma is information timing. Revealing a move before its counterpart commits can create an unfair advantage; hiding everything until the end prevents necessary public board synchronization. The protocol therefore reveals only rule-mandated public data during play, seals private state with a nonce-backed SHA-256 commitment, and performs the full reveal during mutual audit. Capture remains a protocol event—post-move claim plus truthful response—not a retroactive conclusion from coordinates alone.
 
-Reinforcement learning is not required by the selected design. The project favors an interpretable, testable Bayesian/heuristic policy whose decisions can be reconstructed during audit. Gemini adds bounded tactical reasoning while deterministic validation preserves safety and reproducibility.
+### Orchestrator and Gatekeeper responsibilities
+
+The Orchestrator owns legal phase transitions: preflight, negotiation, Step-0 attestation, alternating turns, audit, consensus, artifact generation, and optional reporting. It does not decide what move is strategically best. The decision module proposes an action; the board validates and applies it; the protocol layer seals it.
+
+The Gatekeeper protects external side effects. Shared configuration must pass canonical validation before play, peer identity must match the announced repository revision, token and deadline budgets are enforced, and Gmail delivery is rate-limited and restricted to an agreed final JSON. A reporting failure cannot rewrite a completed game. This separation keeps strategy errors, transport errors, audit errors, and reporting errors diagnosable at their own boundaries.
+
+### Evidence and reproducibility
+
+The repository keeps decision rationale readable, but it treats cryptographic records—not prose—as authoritative. Step-0 binds the environment and commit hash; turn records bind state, move, intent, and nonce; result claims are compared; and a canonical series digest binds the agreed adjudication facts. The two replay packages under `assets/replays/` make the evaluation inspectable without committing the working `results/` directories.
+
+### Specification interpretations
+
+Where examples and fixed tables differ, the official mandatory-parameters table is treated as authoritative. Capture is not inferred from coordinate coincidence alone: it requires the Police post-move landing, a Capture Claim for that cell, and the Thief's truthful `caught=true` response. To avoid missing a legal landing while preserving that handshake, the Cop emits a claim for its post-move cell on every Police turn. Step-0 is carried as a sealed `step: 0`, `type: "system_spec"` audit record, and final series agreement uses a separate empty-record consensus envelope so it cannot overwrite a completed sub-game outcome.
+
+## Limitations and future work
+
+- The belief update depends on the informativeness of the public scent field and can remain diffuse when evidence saturates.
+- Heuristic barrier evaluation is interpretable but does not exhaustively solve the adversarial game tree.
+- Public-tunnel availability remains an infrastructure dependency outside the core strategy.
+- The counted evaluation spans three opponents and should be expanded before drawing broad performance conclusions.
+- Future work could compare the current controller with bounded-depth minimax, Monte Carlo tree search over beliefs, or a trained policy, while preserving the same legal-action and audit boundaries.
 
 ## Credits and license
 

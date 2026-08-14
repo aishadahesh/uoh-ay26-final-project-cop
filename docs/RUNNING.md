@@ -153,7 +153,7 @@ Generate a README-ready animation:
 ```powershell
 uv run python scripts/visualize_game_log.py `
   --input results/network/log_G009_g01.json `
-  --output docs/replays/my-replay.gif `
+  --output assets/replays/my-replay.gif `
   --format gif --duration 350 --resolution 960x540
 ```
 
