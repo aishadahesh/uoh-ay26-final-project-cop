@@ -1957,7 +1957,7 @@ def finalize_completed_series(
         settings.opponent_url, inboxes, sender=settings.role.value,
     )
     terms = NetworkMatchRunner(settings, inboxes, transport=transport)._terms(params)
-    game_uid = derive_game_uid(terms, list(participants))
+    game_uid = derive_game_uid(terms, list(participants), game_id=settings.game_id)
     local_sha = series_consensus_hash(settings.game_id, game_uid, series_result)
     consensus_confirmed = False
     try:
@@ -2122,7 +2122,9 @@ class NetworkMatchSeriesRunner:
         terms = NetworkMatchRunner(
             self.settings, self.inboxes, self.gemini_advisor, self.transport,
         )._terms(params)
-        game_uid = derive_game_uid(terms, list(participants))
+        game_uid = derive_game_uid(
+            terms, list(participants), game_id=self.settings.game_id,
+        )
         local_consensus_sha = series_consensus_hash(
             self.settings.game_id, game_uid, series_result,
         )

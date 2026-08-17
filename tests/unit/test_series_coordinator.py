@@ -125,7 +125,10 @@ def test_finalize_completed_series_builds_six_game_result(tmp_path, monkeypatch)
         scoring=SimpleNamespace(tie_score=2),
     )
     monkeypatch.setattr("police_thief.services.network_match.load_match_parameters", lambda _path: params)
-    monkeypatch.setattr("police_thief.services.network_match.derive_game_uid", lambda _terms, _groups: "uid")
+    monkeypatch.setattr(
+        "police_thief.services.network_match.derive_game_uid",
+        lambda _terms, _groups, **_kwargs: "uid",
+    )
     monkeypatch.setattr("police_thief.services.network_match.finalize_submission_bundle", lambda *args, **kwargs: [tmp_path / "result_G003.json"])
     monkeypatch.setattr("police_thief.services.network_match.save_series_result", lambda result, directory, game_id: (directory / f"result_{game_id}.json").write_text(json.dumps(result), encoding="utf-8"))
 
