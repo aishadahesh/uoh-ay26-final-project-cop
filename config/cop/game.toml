@@ -16,7 +16,7 @@ repos = { cop = "https://github.com/aishadahesh/uoh-ay26-final-project-cop", thi
 
 [network]
 my_port = 8801
-opponent_url = "https://screens-margaret-creatures-integration.trycloudflare.com/mcp"
+opponent_url = "https://combination-scott-afford-humanities.trycloudflare.com/mcp"
 turn_timeout_seconds = 120
 
 # [strategy] -- optional: point at YOUR brain subclass (else the shipped
@@ -33,5 +33,5 @@ turn_timeout_seconds = 120
 # per-team choice. Real sending requires a Google Cloud OAuth setup this
 # session cannot perform (see docs/PRD_gmail_gatekeeper.md Sec.3) --
 # left commented out until a team completes that manual setup themselves.
-# recipient = "rmisegal+uoh26finalgame@gmail.com"
+# recipient = "assdiyousef@gmail.com"
 # mode = "real"  # or "dry_run" while OAuth credentials aren't set up yet
