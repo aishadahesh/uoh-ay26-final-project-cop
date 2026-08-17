@@ -5,7 +5,6 @@ from police_thief.domain.board import Board, BoardConfig, Move, Position
 from police_thief.domain.hints import TemplateHintProvider
 from police_thief.domain.scent import ScentConfig, ScentField
 from police_thief.domain.strategy.tactical_planner import TacticalPlanner
-from police_thief.services.gemini_agent import GeminiDecision
 from police_thief.services.mcp_server import PeerInboxes
 from police_thief.services.network_match import (
     NetworkMatchRunner,
@@ -34,19 +33,22 @@ class _CertainBelief:
 class _UnsafeGemini:
     def __init__(self) -> None:
         self.context = None
+        self.calls = 0
 
     def usage_snapshot(self):
         return 0, 0
 
     def choose_move(self, context, _fallback):
+        self.calls += 1
         self.context = context
-        return GeminiDecision(Move.WEST, "unsafe test response")
+        raise AssertionError("live network strategy must not call Gemini")
 
 
 class _NextTurnUnsafeGemini(_UnsafeGemini):
     def choose_move(self, context, _fallback):
+        self.calls += 1
         self.context = context
-        return GeminiDecision(Move.NORTH, "walk into next-turn capture")
+        raise AssertionError("live network strategy must not call Gemini")
 
 
 def _runner(
@@ -388,7 +390,7 @@ def test_final_audit_rejects_a_discontinuous_revealed_position():
     assert "does not match" in audit.errors[0]
 
 
-def test_confirmed_cop_cell_is_excluded_and_unsafe_gemini_is_rejected(tmp_path):
+def test_confirmed_cop_cell_is_excluded_before_deterministic_move(tmp_path):
     advisor = _UnsafeGemini()
     runner = _runner(tmp_path, advisor)
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
@@ -404,9 +406,8 @@ def test_confirmed_cop_cell_is_excluded_and_unsafe_gemini_is_rejected(tmp_path):
         known_opponent_position=Position(6, 4),
     )
     assert move is not Move.WEST
-    assert Move.WEST not in advisor.context.legal_moves
-    assert advisor.context.known_opponent_position == Position(6, 4)
-    assert any("confirmed current cell" in message for message in messages)
+    assert advisor.calls == 0
+    assert any("capturable on the cop's next turn" in message for message in messages)
 
 
 def test_thief_exposes_all_safe_actions_under_one_action_capture_range(tmp_path):
@@ -426,12 +427,12 @@ def test_thief_exposes_all_safe_actions_under_one_action_capture_range(tmp_path)
         known_opponent_position=Position(4, 1),
     )
 
-    assert advisor.context.legal_moves == (Move.NORTH, Move.EAST, Move.STAY)
-    assert move in advisor.context.legal_moves
+    assert advisor.calls == 0
+    assert move is Move.NORTH
     assert not any("capturable on the cop's next turn" in message for message in messages)
 
 
-def test_public_barrier_candidates_keep_unsafe_actions_away_from_gemini(tmp_path):
+def test_public_barrier_candidates_keep_unsafe_actions_away_from_live_strategy(tmp_path):
     advisor = _NextTurnUnsafeGemini()
     runner = _runner(tmp_path, advisor)
     board = Board(BoardConfig(grid_size=7, max_barriers=14))
@@ -465,7 +466,7 @@ def test_public_barrier_candidates_keep_unsafe_actions_away_from_gemini(tmp_path
         Position(5, 4),
         Position(5, 6),
     }
-    assert advisor.context.legal_moves == (Move.WEST,)
+    assert advisor.calls == 0
     assert move is Move.WEST
     assert any("capturable on the cop's next turn" in message for message in messages)
 

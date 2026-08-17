@@ -1,21 +1,21 @@
-"""Timing diagnostics for Gemini-backed network move selection."""
+"""Diagnostics for deterministic network move selection."""
 
 from pathlib import Path
 
 from police_thief.domain.belief import BeliefMap
 from police_thief.domain.board import Board, BoardConfig, Move, Position
-from police_thief.services.gemini_agent import GeminiDecision
 from police_thief.services.mcp_server import PeerInboxes
 from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
 from police_thief.shared.constants import AgentRole
 
 
 class _Advisor:
-    def __init__(self, decision: GeminiDecision) -> None:
-        self.decision = decision
+    def __init__(self) -> None:
+        self.calls = 0
 
     def choose_move(self, _context, _fallback):
-        return self.decision
+        self.calls += 1
+        raise AssertionError("live network strategy must not call Gemini")
 
 
 def _runner(advisor: _Advisor) -> NetworkMatchRunner:
@@ -37,14 +37,8 @@ def _runner(advisor: _Advisor) -> NetworkMatchRunner:
     )
 
 
-def test_move_selection_emits_source_duration_and_reason(monkeypatch):
-    advisor = _Advisor(
-        GeminiDecision(
-            move=Move.EAST,
-            rationale="Closing on the belief peak.",
-            used_fallback=False,
-        )
-    )
+def test_move_selection_uses_brain_fallback_without_gemini(monkeypatch):
+    advisor = _Advisor()
     runner = _runner(advisor)
     board = Board(BoardConfig())
     belief = BeliefMap(board)
@@ -59,14 +53,12 @@ def test_move_selection_emits_source_duration_and_reason(monkeypatch):
         board,
         belief,
         Position(0, 0),
-        Move.STAY,
+        Move.EAST,
         step=3,
         max_steps=35,
         emit=messages.append,
     )
 
     assert move is Move.EAST
-    assert messages == [
-        "Step 3: Gemini selected EAST (E); valid=True; attempts=1",
-        "Step 3: Gemini (1.2s) - Closing on the belief peak.",
-    ]
+    assert advisor.calls == 0
+    assert messages == ["Step 3: planner selected EAST (E); valid=True"]

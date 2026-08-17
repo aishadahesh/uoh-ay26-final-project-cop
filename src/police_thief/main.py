@@ -175,13 +175,8 @@ def _peer(args: argparse.Namespace) -> None:
         raise SystemExit(f"Cannot start the network agent: {exc}") from exc
     from dotenv import load_dotenv
 
-    from police_thief.services.gemini_agent import GeminiAgentAdvisor, GeminiConfigurationError
-
     load_dotenv(project_root / ".env")
-    try:
-        gemini_advisor = GeminiAgentAdvisor()
-    except GeminiConfigurationError as exc:
-        raise SystemExit(f"Cannot start the network agent: {exc}") from exc
+    gemini_advisor = None
     settings = NetworkMatchSettings(
         role=AgentRole.COP, local_port=network.my_port, opponent_url=network.opponent_url,
         public_url=defaults["public"], game_id=defaults["game"],
@@ -199,7 +194,7 @@ def _peer(args: argparse.Namespace) -> None:
         email_recipient=defaults["email_recipient"],
         credentials_path=project_root / "credentials.json",
         token_path=project_root / "token.json",
-        llm_model=gemini_advisor.model,
+        llm_model="deterministic-brain",
     )
     inboxes = PeerInboxes()
     server = build_peer_server(AgentRole.COP.value, inboxes)

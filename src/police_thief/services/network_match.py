@@ -24,7 +24,7 @@ from police_thief.domain.scent import ScentField
 from police_thief.domain.scoring import MatchOutcome, score_for
 from police_thief.domain.strategy.manhattan_brain import ManhattanHeuristicBrain
 from police_thief.services.commit_reveal import LogEntry
-from police_thief.services.gemini_agent import GeminiAgentAdvisor, TacticalContext
+from police_thief.services.gemini_agent import GeminiAgentAdvisor
 from police_thief.services.match_reports import (
     RepoCrossLinks,
     ResultTeamIdentity,
@@ -1431,73 +1431,8 @@ class NetworkMatchRunner:
                 else ()
             )
             fallback = ranked_allowed[0] if ranked_allowed else allowed[0]
-        if self.gemini_advisor is None:
-            emit(f"Step {step}: planner selected {fallback.name} ({fallback.value}); valid=True")
-            return fallback, "Deterministic local-truth move"
-        started_at = time.monotonic()
-        size = board.config.grid_size
-        blocked = tuple(
-            Position(row, col)
-            for row in range(size)
-            for col in range(size)
-            if board.is_blocked(Position(row, col))
-        )
-        evaluations = {item.move: item.summary() for item in plan.evaluations} if plan else {}
-        decision = self.gemini_advisor.choose_move(
-            TacticalContext(
-                role=self.settings.role, own_position=own, belief_peak=belief.arg_max(),
-                legal_moves=allowed,
-                legal_destinations=tuple((move, legal_now[move]) for move in allowed),
-                action_scores=tuple((move, evaluations.get(move, "not scored")) for move in allowed),
-                board_size=size,
-                blocked_cells=blocked,
-                belief_candidates=(
-                    tuple(
-                        (position, 1.0 / len(threat_positions))
-                        for position in threat_positions
-                    )
-                    if known_opponent_position is None and threat_positions
-                    else belief.top_positions(5)
-                ),
-                recent_positions=plan.recent_positions if plan else (),
-                recent_actions=plan.recent_actions if plan else (),
-                repeated_state_warning=plan.loop_reason if plan and plan.loop_detected else "",
-                known_opponent_position=known_opponent_position,
-                sub_game_number=self.settings.sub_game_number,
-                turn_number=step,
-                max_turns=max_steps, remaining_barriers=board.remaining_barrier_budget,
-            ),
-            fallback,
-        )
-        elapsed = time.monotonic() - started_at
-        legal_now = board.legal_moves(own)
-        unsafe_destination = (
-            self.settings.role is AgentRole.THIEF
-            and known_opponent_position is not None
-            and decision.move in legal_now
-            and legal_now[decision.move] == known_opponent_position
-        )
-        if decision.move not in legal_now or decision.move not in allowed or unsafe_destination:
-            reason = (
-                "would enter the cop's confirmed current cell"
-                if unsafe_destination
-                else "not legal now"
-                if decision.move not in legal_now
-                else "excluded by tactical safety or loop prevention"
-            )
-            emit(f"Step {step}: rejected Gemini action {decision.move!r}: {reason}")
-            emit(f"Step {step}: fallback activated; selected {fallback.name} ({fallback.value})")
-            return fallback, reason
-        for rejection in decision.rejected:
-            emit(f"Step {step}: Gemini response rejected - {rejection}")
-        if decision.used_fallback:
-            emit(f"Step {step}: fallback activated after {decision.attempts} Gemini attempt(s)")
-            emit(f"Step {step}: fallback selected {decision.move.name} ({decision.move.value})")
-        else:
-            emit(f"Step {step}: Gemini selected {decision.move.name} ({decision.move.value}); valid=True; attempts={decision.attempts}")
-        source = "fallback" if decision.used_fallback else "Gemini"
-        emit(f"Step {step}: {source} ({elapsed:.1f}s) - {decision.rationale}")
-        return decision.move, decision.rationale
+        emit(f"Step {step}: planner selected {fallback.name} ({fallback.value}); valid=True")
+        return fallback, "Deterministic local-truth move"
 
     def _generate_public_hint(
         self, provider, board, before, true_move, step,
