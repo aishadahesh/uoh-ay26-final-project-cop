@@ -1728,7 +1728,7 @@ class NetworkMatchRunner:
         )
         path = save_match_result(
             result, s.output_dir,
-            include_sub_game=params.network_league.num_games > 1,
+            include_sub_game=True,
         )
         status = "verified" if mutual_sign_off else "not mutually signed"
         emit(f"Audit {status}; result saved to {path}")
@@ -1828,7 +1828,7 @@ class NetworkMatchRunner:
         )
         path = save_match_result(
             result, s.output_dir,
-            include_sub_game=params.network_league.num_games > 1,
+            include_sub_game=True,
         )
         emit(f"Technical loss recorded (opponent unreachable); result saved to {path}")
         return path

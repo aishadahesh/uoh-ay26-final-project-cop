@@ -2,7 +2,7 @@
   "schema_version": "1.2",
   "agreed_between": [
     "uoh-ay26",
-    "sharNamr"
+    "SMNGRP05"
   ],
   "board_and_agents": {
     "grid_size": 7,
@@ -51,7 +51,7 @@
   "network_and_league": {
     "response_timeout_sec": 120,
     "watchdog_timeout_sec": 180,
-    "num_games": 6,
+    "num_games": 1,
     "diversity_reward": 10,
     "min_games_to_pass": 2,
     "max_games_per_team": 10,

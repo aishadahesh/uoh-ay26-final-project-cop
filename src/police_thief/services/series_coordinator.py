@@ -64,6 +64,19 @@ def _completed_result(output_dir: Path, game_id: str, number: int) -> dict | Non
     return result
 
 
+def _completed_final_result(output_dir: Path, game_id: str) -> Path | None:
+    final_path = output_dir / f"result_{game_id}.json"
+    if not final_path.is_file():
+        return None
+    try:
+        result = json.loads(final_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if result.get("game_id") == game_id and result.get("report_type") == "final_game_result":
+        return final_path
+    return None
+
+
 def _archive_incomplete_attempt(output_dir: Path, game_id: str, number: int) -> None:
     names = (
         f"config_{game_id}_g{number:02d}.json",
@@ -139,8 +152,8 @@ def run_series(
             f"{start_number - 1}"
         )
     if start_number > num_games:
-        final_path = output_dir / f"result_{game_id}.json"
-        if final_path.is_file():
+        final_path = _completed_final_result(output_dir, game_id)
+        if final_path is not None:
             print(f"Series already complete -- final result saved to {final_path}")
             return final_path
         start_number = num_games
