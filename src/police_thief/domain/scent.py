@@ -57,14 +57,14 @@ class ScentField:
         return self._intensity.get(pos, 0.0)
 
     def _emission_delta(self, center: Position, cell: Position) -> float:
-        """Radial (Manhattan-distance) falloff within the field's radius.
+        """Subtractive Chebyshev falloff within the field's radius.
 
         The rulebook fixes the field size and center intensity exactly, but
-        leaves the interpolation shape as an implementation choice ("falls
-        off radially") -- this uses a simple linear falloff to 0 at the edge
-        of the field, consistent with the project's orthogonal-only board.
+        leaves the interpolation shape as an implementation choice. This
+        branch locks the league-kit-compatible subtractive_chebyshev_v1 model:
+        distance is max(|dr|, |dc|), producing 0.9 / 0.6 / 0.3 rings.
         """
-        distance = abs(center.row - cell.row) + abs(center.col - cell.col)
+        distance = max(abs(center.row - cell.row), abs(center.col - cell.col))
         if distance > self._radius:
             return 0.0
         return self.config.center_intensity * (1 - distance / (self._radius + 1))

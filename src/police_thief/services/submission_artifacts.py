@@ -111,12 +111,9 @@ def derive_game_uid(
     *,
     game_id: str | None = None,
 ) -> str:
-    if game_id:
-        seed = canonical_bytes({"game_id": game_id, "terms": terms})
-        return str(uuid.UUID(bytes=hashlib.sha256(seed).digest()[:16]))
     if group_ids is None:
-        raise ValueError("group_ids are required when game_id is not supplied")
-    pair = sorted(group_ids)
+        raise ValueError("group_ids are required to derive game_uid")
+    pair = sorted(group_id.lower() for group_id in group_ids)
     seed = canonical_bytes(terms) + b"|" + "|".join(pair).encode("utf-8")
     return str(uuid.UUID(bytes=hashlib.sha256(seed).digest()[:16]))
 

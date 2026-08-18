@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import platform
+import queue
 import re
 import secrets
 import time
@@ -115,6 +116,12 @@ class _WireScent:
         return float(self.values.get(f"{position.row},{position.col}", 0.0))
 
 
+class _EarlyAuditReceived(RuntimeError):
+    def __init__(self, payload: dict) -> None:
+        super().__init__("opponent submitted final audit while a turn was expected")
+        self.payload = payload
+
+
 class _OrderedTurnReceiver:
     """Apply the protocol's at-least-once, commit-keyed receive contract."""
 
@@ -144,7 +151,22 @@ class _OrderedTurnReceiver:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise PeerClientError("opponent turn timed out")
-            message = TurnMessage.from_dict(self._transport.receive_turn(remaining))
+            inboxes = getattr(self._transport, "inboxes", None)
+            audits = getattr(inboxes, "audits", None)
+            if audits is not None:
+                try:
+                    raise _EarlyAuditReceived(audits.get_nowait())
+                except queue.Empty:
+                    pass
+            turns = getattr(inboxes, "turns", None)
+            if turns is None:
+                raw_message = self._transport.receive_turn(remaining)
+            else:
+                try:
+                    raw_message = turns.get(timeout=min(0.25, remaining))
+                except queue.Empty:
+                    continue
+            message = TurnMessage.from_dict(raw_message)
             slot = (message.sender, message.step)
 
             prior_commit = self._slot_commits.get(slot)
@@ -848,6 +870,8 @@ class NetworkMatchRunner:
         outstanding_capture_claims: list[list[int]] = []
         missing_claim_response = False
         capture_acknowledged = False
+        early_peer_audit_payload: dict | None = None
+        early_terminal_capture_audit = False
         known_cop_position = (
             params.cop_start if self.settings.role is AgentRole.THIEF else None
         )
@@ -1034,7 +1058,19 @@ class NetworkMatchRunner:
             else:
                 self._send_control("status", "WAITING")
                 expected_sender = WIRE_ROLES[active_role.value]
-                message = peer_turns.receive(expected_sender, step, timeout, emit)
+                try:
+                    message = peer_turns.receive(expected_sender, step, timeout, emit)
+                except _EarlyAuditReceived as exc:
+                    early_peer_audit_payload = exc.payload
+                    emit(
+                        f"Step {step}: opponent submitted final audit while "
+                        f"{expected_sender} turn was expected; switching to audit"
+                    )
+                    if self.settings.role is AgentRole.COP and outstanding_capture_claims:
+                        early_terminal_capture_audit = True
+                        capture_acknowledged = True
+                        outcome = MatchOutcome.CAPTURE
+                    break
                 peer_commits[step] = message.commit
                 inferred_candidates = _infer_public_scent_candidates(
                     board,
@@ -1238,9 +1274,16 @@ class NetworkMatchRunner:
             "output_tokens": own_usage.output_tokens,
             "total": own_usage.total,
         }
-        peer_audit = AuditPayload.from_dict(self.transport.exchange_audit(
-            AuditPayload(wire_role, own_records, outcome.value, usage_payload).to_dict(), timeout,
-        ))
+        own_audit_payload = AuditPayload(
+            wire_role, own_records, outcome.value, usage_payload,
+        ).to_dict()
+        if early_peer_audit_payload is None:
+            peer_audit = AuditPayload.from_dict(
+                self.transport.exchange_audit(own_audit_payload, timeout)
+            )
+        else:
+            self.transport.send_audit(own_audit_payload, timeout)
+            peer_audit = AuditPayload.from_dict(early_peer_audit_payload)
         audit_verdict = verify_audit_records(
             peer_audit.records,
             peer_commits,
@@ -1302,6 +1345,18 @@ class NetworkMatchRunner:
                 "Revealed trajectory contains semantic validation errors; "
                 f"mutual sign-off disabled: {rendered}"
             )
+        if early_terminal_capture_audit:
+            if trajectory.coincidence_step is None:
+                semantic_audit_clean = False
+                emit(
+                    "Opponent entered audit immediately after our capture claim, "
+                    "but the reveal did not prove co-location; mutual sign-off disabled"
+                )
+            else:
+                emit(
+                    "Opponent entered audit immediately after our capture claim; "
+                    f"reveal supports co-location at step {trajectory.coincidence_step}"
+                )
         if trajectory.capture_step is not None:
             if outcome is not MatchOutcome.CAPTURE:
                 emit(

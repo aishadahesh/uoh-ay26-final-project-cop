@@ -176,8 +176,9 @@ class AuditPayload:
 
     @classmethod
     def from_dict(cls, data: dict) -> AuditPayload:
+        allowed = set(cls.__dataclass_fields__)
         try:
-            payload = cls(**data)
+            payload = cls(**{key: value for key, value in data.items() if key in allowed})
         except (TypeError, ValueError) as exc:
             raise NetworkProtocolError(f"malformed audit payload: {exc}") from exc
         if payload.sender not in WIRE_ROLES.values() or not isinstance(payload.records, list):

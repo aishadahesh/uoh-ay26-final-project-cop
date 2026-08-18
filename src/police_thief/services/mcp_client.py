@@ -139,6 +139,9 @@ class McpPeerTransport:
         except queue.Empty as exc:
             raise PeerClientError("opponent audit timed out") from exc
 
+    def send_audit(self, payload: dict, timeout: float) -> None:
+        self._send("submit_audit", "payload", payload, timeout)
+
     def send_control(self, message: dict, timeout: float = 2.0) -> None:
         with contextlib.suppress(PeerClientError):
             self._send("receive_control", "message", message, timeout)

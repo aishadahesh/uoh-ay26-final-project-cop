@@ -2,7 +2,8 @@
 
 import pytest
 
-from police_thief.services.network_match import _OrderedTurnReceiver
+from police_thief.services.mcp_server import PeerInboxes
+from police_thief.services.network_match import _EarlyAuditReceived, _OrderedTurnReceiver
 from police_thief.services.network_protocol import NetworkProtocolError
 
 
@@ -29,6 +30,12 @@ class _Transport:
     def receive_turn(self, timeout: float) -> dict:
         self.timeouts.append(timeout)
         return self.messages.pop(0)
+
+
+class _InboxTransport:
+    def __init__(self, audit_payload: dict) -> None:
+        self.inboxes = PeerInboxes()
+        self.inboxes.audits.put(audit_payload)
 
 
 def test_receiver_absorbs_redelivery_without_renewing_deadline(monkeypatch):
@@ -70,3 +77,13 @@ def test_receiver_buffers_future_turn_and_replays_it_in_order():
     assert len(transport.timeouts) == 2
     assert any("buffered early" in message for message in messages)
     assert any("replaying buffered" in message for message in messages)
+
+
+def test_receiver_hands_off_early_audit() -> None:
+    audit = {"sender": "thief", "records": [], "result_claim": "capture"}
+    receiver = _OrderedTurnReceiver(_InboxTransport(audit))
+
+    with pytest.raises(_EarlyAuditReceived) as exc:
+        receiver.receive("thief", 11, 10.0, lambda _message: None)
+
+    assert exc.value.payload == audit

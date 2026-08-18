@@ -31,6 +31,8 @@ def test_emit_falls_off_radially_and_hits_zero_past_the_field_radius(field):
     field.emit(Position(3, 3))
     assert field.intensity_at(Position(3, 4)) == pytest.approx(0.6)  # distance 1
     assert field.intensity_at(Position(3, 5)) == pytest.approx(0.3)  # distance 2
+    assert field.intensity_at(Position(4, 4)) == pytest.approx(0.6)  # Chebyshev distance 1
+    assert field.intensity_at(Position(5, 5)) == pytest.approx(0.3)  # Chebyshev distance 2
     assert field.intensity_at(Position(3, 6)) == 0.0  # distance 3, outside 5x5 field
 
 

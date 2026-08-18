@@ -1,8 +1,8 @@
 {
   "schema_version": "1.2",
   "agreed_between": [
-    "uoh-ay26",
-    "sharNamr"
+    "ahk-yosi",
+    "uoh-ay26"
   ],
   "board_and_agents": {
     "grid_size": 7,
@@ -45,7 +45,7 @@
     "pheromone_grid_size": 5
   },
   "world": {
-    "map_area": "Haifa",
+    "map_area": "New York",
     "hint_max_words": 15
   },
   "network_and_league": {

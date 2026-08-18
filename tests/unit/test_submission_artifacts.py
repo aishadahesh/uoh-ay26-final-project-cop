@@ -5,6 +5,7 @@ from email import message_from_bytes
 from police_thief.services.gmail_report_sender import build_report_email
 from police_thief.services.submission_artifacts import (
     canonical_bytes,
+    derive_game_uid,
     finalize_submission_bundle,
     public_participant,
     save_submission_validation_report,
@@ -133,6 +134,31 @@ def test_series_consensus_payload_matches_exact_cross_team_preimage():
             },
         ],
     }
+
+
+def test_game_uid_matches_ahk_yosi_sorted_group_derivation():
+    terms = {
+        "axis_origin_corner": "top-left",
+        "axis_start_index": 0,
+        "barriers_max": 14,
+        "board_size": 7,
+        "cop_start": [0, 0],
+        "decay_per_step": 0.1,
+        "emit_intensity": 0.9,
+        "hint_max_words": 15,
+        "max_steps": 35,
+        "min_center_intensity": 0.5,
+        "num_games": 6,
+        "setting": "New York",
+        "smell_grid_size": 5,
+        "thief_start": [3, 3],
+    }
+
+    assert derive_game_uid(
+        terms,
+        ["uoh-ay26", "ahk-yosi"],
+        game_id="AHK-YOSI-vs-uoh-ay26-F001",
+    ) == "b52fe9be-0003-6a11-4824-3f4caa135491"
 
 
 def test_finalize_builds_and_validates_all_required_json(tmp_path):

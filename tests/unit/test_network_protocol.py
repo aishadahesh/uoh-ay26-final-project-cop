@@ -55,12 +55,14 @@ def test_audit_payload_rejects_invalid_consensus_sha(digest) -> None:
         })
 
 
-def test_audit_payload_still_rejects_unagreed_unknown_fields() -> None:
-    with pytest.raises(NetworkProtocolError, match="malformed audit payload"):
-        AuditPayload.from_dict({
-            "sender": "police", "records": [], "result_claim": "survival",
-            "future_unagreed_field": True,
-        })
+def test_audit_payload_ignores_peer_metadata_fields() -> None:
+    payload = AuditPayload.from_dict({
+        "sender": "police", "records": [], "result_claim": "survival",
+        "sub_game": 1, "future_unagreed_field": True,
+    })
+    assert payload.sender == "police"
+    assert payload.records == []
+    assert payload.result_claim == "survival"
 
 
 def test_signed_negotiation_round_trip():
