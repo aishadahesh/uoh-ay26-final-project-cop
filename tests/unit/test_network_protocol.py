@@ -35,6 +35,70 @@ def test_changed_live_commit_is_cryptographic_failure() -> None:
     assert verdict.cryptographic_failure is True
 
 
+def test_audit_accepts_sealed_capture_answer_auxiliary_records() -> None:
+    turn = seal_payload({"step": 1, "role": "thief", "move": "E"})
+    answer = seal_payload({
+        "kind": "capture_answer",
+        "role": "thief",
+        "at_step": 1,
+        "claim_cell": [1, 0],
+        "answer": False,
+    })
+
+    verdict = verify_audit_records([turn, answer], {1: turn["commit"]})
+
+    assert verdict.verified is True
+    assert verdict.failed_steps == ()
+
+
+def test_audit_accepts_capture_answer_auxiliary_records_with_step_alias() -> None:
+    turn = seal_payload({"kind": "step", "step": 1, "role": "thief", "move": "E"})
+    answer = seal_payload({
+        "kind": "capture_answer",
+        "role": "thief",
+        "step": 1,
+        "at_step": 1,
+        "claim_cell": [1, 0],
+        "answer": False,
+    })
+
+    verdict = verify_audit_records([turn, answer], {1: turn["commit"]})
+
+    assert verdict.verified is True
+    assert verdict.failed_steps == ()
+
+
+def test_audit_accepts_sealed_survival_claim_auxiliary_record() -> None:
+    turn = seal_payload({"kind": "step", "step": 35, "role": "thief", "move": "N"})
+    claim = seal_payload({
+        "kind": "survival_claim",
+        "role": "thief",
+        "step": 35,
+        "steps": 35,
+    })
+
+    verdict = verify_audit_records([turn, claim], {35: turn["commit"]})
+
+    assert verdict.verified is True
+    assert verdict.failed_steps == ()
+
+
+def test_audit_rejects_tampered_capture_answer_auxiliary_record() -> None:
+    answer = seal_payload({
+        "kind": "capture_answer",
+        "role": "thief",
+        "at_step": 1,
+        "claim_cell": [1, 0],
+        "answer": False,
+    })
+    answer["payload"]["answer"] = True
+
+    verdict = verify_audit_records([answer], {})
+
+    assert verdict.verified is False
+    assert verdict.cryptographic_failure is True
+
+
 def test_audit_payload_omits_unset_consensus_sha() -> None:
     payload = AuditPayload("police", [], "survival").to_dict()
     assert "consensus_sha" not in payload

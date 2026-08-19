@@ -272,7 +272,26 @@ def verify_audit_records(
     cryptographic_failure = False
     seen: set[int] = set()
     saw_step0 = False
+    auxiliary_kinds = {"capture_answer", "survival_claim"}
     for index, record in enumerate(records):
+        payload = record.get("payload") if isinstance(record, dict) else None
+        if isinstance(payload, dict) and payload.get("kind") in auxiliary_kinds:
+            kind = payload.get("kind")
+            try:
+                int(payload.get("at_step", payload.get("step", payload.get("steps"))))
+                str(record["commit"])
+                str(record["nonce"])
+            except (KeyError, TypeError, ValueError):
+                failed.append(-1)
+                errors.append(
+                    f"records[{index}] {kind} must contain step/at_step, nonce, and commit"
+                )
+                continue
+            if not verify_record(record):
+                failed.append(-1)
+                cryptographic_failure = True
+                errors.append(f"records[{index}] {kind} nonce/commit verification failed")
+            continue
         try:
             step = int(record["payload"]["step"])
             commit = str(record["commit"])

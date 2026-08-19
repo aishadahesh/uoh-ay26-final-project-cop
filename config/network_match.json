@@ -3,11 +3,11 @@
   "peer": {
     "role": "cop",
     "local_port": 8801,
-    "opponent_url": "https://practical-growing-differences-albums.trycloudflare.com/mcp",
+    "opponent_url": "https://enquiries-lat-exp-association.trycloudflare.com/mcp",
     "public_url": "https://cop.uohay26game.com/mcp"
   },
   "match": {
-    "game_id": "AHK-YOSI-vs-uoh-ay26-F002",
+    "game_id": "AHK-YOSI-vs-uoh-ay26-C001",
     "sub_game_number": 1,
     "shared_match_secret": "50",
     "output_directory": "results/network"
@@ -22,7 +22,7 @@
   },
   "team_2": {
     "name": "ahk-yosi",
-    "members": ["Yosef Shanaa", "Ahmad Kais"],
+    "members": ["Yosef Shanaa (213314859)", "Ahmad Kaiss (325811255)"],
     "repos": {
       "cop": "https://github.com/yosefshanaa/p2p-police-agent",
       "thief": "https://github.com/yosefshanaa/p2p-thief-agent"
@@ -30,6 +30,6 @@
   },
   "email": {
     "automatic": true,
-    "recipient": "assdiyousef@gmail.com"
+    "recipient": "rmisegal+uoh26finalgame@gmail.com"
   }
 }
