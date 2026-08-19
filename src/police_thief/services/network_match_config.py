@@ -42,6 +42,7 @@ def load_network_defaults(path: Path, project_root: Path) -> dict:
         "output": str(output),
         "secret": str(match.get("shared_match_secret", "")),
         "team1_name": str(team1.get("name", "")),
+        "team1_counted_games_played": int(team1.get("counted_games_played", 0)),
         "team1_member1": str(team1_members[0]),
         "team1_member2": str(team1_members[1]),
         "own_cop": str(team1.get("repos", {}).get("cop", "")),

@@ -106,6 +106,7 @@ class NetworkMatchSettings:
     game_index: int = 0
     counted: bool = True
     smoke_test: bool = False
+    previous_counted_games: int = 0
 
 
 class _WireScent:
@@ -1563,6 +1564,7 @@ class NetworkMatchRunner:
             "repos": {"cop": s.own_cop_repo, "thief": s.own_thief_repo},
             "mcp_servers": {s.role.value: s.public_url},
             "llm_model": s.llm_model,
+            "counted_games_played": s.previous_counted_games,
             # Exact public hardware keys consumed by the reference report
             # builder after a successful match.
             "spec": {

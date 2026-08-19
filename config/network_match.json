@@ -13,8 +13,9 @@
                   "shared_match_secret":  "50",
                   "output_directory":  "results/network"
               },
-    "team_1":  {
+               "team_1":  {
                    "name":  "uoh-ay26",
+                   "counted_games_played":  0,
                    "members":  [
                                    "Aisha Abu Dahesh",
                                    "Yousef Asadi"

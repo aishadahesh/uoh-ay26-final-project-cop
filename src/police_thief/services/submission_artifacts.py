@@ -165,6 +165,7 @@ def public_participant(identity: dict[str, Any]) -> dict[str, Any]:
         "repos": dict(identity.get("repos", {})),
         "mcp_servers": dict(identity.get("mcp_servers", {})),
         "llm_model": str(identity.get("llm_model", "unknown")),
+        "counted_games_played": int(identity.get("counted_games_played", 0)),
         "hardware_spec": dict(spec),
         "github_commit": str(identity.get("git_commit_hash", "")),
         "code_version": str((identity.get("protocol") or {}).get("version", "3.0.0")),

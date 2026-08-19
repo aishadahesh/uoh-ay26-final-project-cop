@@ -193,6 +193,7 @@ def _peer(args: argparse.Namespace) -> None:
         shared_key=defaults["secret"].encode(),
         email_mode="real" if defaults["email"] else "dry_run",
         email_recipient=defaults["email_recipient"],
+        previous_counted_games=defaults["team1_counted_games_played"],
         credentials_path=project_root / "credentials.json",
         token_path=project_root / "token.json",
         llm_model="deterministic-brain",

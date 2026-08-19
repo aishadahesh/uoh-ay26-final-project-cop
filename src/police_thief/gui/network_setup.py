@@ -243,6 +243,7 @@ class NetworkSetupDialog:
             shared_key=self.vars["secret"].get().encode(),
             email_mode="real" if self.vars["email"].get() else "dry_run",
             email_recipient=recipient or DEFAULT_REPORT_EMAIL,
+            previous_counted_games=int(defaults.get("team1_counted_games_played", 0)),
             credentials_path=self.project_root / "credentials.json",
             token_path=self.project_root / "token.json",
         )

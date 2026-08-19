@@ -26,6 +26,7 @@ def _identity(group_id):
         },
         "mcp_servers": {"police": f"https://{group_id}.example/mcp"},
         "llm_model": "gemini-test",
+        "counted_games_played": 0,
         "spec": {"os": "test", "cpu_cores": 4, "ram_gb": 8},
         "git_commit_hash": ("a" if group_id == "alpha" else "b") * 40,
         "protocol": {"version": "3.0.0"},
@@ -177,6 +178,13 @@ def test_finalize_bundle_accepts_explicit_labeled_game_uid(tmp_path):
     assert required == paths
     uids = {json.loads(path.read_text(encoding="utf-8"))["game_uid"] for path in paths}
     assert uids == {pinned_uid}
+
+
+def test_public_participant_preserves_counted_games_played():
+    identity = _identity("alpha")
+    identity["counted_games_played"] = 3
+
+    assert public_participant(identity)["counted_games_played"] == 3
 
 
 def test_finalize_builds_and_validates_all_required_json(tmp_path):
