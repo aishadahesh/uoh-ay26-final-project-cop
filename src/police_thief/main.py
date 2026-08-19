@@ -180,6 +180,7 @@ def _peer(args: argparse.Namespace) -> None:
     settings = NetworkMatchSettings(
         role=AgentRole.COP, local_port=network.my_port, opponent_url=network.opponent_url,
         public_url=defaults["public"], game_id=defaults["game"],
+        game_uid=defaults["game_uid"],
         sub_game_number=args.sub_game_number or int(defaults["subgame"]),
         shared_config=args.config_root / "game.json",
         output_dir=args.output_directory or Path(defaults["output"]),

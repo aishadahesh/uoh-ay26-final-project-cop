@@ -3,11 +3,12 @@
     "peer":  {
                  "role":  "cop",
                  "local_port":  8801,
-                 "opponent_url":  "https://combination-scott-afford-humanities.trycloudflare.com/mcp",
+                 "opponent_url":  "https://modes-buried-diagnosis-launch.trycloudflare.com/mcp",
                  "public_url":  "https://cop.uohay26game.com/mcp"
              },
     "match":  {
-                  "game_id":  "SMNGRP05-vs-uoh-ay26-W012",
+                  "game_id":  "SMNGRP05-vs-uoh-ay26-C01",
+                  "game_uid":  "a97a2332-d12b-3b1c-8940-1118b83ef07c",
                   "sub_game_number":  1,
                   "shared_match_secret":  "50",
                   "output_directory":  "results/network"
@@ -36,6 +37,6 @@
                },
     "email":  {
                   "automatic":  true,
-                  "recipient":  "assdiyousef@gmail.com"
+                  "recipient":  "rmisegal+uoh26finalgame@gmail.com"
               }
 }

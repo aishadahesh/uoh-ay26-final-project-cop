@@ -203,5 +203,5 @@ def run_series(
     final_path = output_dir / f"result_{game_id}.json"
     if not final_path.is_file():
         raise RuntimeError(f"six games completed but aggregate result is missing: {final_path}")
-    print(f"Six-game series complete -- final result saved to {final_path}")
+    print(f"{num_games}-game series complete -- final result saved to {final_path}")
     return final_path

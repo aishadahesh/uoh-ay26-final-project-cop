@@ -37,6 +37,7 @@ def load_network_defaults(path: Path, project_root: Path) -> dict:
         "opponent": str(peer.get("opponent_url", "https://opponent.example/mcp")),
         "public": str(peer.get("public_url", "https://your-tunnel.example/mcp")),
         "game": str(match.get("game_id", "G001")),
+        "game_uid": str(match.get("game_uid", "")),
         "subgame": str(match.get("sub_game_number", 1)),
         "output": str(output),
         "secret": str(match.get("shared_match_secret", "")),

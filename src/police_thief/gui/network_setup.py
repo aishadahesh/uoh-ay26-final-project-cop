@@ -52,6 +52,7 @@ class NetworkSetupDialog:
             "opponent": tk.StringVar(value=defaults.get("opponent", "https://opponent.example/mcp")),
             "public": tk.StringVar(value=defaults.get("public", "https://your-tunnel.example/mcp")),
             "game": tk.StringVar(value=defaults.get("game", "G001")),
+            "game_uid": tk.StringVar(value=defaults.get("game_uid", "")),
             "subgame": tk.StringVar(value=defaults.get("subgame", "1")),
             "output": tk.StringVar(value=defaults.get("output", str(project_root / "results" / "network"))),
             "team1_name": tk.StringVar(value=defaults.get("team1_name", "")),
@@ -221,7 +222,8 @@ class NetworkSetupDialog:
             return
         self.result = NetworkMatchSettings(
             role=role, local_port=port, opponent_url=opponent, public_url=public,
-            game_id=game_id, sub_game_number=subgame,
+            game_id=game_id, game_uid=self.vars["game_uid"].get().strip(),
+            sub_game_number=subgame,
             shared_config=self.project_root / "config" / "game.json",
             output_dir=Path(self.vars["output"].get()),
             team_name=self.vars["team1_name"].get().strip(),

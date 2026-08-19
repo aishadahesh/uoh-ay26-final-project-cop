@@ -111,13 +111,28 @@ def derive_game_uid(
     *,
     game_id: str | None = None,
 ) -> str:
-    if game_id:
-        seed = canonical_bytes({"game_id": game_id, "terms": terms})
-        return str(uuid.UUID(bytes=hashlib.sha256(seed).digest()[:16]))
+    del game_id  # The league interop-kit formula intentionally excludes labels.
     if group_ids is None:
-        raise ValueError("group_ids are required when game_id is not supplied")
+        raise ValueError("group_ids are required to derive game_uid")
     pair = sorted(group_ids)
     seed = canonical_bytes(terms) + b"|" + "|".join(pair).encode("utf-8")
+    return str(uuid.UUID(bytes=hashlib.sha256(seed).digest()[:16]))
+
+
+def derive_labeled_game_uid(
+    terms: dict[str, Any],
+    group_ids: list[str],
+    *,
+    game_id: str,
+) -> str:
+    pair = sorted(group_ids)
+    seed = (
+        canonical_bytes(terms)
+        + b"|"
+        + "|".join(pair).encode("utf-8")
+        + b"|"
+        + game_id.encode("utf-8")
+    )
     return str(uuid.UUID(bytes=hashlib.sha256(seed).digest()[:16]))
 
 
@@ -191,6 +206,7 @@ def finalize_submission_bundle(
     directory: Path,
     *,
     game_id: str,
+    game_uid: str | None = None,
     terms: dict[str, Any],
     participants: dict[str, dict[str, Any]],
     series_result: dict[str, Any],
@@ -203,7 +219,11 @@ def finalize_submission_bundle(
             f"submission requires exactly two distinct groups; received {sorted(participants)}"
         )
     num_games = int(series_result["num_games"])
-    game_uid = derive_game_uid(terms, list(participants), game_id=game_id)
+    game_uid = (
+        str(uuid.UUID(str(game_uid)))
+        if game_uid
+        else derive_game_uid(terms, list(participants), game_id=game_id)
+    )
     links = _links(game_id, participants)
     base = {
         "schema_version": SCHEMA_VERSION,
@@ -435,11 +455,14 @@ def validate_submission_directory(
     if not _iso(declaration.get("game_started_at")):
         errors.append(_error(declaration_path.name, "game_started_at", "ISO-8601 timestamp", declaration.get("game_started_at"), "invalid_value"))
 
-    expected_uid = derive_game_uid(
-        _first_terms(documents), group_ids, game_id=game_id,
-    ) if len(group_ids) == 2 and _first_terms(documents) else None
-    if expected_uid and uid != expected_uid:
-        errors.append(_error(declaration_path.name, "game_uid", expected_uid, uid, "derivation_mismatch"))
+    terms = _first_terms(documents)
+    expected_uids = set()
+    if len(group_ids) == 2 and terms:
+        expected_uids.add(derive_game_uid(terms, group_ids, game_id=game_id))
+        expected_uids.add(derive_labeled_game_uid(terms, group_ids, game_id=game_id))
+    if expected_uids and uid not in expected_uids:
+        expected = " or ".join(sorted(expected_uids))
+        errors.append(_error(declaration_path.name, "game_uid", expected, uid, "derivation_mismatch"))
 
     for number in range(1, num_games + 1):
         config_name = f"config_{game_id}_g{number:02d}.json"

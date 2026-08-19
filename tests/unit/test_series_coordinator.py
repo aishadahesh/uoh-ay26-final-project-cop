@@ -188,3 +188,60 @@ def test_finalize_completed_series_builds_six_game_result(tmp_path, monkeypatch)
     result = json.loads(path.read_text(encoding="utf-8"))
     assert len(result["sub_games"]) == 6
     assert result["consensus_confirmed"] is True
+
+
+def test_finalize_completed_series_accepts_peer_natural_role_consensus_sender(
+    tmp_path, monkeypatch,
+) -> None:
+    participants = {
+        "alpha": {"group_name": "alpha", "github_commit": "a" * 40, "mcp_servers": {}},
+        "beta": {"group_name": "beta", "github_commit": "b" * 40, "mcp_servers": {}},
+    }
+    games = {}
+    for number in range(1, 7):
+        games[str(number)] = {
+            "started_at": f"2026-01-01T00:0{number}:00+00:00",
+            "ended_at": f"2026-01-01T00:0{number}:30+00:00",
+        }
+        (tmp_path / f"result_G003_g{number:02d}.json").write_text(json.dumps({
+            "game_id": "G003", "sub_game_number": number, "outcome": "survival",
+            "cop_score": 5, "thief_score": 10, "mutual_sign_off": True,
+            "participants": participants, "token_usage_by_group": {"alpha": 0, "beta": 0},
+            "log_sha256": str(number) * 64,
+        }), encoding="utf-8")
+    state = tmp_path / "state.json"
+    state.write_text(json.dumps({
+        "game_id": "G003", "series_started_at": "2026-01-01T00:00:00+00:00",
+        "games": games,
+    }), encoding="utf-8")
+    params = SimpleNamespace(
+        network_league=SimpleNamespace(num_games=6, response_timeout_sec=1, token_budget_per_series=200000),
+        scoring=SimpleNamespace(tie_score=2),
+    )
+    monkeypatch.setattr("police_thief.services.network_match.load_match_parameters", lambda _path: params)
+    monkeypatch.setattr(
+        "police_thief.services.network_match.derive_game_uid",
+        lambda _terms, _groups, **_kwargs: "uid",
+    )
+    monkeypatch.setattr("police_thief.services.network_match.finalize_submission_bundle", lambda *args, **kwargs: [tmp_path / "result_G003.json"])
+    monkeypatch.setattr("police_thief.services.network_match.save_series_result", lambda result, directory, game_id: (directory / f"result_{game_id}.json").write_text(json.dumps(result), encoding="utf-8"))
+
+    class Transport:
+        def exchange_audit(self, payload, timeout):
+            return {
+                "sender": "thief", "records": [],
+                "result_claim": "series_consensus",
+                "consensus_sha": payload["consensus_sha"],
+                "token_usage": None,
+            }
+
+    settings = NetworkMatchSettings(
+        role=AgentRole.THIEF, local_port=8802, opponent_url="https://peer.test/mcp",
+        public_url="https://us.test/mcp", game_id="G003", sub_game_number=6,
+        shared_config=tmp_path / "game.json", output_dir=tmp_path, team_name="alpha",
+    )
+    monkeypatch.setattr("police_thief.services.network_match.McpPeerTransport", lambda *args, **kwargs: Transport())
+    monkeypatch.setattr("police_thief.services.network_match.NetworkMatchRunner._terms", lambda self, value: {})
+    path = finalize_completed_series(settings, PeerInboxes(), state, AgentRole.COP)
+    result = json.loads(path.read_text(encoding="utf-8"))
+    assert result["consensus_confirmed"] is True

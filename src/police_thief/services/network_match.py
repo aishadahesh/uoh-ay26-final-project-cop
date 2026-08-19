@@ -85,6 +85,7 @@ class NetworkMatchSettings:
     sub_game_number: int
     shared_config: Path
     output_dir: Path
+    game_uid: str = ""
     team_name: str = "TBD"
     members: tuple[str, ...] = ()
     opponent_team_name: str = "TBD"
@@ -1841,6 +1842,10 @@ def role_for_subgame(natural_role: AgentRole, series_index: int) -> AgentRole:
     return natural_role
 
 
+def _opposite_role(role: AgentRole) -> AgentRole:
+    return AgentRole.THIEF if role is AgentRole.COP else AgentRole.COP
+
+
 def finalize_completed_series(
     settings: NetworkMatchSettings,
     inboxes: PeerInboxes,
@@ -1957,7 +1962,9 @@ def finalize_completed_series(
         settings.opponent_url, inboxes, sender=settings.role.value,
     )
     terms = NetworkMatchRunner(settings, inboxes, transport=transport)._terms(params)
-    game_uid = derive_game_uid(terms, list(participants), game_id=settings.game_id)
+    game_uid = settings.game_uid or derive_game_uid(
+        terms, list(participants), game_id=settings.game_id,
+    )
     local_sha = series_consensus_hash(settings.game_id, game_uid, series_result)
     consensus_confirmed = False
     try:
@@ -1968,18 +1975,24 @@ def finalize_completed_series(
             ).to_dict(),
             params.network_league.response_timeout_sec,
         ))
-        expected_sender = WIRE_ROLES[
-            AgentRole.THIEF.value
-            if settings.role is AgentRole.COP
-            else AgentRole.COP.value
-        ]
+        allowed_senders = {
+            WIRE_ROLES[_opposite_role(settings.role).value],
+            WIRE_ROLES[_opposite_role(first_role).value],
+        }
         consensus_confirmed = bool(
             series_result["mutual_sign_off"]
-            and peer.sender == expected_sender
+            and peer.sender in allowed_senders
             and peer.records == []
             and peer.result_claim == "series_consensus"
             and peer.consensus_sha == local_sha
         )
+        if not consensus_confirmed:
+            emit(
+                "Final series consensus was not mutually confirmed; "
+                f"local_sha={local_sha}, allowed_senders={sorted(allowed_senders)}, "
+                f"peer_sender={peer.sender}, peer_claim={peer.result_claim}, "
+                f"peer_sha={peer.consensus_sha or 'missing'}"
+            )
     except (PeerClientError, NetworkProtocolError) as exc:
         emit(f"Final series consensus exchange failed: {exc}")
     series_result["consensus_sha"] = local_sha
@@ -1990,6 +2003,7 @@ def finalize_completed_series(
         paths = finalize_submission_bundle(
             settings.output_dir,
             game_id=settings.game_id,
+            game_uid=settings.game_uid or None,
             terms=terms,
             participants=participants,
             series_result=series_result,
@@ -2122,7 +2136,7 @@ class NetworkMatchSeriesRunner:
         terms = NetworkMatchRunner(
             self.settings, self.inboxes, self.gemini_advisor, self.transport,
         )._terms(params)
-        game_uid = derive_game_uid(
+        game_uid = self.settings.game_uid or derive_game_uid(
             terms, list(participants), game_id=self.settings.game_id,
         )
         local_consensus_sha = series_consensus_hash(
@@ -2142,14 +2156,13 @@ class NetworkMatchSeriesRunner:
                 ).to_dict(),
                 params.network_league.response_timeout_sec,
             ))
-            expected_sender = WIRE_ROLES[
-                AgentRole.THIEF.value
-                if self.settings.role is AgentRole.COP
-                else AgentRole.COP.value
-            ]
+            allowed_senders = {
+                WIRE_ROLES[_opposite_role(role).value],
+                WIRE_ROLES[_opposite_role(self.settings.role).value],
+            }
             consensus_confirmed = bool(
                 subgames_mutually_verified
-                and peer_consensus.sender == expected_sender
+                and peer_consensus.sender in allowed_senders
                 and peer_consensus.records == []
                 and peer_consensus.result_claim == "series_consensus"
                 and peer_consensus.consensus_sha == local_consensus_sha
@@ -2158,6 +2171,9 @@ class NetworkMatchSeriesRunner:
                 emit(
                     "Final series consensus was not mutually confirmed; "
                     f"local_sha={local_consensus_sha}, "
+                    f"allowed_senders={sorted(allowed_senders)}, "
+                    f"peer_sender={peer_consensus.sender}, "
+                    f"peer_claim={peer_consensus.result_claim}, "
                     f"peer_sha={peer_consensus.consensus_sha or 'missing'}"
                 )
         except (PeerClientError, NetworkProtocolError) as exc:
@@ -2170,6 +2186,7 @@ class NetworkMatchSeriesRunner:
             submission_paths = finalize_submission_bundle(
                 self.settings.output_dir,
                 game_id=self.settings.game_id,
+                game_uid=self.settings.game_uid or None,
                 terms=terms,
                 participants=participants,
                 series_result=series_result,

@@ -5,6 +5,8 @@ from email import message_from_bytes
 from police_thief.services.gmail_report_sender import build_report_email
 from police_thief.services.submission_artifacts import (
     canonical_bytes,
+    derive_game_uid,
+    derive_labeled_game_uid,
     finalize_submission_bundle,
     public_participant,
     save_submission_validation_report,
@@ -51,7 +53,7 @@ def _record(step, role, move):
     return {"payload": payload, "nonce": nonce, "h_commit": commit}
 
 
-def _bundle(tmp_path, scores=None):
+def _bundle(tmp_path, scores=None, game_uid=None):
     participants = {
         key: public_participant(_identity(key)) for key in ("alpha", "beta")
     }
@@ -82,7 +84,8 @@ def _bundle(tmp_path, scores=None):
         "consensus_confirmed": True,
     }
     return finalize_submission_bundle(
-        tmp_path, game_id="G1", terms=_terms(), participants=participants,
+        tmp_path, game_id="G1", game_uid=game_uid, terms=_terms(),
+        participants=participants,
         series_result=series, game_started_at="2026-08-06T10:00:00+03:00",
         token_budget=200000,
     )
@@ -133,6 +136,47 @@ def test_series_consensus_payload_matches_exact_cross_team_preimage():
             },
         ],
     }
+
+
+def test_game_uid_uses_league_interop_kit_formula_and_ignores_game_id():
+    assert derive_game_uid(_terms(), ["beta", "alpha"], game_id="G1") == derive_game_uid(
+        _terms(), ["alpha", "beta"], game_id="G2",
+    )
+
+
+def test_labeled_game_uid_matches_w014_agreement():
+    terms = {
+        "axis_origin_corner": "top-left",
+        "axis_start_index": 0,
+        "barriers_max": 14,
+        "board_size": 7,
+        "cop_start": [0, 0],
+        "decay_per_step": 0.1,
+        "emit_intensity": 0.9,
+        "hint_max_words": 15,
+        "max_steps": 35,
+        "min_center_intensity": 0.5,
+        "num_games": 6,
+        "setting": "Haifa",
+        "smell_grid_size": 5,
+        "thief_start": [3, 3],
+    }
+    assert derive_labeled_game_uid(
+        terms, ["uoh-ay26", "SMNGRP05"], game_id="SMNGRP05-vs-uoh-ay26-W014",
+    ) == "e8d18cdd-713d-0536-be65-3ed12f4cb2b8"
+
+
+def test_finalize_bundle_accepts_explicit_labeled_game_uid(tmp_path):
+    pinned_uid = derive_labeled_game_uid(
+        _terms(), ["alpha", "beta"], game_id="G1",
+    )
+    paths = _bundle(tmp_path, game_uid=pinned_uid)
+    errors, required = validate_submission_directory(tmp_path, "G1")
+
+    assert errors == []
+    assert required == paths
+    uids = {json.loads(path.read_text(encoding="utf-8"))["game_uid"] for path in paths}
+    assert uids == {pinned_uid}
 
 
 def test_finalize_builds_and_validates_all_required_json(tmp_path):
