@@ -1,0 +1,45 @@
+{
+  "config_sha256": "ad9e1bfd724e9debcde523833381cb7982a5d619d693d3738b59e0da61f4d81a",
+  "game_id": "SMNGRP05-vs-uoh-ay26-C01",
+  "game_uid": "a97a2332-d12b-3b1c-8940-1118b83ef07c",
+  "links": {
+    "config": "config_SMNGRP05-vs-uoh-ay26-C01_g<NN>.json",
+    "declaration": "declaration_SMNGRP05-vs-uoh-ay26-C01.json",
+    "github": {
+      "SMNGRP05": {
+        "cop": "https://github.com/afaf-gharra/SMNGRP05-police",
+        "thief": "https://github.com/afaf-gharra/SMNGRP05-thief"
+      },
+      "uoh-ay26": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      }
+    },
+    "log": "log_SMNGRP05-vs-uoh-ay26-C01_g<NN>.json",
+    "result": "result_SMNGRP05-vs-uoh-ay26-C01.json"
+  },
+  "schema_version": "1.1",
+  "sub_game_number": 3,
+  "terms": {
+    "axis_origin_corner": "top-left",
+    "axis_start_index": 0,
+    "barriers_max": 14,
+    "board_size": 7,
+    "cop_start": [
+      0,
+      0
+    ],
+    "decay_per_step": 0.1,
+    "emit_intensity": 0.9,
+    "hint_max_words": 15,
+    "max_steps": 35,
+    "min_center_intensity": 0.5,
+    "num_games": 6,
+    "setting": "Haifa",
+    "smell_grid_size": 5,
+    "thief_start": [
+      3,
+      3
+    ]
+  }
+}
