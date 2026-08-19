@@ -1,0 +1,99 @@
+{
+  "audit": null,
+  "cop_score": 5,
+  "game_id": "SMNGRP05-vs-uoh-ay26-C01",
+  "log_sha256": "b354d56c543b24e38121b1f4b03a13dd1eefd8b7a49e3fc3d09ff64039099f90",
+  "mutual_sign_off": true,
+  "outcome": "survival",
+  "participants": {
+    "SMNGRP05": {
+      "code_version": "3.0.0",
+      "counted_games_played": 1,
+      "github_commit": "27e1cb09c4d2010d27b45d296535a84041223ad4",
+      "group_id": "SMNGRP05",
+      "group_name": "SMNGRP05",
+      "hardware_spec": {
+        "cpu_cores": 12,
+        "cpu_freq_mhz": null,
+        "cpu_type": "AMD64 Family 25 Model 33 Stepping 0, AuthenticAMD",
+        "gpu_type": "NVIDIA GeForce RTX 3070",
+        "machine": "AMD64",
+        "os": "Windows 11",
+        "python": "3.14.5",
+        "ram_gb": null,
+        "vram_gb": 8.0
+      },
+      "llm_model": "template-zero-token",
+      "mcp_servers": {
+        "cop": "https://7edc-147-236-163-154.ngrok-free.app/mcp",
+        "thief": "https://7edc-147-236-163-154.ngrok-free.app/mcp"
+      },
+      "members": [
+        "Afaf Gharra",
+        "Reem Awawdy"
+      ],
+      "repos": {
+        "cop": "https://github.com/afaf-gharra/SMNGRP05-police",
+        "thief": "https://github.com/afaf-gharra/SMNGRP05-thief"
+      },
+      "signature": "sha256:23f1857f05c86067cc0e746dec88599bbb90155199ee4e28c45fe710068d9d2d"
+    },
+    "uoh-ay26": {
+      "code_version": "3.0.0",
+      "counted_games_played": 0,
+      "github_commit": "a1f5aa32b66a4fee5726669916e48e9dab0aef77",
+      "group_id": "uoh-ay26",
+      "group_name": "uoh-ay26",
+      "hardware_spec": {
+        "cpu_cores": 8,
+        "cpu_freq_mhz": "unknown",
+        "cpu_type": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+        "gpu_cores_or_cuda": "unknown",
+        "gpu_type": "unknown",
+        "os": "Windows",
+        "ram_gb": 15.7,
+        "vram_gb": "unknown"
+      },
+      "llm_model": "deterministic-brain",
+      "mcp_servers": {
+        "cop": "https://cop.uohay26game.com/mcp"
+      },
+      "members": [
+        "Aisha Abu Dahesh",
+        "Yousef Asadi"
+      ],
+      "repos": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      },
+      "signature": "sha256:cf8588869ef3a0a22816cf995fa1e2cb6e4ef91ac966018b4b13c43dbb242091"
+    }
+  },
+  "repo_links": {
+    "team_a_cop_repo": "https://github.com/afaf-gharra/SMNGRP05-police",
+    "team_a_thief_repo": "https://github.com/afaf-gharra/SMNGRP05-thief",
+    "team_b_cop_repo": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+    "team_b_thief_repo": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+  },
+  "sub_game_number": 1,
+  "team_a": {
+    "members": [
+      "Afaf Gharra",
+      "Reem Awawdy"
+    ],
+    "team_name": "SMNGRP05"
+  },
+  "team_b": {
+    "members": [
+      "Aisha Abu Dahesh",
+      "Yousef Asadi"
+    ],
+    "team_name": "uoh-ay26"
+  },
+  "thief_score": 10,
+  "token_usage_by_group": {
+    "SMNGRP05": 0,
+    "uoh-ay26": 0
+  },
+  "total_tokens_used": 0
+}

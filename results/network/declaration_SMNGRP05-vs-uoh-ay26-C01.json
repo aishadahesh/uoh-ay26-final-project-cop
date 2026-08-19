@@ -1,0 +1,92 @@
+{
+  "declaration_type": "pre_game_declaration",
+  "game_id": "SMNGRP05-vs-uoh-ay26-C01",
+  "game_started_at": "2026-08-19T13:44:57.954598+03:00",
+  "game_uid": "a97a2332-d12b-3b1c-8940-1118b83ef07c",
+  "groups": {
+    "group_1": {
+      "code_version": "3.0.0",
+      "counted_games_played": 1,
+      "github_commit": "27e1cb09c4d2010d27b45d296535a84041223ad4",
+      "group_id": "SMNGRP05",
+      "group_name": "SMNGRP05",
+      "hardware_spec": {
+        "cpu_cores": 12,
+        "cpu_freq_mhz": null,
+        "cpu_type": "AMD64 Family 25 Model 33 Stepping 0, AuthenticAMD",
+        "gpu_type": "NVIDIA GeForce RTX 3070",
+        "machine": "AMD64",
+        "os": "Windows 11",
+        "python": "3.14.5",
+        "ram_gb": null,
+        "vram_gb": 8.0
+      },
+      "llm_model": "template-zero-token",
+      "mcp_servers": {
+        "cop": "https://7edc-147-236-163-154.ngrok-free.app/mcp",
+        "thief": "https://7edc-147-236-163-154.ngrok-free.app/mcp"
+      },
+      "members": [
+        "Afaf Gharra",
+        "Reem Awawdy"
+      ],
+      "repos": {
+        "cop": "https://github.com/afaf-gharra/SMNGRP05-police",
+        "thief": "https://github.com/afaf-gharra/SMNGRP05-thief"
+      },
+      "signature": "sha256:23f1857f05c86067cc0e746dec88599bbb90155199ee4e28c45fe710068d9d2d"
+    },
+    "group_2": {
+      "code_version": "3.0.0",
+      "counted_games_played": 0,
+      "github_commit": "a1f5aa32b66a4fee5726669916e48e9dab0aef77",
+      "group_id": "uoh-ay26",
+      "group_name": "uoh-ay26",
+      "hardware_spec": {
+        "cpu_cores": 8,
+        "cpu_freq_mhz": "unknown",
+        "cpu_type": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+        "gpu_cores_or_cuda": "unknown",
+        "gpu_type": "unknown",
+        "os": "Windows",
+        "ram_gb": 15.7,
+        "vram_gb": "unknown"
+      },
+      "llm_model": "deterministic-brain",
+      "mcp_servers": {
+        "cop": "https://cop.uohay26game.com/mcp",
+        "thief": "https://theif.uohay26game.com/mcp"
+      },
+      "members": [
+        "Aisha Abu Dahesh",
+        "Yousef Asadi"
+      ],
+      "repos": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      },
+      "signature": "sha256:cf8588869ef3a0a22816cf995fa1e2cb6e4ef91ac966018b4b13c43dbb242091"
+    }
+  },
+  "links": {
+    "config": "config_SMNGRP05-vs-uoh-ay26-C01_g<NN>.json",
+    "declaration": "declaration_SMNGRP05-vs-uoh-ay26-C01.json",
+    "github": {
+      "SMNGRP05": {
+        "cop": "https://github.com/afaf-gharra/SMNGRP05-police",
+        "thief": "https://github.com/afaf-gharra/SMNGRP05-thief"
+      },
+      "uoh-ay26": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      }
+    },
+    "log": "log_SMNGRP05-vs-uoh-ay26-C01_g<NN>.json",
+    "result": "result_SMNGRP05-vs-uoh-ay26-C01.json"
+  },
+  "max_tokens_per_game": 200000,
+  "num_sub_games": 6,
+  "report_type": "declaration",
+  "schema_version": "1.1",
+  "timezone": "Asia/Jerusalem"
+}
