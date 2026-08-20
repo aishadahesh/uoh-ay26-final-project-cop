@@ -45,6 +45,16 @@ def test_network_defaults_populate_all_gui_fields(tmp_path):
     assert loaded["output"] == str(tmp_path / "results" / "custom")
 
 
+def test_network_defaults_accept_utf8_bom(tmp_path):
+    path = tmp_path / "network_match.json"
+    path.write_text(json.dumps(_defaults()), encoding="utf-8-sig")
+
+    loaded = load_network_defaults(path, tmp_path)
+
+    assert loaded["game"] == "G900"
+    assert loaded["email_recipient"] == "reports@example.com"
+
+
 def test_network_defaults_require_two_members_per_team(tmp_path):
     raw = _defaults()
     raw["team_2"]["members"] = ["only-one"]
