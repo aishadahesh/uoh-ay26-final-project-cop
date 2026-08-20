@@ -10,6 +10,7 @@ from police_thief.services.submission_artifacts import (
     finalize_submission_bundle,
     public_participant,
     save_submission_validation_report,
+    series_consensus_hash,
     series_consensus_payload,
     validate_submission_directory,
 )
@@ -146,6 +147,36 @@ def test_game_uid_expands_bare_label_to_sorted_pair_game_id():
     assert (
         derive_game_uid(terms, ["beta", "alpha"], game_id="alpha-vs-beta-G010")
         == expected
+    )
+
+
+def test_series_consensus_zeroes_technical_loss_without_winner():
+    series = {
+        "sub_games": [
+            {
+                "sub_game_number": 1,
+                "outcome": "technical_loss",
+                "roles": {"alpha": "cop", "beta": "thief"},
+                "score": {"alpha": 0, "beta": 0},
+            },
+        ],
+    }
+
+    assert series_consensus_payload("G010", "shared-uid", series) == {
+        "game_id": "G010",
+        "game_uid": "shared-uid",
+        "sub_games": [
+            {
+                "sub_game_number": 1,
+                "result": "technical_loss",
+                "roles": {"alpha": "police", "beta": "thief"},
+                "score": {"alpha": 0, "beta": 0},
+                "winner_group": None,
+            },
+        ],
+    }
+    assert series_consensus_hash("G010", "shared-uid", series) == (
+        "715a7428d92c51a7f39fa53cd4b3133c3eca98e4fbb6854e805322913b38b35a"
     )
 
 
