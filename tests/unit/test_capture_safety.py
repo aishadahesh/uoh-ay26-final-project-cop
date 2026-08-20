@@ -291,6 +291,40 @@ def test_stationary_barrier_capture_requires_and_accepts_truthful_response():
     assert audit.capture_after_role == "police"
 
 
+def test_capture_answer_false_clears_claim_without_capture():
+    audit = _audit_revealed_trajectory(
+        [{"payload": {
+            "step": 1, "role": "police",
+            "state": {"row": 0, "col": 0},
+            "position": [0, 1], "move": "E", "intent": True,
+            "capture_claim": [0, 1],
+        }}],
+        [
+            {"payload": {
+                "kind": "step", "step": 1, "role": "thief",
+                "state": [3, 3], "position": [3, 4], "move": "E",
+                "intent": "truth",
+            }},
+            {"payload": {
+                "kind": "capture_answer", "step": 1, "at_step": 1,
+                "role": "thief", "claim_cell": [0, 1], "answer": False,
+            }},
+            {"payload": {
+                "kind": "survival_claim", "step": 35, "steps": 35,
+                "role": "thief",
+            }},
+        ],
+        "police",
+        "thief",
+        Position(0, 0),
+        Position(3, 3),
+        7,
+    )
+
+    assert audit.errors == ()
+    assert audit.capture_step is None
+
+
 def test_final_audit_rejects_unknown_action_with_diagonal_position_jump():
     audit = _audit_revealed_trajectory(
         [{"payload": {

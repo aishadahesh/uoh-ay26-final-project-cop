@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import platform
+import queue
 import re
 import secrets
 import time
@@ -115,6 +116,12 @@ class _WireScent:
         return float(self.values.get(f"{position.row},{position.col}", 0.0))
 
 
+class _EarlyAuditReceived(RuntimeError):
+    def __init__(self, payload: dict) -> None:
+        super().__init__("opponent submitted final audit while a turn was expected")
+        self.payload = payload
+
+
 class _OrderedTurnReceiver:
     """Apply the protocol's at-least-once, commit-keyed receive contract."""
 
@@ -144,7 +151,22 @@ class _OrderedTurnReceiver:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise PeerClientError("opponent turn timed out")
-            message = TurnMessage.from_dict(self._transport.receive_turn(remaining))
+            inboxes = getattr(self._transport, "inboxes", None)
+            audits = getattr(inboxes, "audits", None)
+            if audits is not None:
+                try:
+                    raise _EarlyAuditReceived(audits.get_nowait())
+                except queue.Empty:
+                    pass
+            turns = getattr(inboxes, "turns", None)
+            if turns is None:
+                raw_message = self._transport.receive_turn(remaining)
+            else:
+                try:
+                    raw_message = turns.get(timeout=min(0.25, remaining))
+                except queue.Empty:
+                    continue
+            message = TurnMessage.from_dict(raw_message)
             slot = (message.sender, message.step)
 
             prior_commit = self._slot_commits.get(slot)
@@ -626,9 +648,17 @@ def _audit_revealed_trajectory(
     for source_role, records in ((own_role, own_records), (peer_role, peer_records)):
         for record in records:
             payload = record.get("payload") if isinstance(record, dict) else None
-            if not isinstance(payload, dict) or not any(
-                field in payload
-                for field in ("move", "terminal_ack", "capture_claim", "claim_response")
+            if not isinstance(payload, dict) or not (
+                any(
+                    field in payload
+                    for field in (
+                        "move",
+                        "terminal_ack",
+                        "capture_claim",
+                        "claim_response",
+                    )
+                )
+                or payload.get("kind") in {"capture_answer", "survival_claim"}
             ):
                 continue
             decorated.append((source_role, payload))
@@ -637,7 +667,14 @@ def _audit_revealed_trajectory(
             step = int(item[1].get("step", -1))
         except (TypeError, ValueError):
             step = -1
-        return step, 0 if item[0] == "thief" else 1
+        kind = item[1].get("kind")
+        if kind == "capture_answer":
+            order = 2
+        elif kind == "survival_claim":
+            order = 3
+        else:
+            order = 0 if item[0] == "thief" else 1
+        return step, order
 
     decorated.sort(key=sort_key)
 
@@ -665,6 +702,48 @@ def _audit_revealed_trajectory(
             errors.append(
                 f"step {step} source role {role!r} conflicts with payload role {declared_role!r}"
             )
+            continue
+        kind = payload.get("kind")
+        if kind == "capture_answer":
+            if role != "thief":
+                errors.append(f"step {step} capture_answer came from {role!r}")
+                continue
+            try:
+                answer_step = int(payload.get("at_step", step))
+            except (TypeError, ValueError):
+                errors.append(
+                    f"step {step} capture_answer has invalid at_step "
+                    f"{payload.get('at_step')!r}"
+                )
+                continue
+            if pending_capture_claim is not None:
+                claim_step, claim_cell = pending_capture_claim
+                if answer_step != claim_step:
+                    errors.append(
+                        f"step {step} capture_answer references step {answer_step}, "
+                        f"expected {claim_step}"
+                    )
+                answer_cell = _revealed_coordinate(
+                    payload.get("claim_cell", payload.get("claim"))
+                )
+                if payload.get("answer") is True:
+                    if answer_cell == claim_cell:
+                        capture_step = claim_step
+                        capture_after_role = "police"
+                    else:
+                        errors.append(
+                            f"step {step} capture_answer=true names "
+                            f"{payload.get('claim_cell', payload.get('claim'))!r}, "
+                            f"not the police claim {[claim_cell.row, claim_cell.col]}"
+                        )
+                elif payload.get("answer") is not False:
+                    errors.append(
+                        f"step {step} capture_answer has non-boolean answer "
+                        f"{payload.get('answer')!r}"
+                    )
+                pending_capture_claim = None
+            continue
+        if kind == "survival_claim":
             continue
         key = (role, step)
         if key in seen:
@@ -848,6 +927,9 @@ class NetworkMatchRunner:
         outstanding_capture_claims: list[list[int]] = []
         missing_claim_response = False
         capture_acknowledged = False
+        early_peer_audit_payload: dict | None = None
+        early_audit_turn: tuple[str, int] | None = None
+        early_terminal_capture_audit = False
         known_cop_position = (
             params.cop_start if self.settings.role is AgentRole.THIEF else None
         )
@@ -1034,7 +1116,18 @@ class NetworkMatchRunner:
             else:
                 self._send_control("status", "WAITING")
                 expected_sender = WIRE_ROLES[active_role.value]
-                message = peer_turns.receive(expected_sender, step, timeout, emit)
+                try:
+                    message = peer_turns.receive(expected_sender, step, timeout, emit)
+                except _EarlyAuditReceived as exc:
+                    early_peer_audit_payload = exc.payload
+                    emit(
+                        f"Step {step}: opponent submitted final audit while "
+                        f"{expected_sender} turn was expected; switching to audit"
+                    )
+                    early_audit_turn = (expected_sender, step)
+                    if self.settings.role is AgentRole.COP and outstanding_capture_claims:
+                        early_terminal_capture_audit = True
+                    break
                 peer_commits[step] = message.commit
                 inferred_candidates = _infer_public_scent_candidates(
                     board,
@@ -1238,9 +1331,36 @@ class NetworkMatchRunner:
             "output_tokens": own_usage.output_tokens,
             "total": own_usage.total,
         }
-        peer_audit = AuditPayload.from_dict(self.transport.exchange_audit(
-            AuditPayload(wire_role, own_records, outcome.value, usage_payload).to_dict(), timeout,
-        ))
+        own_audit_payload = AuditPayload(
+            wire_role, own_records, outcome.value, usage_payload,
+        ).to_dict()
+        if early_peer_audit_payload is None:
+            peer_audit = AuditPayload.from_dict(
+                self.transport.exchange_audit(own_audit_payload, timeout)
+            )
+        else:
+            self.transport.send_audit(own_audit_payload, timeout)
+            peer_audit = AuditPayload.from_dict(early_peer_audit_payload)
+        if early_audit_turn is not None:
+            expected_sender, expected_step = early_audit_turn
+            for record in peer_audit.records:
+                payload = record.get("payload") if isinstance(record, dict) else None
+                if not isinstance(payload, dict) or payload.get("kind") != "step":
+                    continue
+                declared_role = (
+                    "police" if payload.get("role") == "cop" else payload.get("role")
+                )
+                try:
+                    record_step = int(payload.get("step"))
+                except (TypeError, ValueError):
+                    continue
+                if record_step == expected_step and declared_role == expected_sender:
+                    peer_commits.setdefault(expected_step, str(record.get("commit")))
+                    emit(
+                        f"Accepted step {expected_step} from the early final audit "
+                        "as the terminal peer turn"
+                    )
+                    break
         audit_verdict = verify_audit_records(
             peer_audit.records,
             peer_commits,
@@ -1302,6 +1422,25 @@ class NetworkMatchRunner:
                 "Revealed trajectory contains semantic validation errors; "
                 f"mutual sign-off disabled: {rendered}"
             )
+        if early_terminal_capture_audit:
+            if trajectory.capture_step is not None:
+                emit(
+                    "Opponent entered audit immediately after our capture claim; "
+                    f"the reveal contains a signed caught=true answer at step "
+                    f"{trajectory.capture_step}"
+                )
+            elif trajectory.coincidence_step is not None:
+                semantic_audit_clean = False
+                emit(
+                    "Opponent entered audit immediately after our capture claim, "
+                    "but the reveal did not include a signed caught=true answer; "
+                    "mutual sign-off disabled"
+                )
+            else:
+                emit(
+                    "Opponent entered audit immediately after our capture claim; "
+                    "the reveal did not prove capture, so the live outcome is retained"
+                )
         if trajectory.capture_step is not None:
             if outcome is not MatchOutcome.CAPTURE:
                 emit(
@@ -1793,7 +1932,7 @@ class NetworkMatchRunner:
         )
         path = save_match_result(
             result, s.output_dir,
-            include_sub_game=params.network_league.num_games > 1,
+            include_sub_game=True,
         )
         status = "verified" if mutual_sign_off else "not mutually signed"
         emit(f"Audit {status}; result saved to {path}")
@@ -1893,7 +2032,7 @@ class NetworkMatchRunner:
         )
         path = save_match_result(
             result, s.output_dir,
-            include_sub_game=params.network_league.num_games > 1,
+            include_sub_game=True,
         )
         emit(f"Technical loss recorded (opponent unreachable); result saved to {path}")
         return path
@@ -2022,7 +2161,7 @@ def finalize_completed_series(
         settings.opponent_url, inboxes, sender=settings.role.value,
     )
     terms = NetworkMatchRunner(settings, inboxes, transport=transport)._terms(params)
-    game_uid = derive_game_uid(terms, list(participants))
+    game_uid = derive_game_uid(terms, list(participants), game_id=settings.game_id)
     local_sha = series_consensus_hash(settings.game_id, game_uid, series_result)
     consensus_confirmed = False
     try:
@@ -2187,7 +2326,9 @@ class NetworkMatchSeriesRunner:
         terms = NetworkMatchRunner(
             self.settings, self.inboxes, self.gemini_advisor, self.transport,
         )._terms(params)
-        game_uid = derive_game_uid(terms, list(participants))
+        game_uid = derive_game_uid(
+            terms, list(participants), game_id=self.settings.game_id,
+        )
         local_consensus_sha = series_consensus_hash(
             self.settings.game_id, game_uid, series_result,
         )
