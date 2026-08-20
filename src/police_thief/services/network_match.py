@@ -74,6 +74,7 @@ from police_thief.shared.game_config import config_fingerprint, load_match_param
 
 EventSink = Callable[[str], None]
 NEGOTIATION_TIMEOUT_SECONDS = 600.0
+SERIES_CONSENSUS_TIMEOUT_SECONDS = 600.0
 
 
 @dataclass(frozen=True)
@@ -2163,6 +2164,10 @@ def finalize_completed_series(
     terms = NetworkMatchRunner(settings, inboxes, transport=transport)._terms(params)
     game_uid = derive_game_uid(terms, list(participants), game_id=settings.game_id)
     local_sha = series_consensus_hash(settings.game_id, game_uid, series_result)
+    consensus_timeout = max(
+        params.network_league.response_timeout_sec,
+        SERIES_CONSENSUS_TIMEOUT_SECONDS,
+    )
     consensus_confirmed = False
     try:
         peer = AuditPayload.from_dict(transport.exchange_audit(
@@ -2170,7 +2175,7 @@ def finalize_completed_series(
                 sender=WIRE_ROLES[settings.role.value], records=[],
                 result_claim="series_consensus", consensus_sha=local_sha,
             ).to_dict(),
-            params.network_league.response_timeout_sec,
+            consensus_timeout,
         ))
         expected_sender = WIRE_ROLES[
             AgentRole.THIEF.value
@@ -2332,6 +2337,10 @@ class NetworkMatchSeriesRunner:
         local_consensus_sha = series_consensus_hash(
             self.settings.game_id, game_uid, series_result,
         )
+        consensus_timeout = max(
+            params.network_league.response_timeout_sec,
+            SERIES_CONSENSUS_TIMEOUT_SECONDS,
+        )
         subgames_mutually_verified = bool(
             subgames and all(bool(row["mutual_sign_off"]) for row in subgames)
         )
@@ -2344,7 +2353,7 @@ class NetworkMatchSeriesRunner:
                     result_claim="series_consensus",
                     consensus_sha=local_consensus_sha,
                 ).to_dict(),
-                params.network_league.response_timeout_sec,
+                consensus_timeout,
             ))
             expected_sender = WIRE_ROLES[
                 AgentRole.THIEF.value
