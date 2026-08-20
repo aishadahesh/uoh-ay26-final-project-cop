@@ -29,7 +29,7 @@
     }
   },
   "email": {
-    "automatic": false,
+    "automatic": true,
     "recipient": "assdiyousef@gmail.com"
   }
 }
