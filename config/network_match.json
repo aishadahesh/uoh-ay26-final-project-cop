@@ -3,11 +3,11 @@
   "peer": {
     "role": "cop",
     "local_port": 8801,
-    "opponent_url": "https://screens-margaret-creatures-integration.trycloudflare.com/mcp",
+    "opponent_url": "https://acts-delegation-victorian-incident.trycloudflare.com/mcp",
     "public_url": "https://cop.uohay26game.com/mcp"
   },
   "match": {
-    "game_id": "G003",
+    "game_id": "G010",
     "sub_game_number": 1,
     "shared_match_secret": "50",
     "output_directory": "results/network"
@@ -20,16 +20,16 @@
       "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
     }
   },
- "team_2": {
-    "name": "sharNamr",
-    "members": ["Sharbel Maroun", "Amr safadi"],
+  "team_2": {
+    "name": "yanell11",
+    "members": ["Nell Khoury", "Yanal Serhan"],
     "repos": {
-      "cop": "https://github.com/SharbelMaroun/p2p-cop-agent",
-      "thief": "https://github.com/SharbelMaroun/p2p-thief-agent"
+      "cop": "https://github.com/Nell-Kh/police-agent",
+      "thief": "https://github.com/Nell-Kh/thief-agent"
     }
   },
   "email": {
     "automatic": false,
-    "recipient": "rmisegal+uoh26finalgame@gmail.com"
+    "recipient": "assdiyousef@gmail.com"
   }
 }

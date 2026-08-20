@@ -105,9 +105,18 @@ def series_consensus_hash(
     return canonical_hash(series_consensus_payload(game_id, game_uid, series_result))
 
 
-def derive_game_uid(terms: dict[str, Any], group_ids: list[str]) -> str:
+def derive_game_uid(
+    terms: dict[str, Any],
+    group_ids: list[str],
+    *,
+    game_id: str | None = None,
+) -> str:
     pair = sorted(group_ids)
-    seed = canonical_bytes(terms) + b"|" + "|".join(pair).encode("utf-8")
+    identity = "|".join(pair)
+    if game_id:
+        label = str(game_id)
+        identity = label if "-vs-" in label else f"{pair[0]}-vs-{pair[1]}-{label}"
+    seed = canonical_bytes(terms) + b"|" + identity.encode("utf-8")
     return str(uuid.UUID(bytes=hashlib.sha256(seed).digest()[:16]))
 
 
@@ -193,7 +202,7 @@ def finalize_submission_bundle(
             f"submission requires exactly two distinct groups; received {sorted(participants)}"
         )
     num_games = int(series_result["num_games"])
-    game_uid = derive_game_uid(terms, list(participants))
+    game_uid = derive_game_uid(terms, list(participants), game_id=game_id)
     links = _links(game_id, participants)
     base = {
         "schema_version": SCHEMA_VERSION,
@@ -425,7 +434,11 @@ def validate_submission_directory(
     if not _iso(declaration.get("game_started_at")):
         errors.append(_error(declaration_path.name, "game_started_at", "ISO-8601 timestamp", declaration.get("game_started_at"), "invalid_value"))
 
-    expected_uid = derive_game_uid(_first_terms(documents), group_ids) if len(group_ids) == 2 and _first_terms(documents) else None
+    expected_uid = (
+        derive_game_uid(_first_terms(documents), group_ids, game_id=game_id)
+        if len(group_ids) == 2 and _first_terms(documents)
+        else None
+    )
     if expected_uid and uid != expected_uid:
         errors.append(_error(declaration_path.name, "game_uid", expected_uid, uid, "derivation_mismatch"))
 

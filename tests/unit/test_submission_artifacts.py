@@ -1,10 +1,12 @@
 import hashlib
 import json
+import uuid
 from email import message_from_bytes
 
 from police_thief.services.gmail_report_sender import build_report_email
 from police_thief.services.submission_artifacts import (
     canonical_bytes,
+    derive_game_uid,
     finalize_submission_bundle,
     public_participant,
     save_submission_validation_report,
@@ -133,6 +135,18 @@ def test_series_consensus_payload_matches_exact_cross_team_preimage():
             },
         ],
     }
+
+
+def test_game_uid_expands_bare_label_to_sorted_pair_game_id():
+    terms = _terms()
+    seed = canonical_bytes(terms) + b"|alpha-vs-beta-G010"
+    expected = str(uuid.UUID(bytes=hashlib.sha256(seed).digest()[:16]))
+
+    assert derive_game_uid(terms, ["beta", "alpha"], game_id="G010") == expected
+    assert (
+        derive_game_uid(terms, ["beta", "alpha"], game_id="alpha-vs-beta-G010")
+        == expected
+    )
 
 
 def test_finalize_builds_and_validates_all_required_json(tmp_path):
