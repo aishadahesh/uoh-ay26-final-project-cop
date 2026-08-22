@@ -930,9 +930,11 @@ class NetworkMatchRunner:
         params = load_match_parameters(s.shared_config)
         timeout = params.network_league.response_timeout_sec
         terms = self._terms(params)
+        own_agreement = create_agreement(terms, own_identity)
+        self.transport.inboxes.set_local_agreement(own_agreement)
         emit("Negotiating peer session")
         peer_agreement = self.transport.exchange_agreement(
-            create_agreement(terms, own_identity), NEGOTIATION_TIMEOUT_SECONDS,
+            own_agreement, NEGOTIATION_TIMEOUT_SECONDS,
         )
         peer_identity = verify_agreement(peer_agreement, terms)
         emit(f"Peer session established with {peer_identity.get('group_name', 'opponent')}")

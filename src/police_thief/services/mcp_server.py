@@ -26,11 +26,21 @@ class PeerInboxes:
         self.audits: queue.Queue[dict] = queue.Queue()
         self.controls: queue.Queue[dict] = queue.Queue()
         self._delivery_lock = threading.Lock()
+        self._agreement_lock = threading.Lock()
+        self._local_agreement: dict | None = None
         self._delivered: dict[str, OrderedDict[str, None]] = {
             "agreements": OrderedDict(),
             "turns": OrderedDict(),
             "audits": OrderedDict(),
         }
+
+    def set_local_agreement(self, agreement: dict) -> None:
+        with self._agreement_lock:
+            self._local_agreement = dict(agreement)
+
+    def local_agreement(self) -> dict | None:
+        with self._agreement_lock:
+            return dict(self._local_agreement) if self._local_agreement is not None else None
 
     def enqueue_once(self, inbox_name: str, payload: dict) -> bool:
         """Queue a retriable payload once and acknowledge safe redelivery.
@@ -71,7 +81,11 @@ def build_peer_server(role: str, inboxes: PeerInboxes) -> FastMCP:
             direction="in", tool="negotiate", payload=message,
             result="accepted", queued=queued,
         )
-        return {"ok": True, "accepted": True, "kind": "negotiate", "errors": []}
+        response = {"ok": True, "accepted": True, "kind": "negotiate", "errors": []}
+        agreement = inboxes.local_agreement()
+        if agreement is not None:
+            response["agreement"] = agreement
+        return response
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def receive_turn(message: dict) -> dict:

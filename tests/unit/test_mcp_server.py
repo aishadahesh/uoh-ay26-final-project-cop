@@ -42,6 +42,28 @@ async def test_each_tool_acknowledges_and_queues_payload(
 
 
 @pytest.mark.asyncio
+async def test_negotiate_returns_cached_local_agreement_when_available():
+    inboxes = PeerInboxes()
+    agreement = {
+        "terms": {"match_id": "G010"},
+        "identity": {"group_id": "uoh-ay26", "role": "police"},
+        "nonce": "n",
+        "signature": "s",
+    }
+    inboxes.set_local_agreement(agreement)
+    mcp = build_peer_server("cop", inboxes)
+    payload = {"kind": "negotiate"}
+
+    async with Client(mcp) as client:
+        result = await client.call_tool("negotiate", {"message": payload})
+
+    assert result.data["ok"] is True
+    assert result.data["accepted"] is True
+    assert result.data["agreement"] == agreement
+    assert inboxes.agreements.get_nowait() == payload
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("tool", "argument", "inbox_name", "response_kind"),
     [
