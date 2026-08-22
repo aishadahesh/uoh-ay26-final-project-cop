@@ -7,6 +7,10 @@ from police_thief.domain.board import Board, BoardConfig, Move, Position
 from police_thief.services.gemini_agent import GeminiDecision
 from police_thief.services.mcp_server import PeerInboxes
 from police_thief.services.network_match import NetworkMatchRunner, NetworkMatchSettings
+from police_thief.services.network_match import (
+    BOUNDARY_FIRST_TURN_TIMEOUT_SECONDS,
+    _turn_timeout,
+)
 from police_thief.shared.constants import AgentRole
 
 
@@ -70,3 +74,11 @@ def test_move_selection_emits_source_duration_and_reason(monkeypatch):
         "Step 3: Gemini selected EAST (E); valid=True; attempts=1",
         "Step 3: Gemini (1.2s) - Closing on the belief peak.",
     ]
+
+
+def test_first_turn_uses_boundary_timeout() -> None:
+    assert _turn_timeout(120.0, 1) == BOUNDARY_FIRST_TURN_TIMEOUT_SECONDS
+
+
+def test_later_turns_keep_response_timeout() -> None:
+    assert _turn_timeout(120.0, 2) == 120.0

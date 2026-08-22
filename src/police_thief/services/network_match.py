@@ -75,6 +75,13 @@ from police_thief.shared.game_config import config_fingerprint, load_match_param
 EventSink = Callable[[str], None]
 NEGOTIATION_TIMEOUT_SECONDS = 600.0
 SERIES_CONSENSUS_TIMEOUT_SECONDS = 600.0
+BOUNDARY_FIRST_TURN_TIMEOUT_SECONDS = 1200.0
+
+
+def _turn_timeout(base_timeout: float, step: int) -> float:
+    if step == 1:
+        return max(base_timeout, BOUNDARY_FIRST_TURN_TIMEOUT_SECONDS)
+    return base_timeout
 
 
 @dataclass(frozen=True)
@@ -962,6 +969,7 @@ class NetworkMatchRunner:
                 raise RuntimeError("network match cancelled")
             active_role = AgentRole.THIEF if global_turn % 2 == 1 else AgentRole.COP
             step = (global_turn + 1) // 2
+            turn_timeout = _turn_timeout(timeout, step)
             if active_role is self.settings.role:
                 if (
                     self.settings.role is AgentRole.THIEF
@@ -991,7 +999,14 @@ class NetworkMatchRunner:
                         timestamp=now_iso(),
                         claim_response=pending_claim_response,
                     )
-                    self.transport.send_turn(message.to_dict(), timeout)
+                    try:
+                        self.transport.send_turn(message.to_dict(), turn_timeout)
+                    except PeerClientError as exc:
+                        emit(f"Step {step}: failed to deliver capture acknowledgement: {exc}")
+                        self._send_control("quit", "STOPPED")
+                        return self._write_technical_loss_result(
+                            params, own_records, peer_identity, emit,
+                        )
                     emit(f"Step {step}: capture acknowledged; no thief move executed")
                     outcome = MatchOutcome.CAPTURE
                     break
@@ -1098,7 +1113,14 @@ class NetworkMatchRunner:
                     claim_response=pending_claim_response,
                     win_claim=win_claim,
                 )
-                self.transport.send_turn(message.to_dict(), timeout)
+                try:
+                    self.transport.send_turn(message.to_dict(), turn_timeout)
+                except PeerClientError as exc:
+                    emit(f"Step {step}: failed to deliver sealed turn: {exc}")
+                    self._send_control("quit", "STOPPED")
+                    return self._write_technical_loss_result(
+                        params, own_records, peer_identity, emit,
+                    )
                 if self.settings.role is AgentRole.COP:
                     outstanding_capture_claims = [
                         list(claim) for claim in (capture_claim, barrier_placed)
@@ -1121,7 +1143,9 @@ class NetworkMatchRunner:
                 self._send_control("status", "WAITING")
                 expected_sender = WIRE_ROLES[active_role.value]
                 try:
-                    message = peer_turns.receive(expected_sender, step, timeout, emit)
+                    message = peer_turns.receive(
+                        expected_sender, step, turn_timeout, emit,
+                    )
                 except _EarlyAuditReceived as exc:
                     early_peer_audit_payload = exc.payload
                     emit(
@@ -1132,6 +1156,15 @@ class NetworkMatchRunner:
                     if self.settings.role is AgentRole.COP and outstanding_capture_claims:
                         early_terminal_capture_audit = True
                     break
+                except PeerClientError as exc:
+                    emit(
+                        f"Step {step}: timed out waiting for sealed "
+                        f"{expected_sender} turn: {exc}"
+                    )
+                    self._send_control("quit", "STOPPED")
+                    return self._write_technical_loss_result(
+                        params, own_records, peer_identity, emit,
+                    )
                 peer_commits[step] = message.commit
                 inferred_candidates = _infer_public_scent_candidates(
                     board,
