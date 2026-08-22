@@ -150,7 +150,9 @@ def public_participant(identity: dict[str, Any]) -> dict[str, Any]:
         "mcp_servers": dict(identity.get("mcp_servers", {})),
         "llm_model": str(identity.get("llm_model", "unknown")),
         "hardware_spec": dict(spec),
-        "github_commit": str(identity.get("git_commit_hash", "")),
+        "github_commit": str(
+            identity.get("git_commit_hash") or identity.get("github_commit") or ""
+        ),
         "code_version": str((identity.get("protocol") or {}).get("version", "3.0.0")),
     }
     # A SHA-256 integrity signature over exactly the public declaration.

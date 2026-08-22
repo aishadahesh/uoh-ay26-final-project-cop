@@ -53,6 +53,10 @@ def _digest(payload: dict, nonce: str) -> str:
     return hashlib.sha256(f"{_canonical(payload)}|{nonce}".encode()).hexdigest()
 
 
+def _identity_commit_hash(identity: dict) -> str:
+    return str(identity.get("git_commit_hash") or identity.get("github_commit") or "")
+
+
 def seal_payload(payload: dict) -> dict:
     nonce = secrets.token_hex(32)
     return {"payload": payload, "nonce": nonce, "commit": _digest(payload, nonce)}
@@ -72,12 +76,16 @@ def create_agreement(
     terms: dict, identity: dict, conformance: dict | None = None,
 ) -> dict:
     nonce = secrets.token_hex(16)
+    commit_hash = _identity_commit_hash(identity)
     agreement = {
         "terms": terms,
         "nonce": nonce,
         "signature": _digest(terms, nonce),
         "identity": identity,
     }
+    if commit_hash:
+        agreement["git_commit_hash"] = commit_hash
+        agreement["github_commit"] = commit_hash
     if conformance is not None:
         agreement["conformance"] = conformance
     return agreement
@@ -108,6 +116,13 @@ def verify_agreement(message: dict, expected_terms: dict) -> dict:
         raise NetworkProtocolError(f"opponent game terms do not match: {details}")
     if not secrets.compare_digest(signature, _digest(terms, nonce)):
         raise NetworkProtocolError("opponent negotiation signature is invalid")
+    for field in ("git_commit_hash", "github_commit"):
+        if not identity.get(field) and message.get(field):
+            identity[field] = str(message[field])
+    commit_hash = _identity_commit_hash(identity)
+    if commit_hash:
+        identity.setdefault("git_commit_hash", commit_hash)
+        identity.setdefault("github_commit", commit_hash)
     return identity
 
 

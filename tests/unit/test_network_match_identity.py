@@ -44,4 +44,5 @@ def test_sealed_step_zero_contains_the_serving_git_commit(monkeypatch):
     record = _runner()._sealed_system_spec()
 
     assert record["payload"]["git_commit_hash"] == commit
+    assert record["payload"]["github_commit"] == commit
     assert verify_record(record)

@@ -54,6 +54,16 @@ def _record(step, role, move):
     return {"payload": payload, "nonce": nonce, "h_commit": commit}
 
 
+def test_public_participant_accepts_github_commit_alias():
+    identity = _identity("alpha")
+    identity.pop("git_commit_hash")
+    identity["github_commit"] = "c" * 40
+
+    participant = public_participant(identity)
+
+    assert participant["github_commit"] == "c" * 40
+
+
 def _bundle(tmp_path, scores=None):
     participants = {
         key: public_participant(_identity(key)) for key in ("alpha", "beta")

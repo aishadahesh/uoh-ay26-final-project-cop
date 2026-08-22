@@ -135,6 +135,19 @@ def test_signed_negotiation_round_trip():
     assert verify_agreement(message, terms) == {"group_name": "Alpha"}
 
 
+def test_signed_negotiation_mirrors_and_accepts_commit_aliases():
+    terms = {"board_size": 7}
+    identity = {"group_name": "Alpha", "github_commit": "a" * 40}
+
+    message = create_agreement(terms, identity)
+    verified = verify_agreement(message, terms)
+
+    assert message["git_commit_hash"] == "a" * 40
+    assert message["github_commit"] == "a" * 40
+    assert verified["git_commit_hash"] == "a" * 40
+    assert verified["github_commit"] == "a" * 40
+
+
 def test_signed_negotiation_carries_public_conformance_manifest():
     terms = {"board_size": 7}
     manifest = {"game_config_sha256": "a" * 64}

@@ -1476,8 +1476,13 @@ class NetworkMatchRunner:
                     f"retaining the live {outcome.value!r} outcome without mutual "
                     "sign-off"
                 )
+        peer_commit_hash = str(
+            peer_identity.get("git_commit_hash")
+            or peer_identity.get("github_commit")
+            or ""
+        )
         mutual_sign_off = bool(re.fullmatch(
-            r"[0-9a-f]{40}", str(peer_identity.get("git_commit_hash", "")),
+            r"[0-9a-f]{40}", peer_commit_hash,
         )) and peer_claim_matches and semantic_audit_clean and not missing_claim_response
         if not mutual_sign_off:
             emit(
@@ -1763,6 +1768,7 @@ class NetworkMatchRunner:
     def _identity(self) -> dict:
         s = self.settings
         hardware = gather_hardware_spec(s.llm_model)
+        commit_hash = get_git_commit_hash(str(s.shared_config.parent.parent))
         return {
             "group_id": s.team_name.lower().replace(" ", "-"),
             "group_name": s.team_name,
@@ -1783,7 +1789,8 @@ class NetworkMatchRunner:
                 "vram_gb": "unknown",
             },
             "protocol": {"name": "police-thief-mcp", "version": "3.0.0"},
-            "git_commit_hash": get_git_commit_hash(str(s.shared_config.parent.parent)),
+            "git_commit_hash": commit_hash,
+            "github_commit": commit_hash,
         }
 
     def _validate_peer_identity(self, identity: dict) -> None:
@@ -1812,6 +1819,9 @@ class NetworkMatchRunner:
 
     def _sealed_system_spec(self) -> dict:
         """Build the lecturer-reference step-0 record revealed at final audit."""
+        commit_hash = get_git_commit_hash(
+            str(self.settings.shared_config.parent.parent)
+        )
         payload = {
             "step": 0,
             "type": "system_spec",
@@ -1820,9 +1830,8 @@ class NetworkMatchRunner:
             "code_version": "3.0.0",
             "group_name": self.settings.team_name,
             "sub_game_number": self.settings.sub_game_number,
-            "git_commit_hash": get_git_commit_hash(
-                str(self.settings.shared_config.parent.parent)
-            ),
+            "git_commit_hash": commit_hash,
+            "github_commit": commit_hash,
         }
         return seal_payload(payload)
 
