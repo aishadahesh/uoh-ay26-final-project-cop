@@ -11,10 +11,10 @@ Send this document to an opposing team before a friendly or counted series. It r
 | Cop repository | <https://github.com/aishadahesh/uoh-ay26-final-project-cop> |
 | Thief repository | <https://github.com/aishadahesh/uoh-ay26-final-project-thief> |
 | Cop endpoint | `https://cop.uohay26game.com/mcp` |
-| Thief endpoint | `https://theif.uohay26game.com/mcp` |
+| Thief endpoint | `https://thief.uohay26game.com/mcp` |
 | Automatic-report sender | `aishadahesh11@gmail.com` |
 
-The spelling `theif.uohay26game.com` is deliberate and matches the deployed hostname.
+The spelling `thief.uohay26game.com` is deliberate and matches the deployed hostname.
 
 ## Information required from the opponent
 
