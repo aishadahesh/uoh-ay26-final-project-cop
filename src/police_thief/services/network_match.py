@@ -1349,7 +1349,10 @@ class NetworkMatchRunner:
             expected_sender, expected_step = early_audit_turn
             for record in peer_audit.records:
                 payload = record.get("payload") if isinstance(record, dict) else None
-                if not isinstance(payload, dict) or payload.get("kind") != "step":
+                if not isinstance(payload, dict):
+                    continue
+                payload_kind = payload.get("kind") or payload.get("type")
+                if payload_kind not in {"step", "turn"}:
                     continue
                 declared_role = (
                     "police" if payload.get("role") == "cop" else payload.get("role")
