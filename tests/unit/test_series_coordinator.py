@@ -108,6 +108,45 @@ def test_run_series_resumes_after_verified_existing_artifact(tmp_path, monkeypat
     assert calls[0][calls[0].index("--sub-game-number") + 1] == "2"
 
 
+def test_run_series_stops_after_unsigned_subgame_result(tmp_path, monkeypatch) -> None:
+    current = tmp_path / "cop"
+    sibling = tmp_path / "thief"
+    (current / "config").mkdir(parents=True)
+    (sibling / "config").mkdir(parents=True)
+    output = tmp_path / "results"
+    monkeypatch.setattr(
+        series_coordinator, "load_match_parameters",
+        lambda _path: SimpleNamespace(network_league=SimpleNamespace(num_games=2)),
+    )
+    calls = []
+
+    def fake_run(command, *, cwd, env, check):
+        calls.append(command)
+        number = int(command[command.index("--sub-game-number") + 1])
+        (output / f"log_G003_g{number:02d}.json").parent.mkdir(parents=True, exist_ok=True)
+        (output / f"log_G003_g{number:02d}.json").write_text("[]", encoding="utf-8")
+        (output / f"result_G003_g{number:02d}.json").write_text(json.dumps({
+            "game_id": "G003",
+            "sub_game_number": number,
+            "outcome": "survival",
+            "mutual_sign_off": False,
+        }), encoding="utf-8")
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(series_coordinator.subprocess, "run", fake_run)
+    try:
+        series_coordinator.run_series(
+            current_role=AgentRole.COP, first_role=AgentRole.COP,
+            current_repo=current, sibling_repo=sibling, config_root=current / "config",
+            output_dir=output, game_id="G003", first_sub_game=1,
+        )
+    except RuntimeError as exc:
+        assert "mutual_sign_off=False" in str(exc)
+    else:
+        raise AssertionError("run_series should stop after an unsigned sub-game")
+    assert len(calls) == 1
+
+
 def test_finalize_completed_series_builds_six_game_result(tmp_path, monkeypatch) -> None:
     participants = {
         "alpha": {"group_name": "alpha", "github_commit": "a" * 40, "mcp_servers": {}},

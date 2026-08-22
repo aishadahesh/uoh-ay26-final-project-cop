@@ -64,6 +64,21 @@ def _completed_result(output_dir: Path, game_id: str, number: int) -> dict | Non
     return result
 
 
+def _load_subgame_result(output_dir: Path, game_id: str, number: int) -> dict:
+    result_path = output_dir / f"result_{game_id}_g{number:02d}.json"
+    if not result_path.is_file():
+        raise RuntimeError(
+            f"sub-game {number} finished but result file is missing: {result_path}"
+        )
+    try:
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"sub-game {number} wrote an unreadable result file") from exc
+    if result.get("game_id") != game_id or int(result.get("sub_game_number", -1)) != number:
+        raise RuntimeError(f"sub-game {number} wrote a result for a different game")
+    return result
+
+
 def _archive_incomplete_attempt(output_dir: Path, game_id: str, number: int) -> None:
     names = (
         f"config_{game_id}_g{number:02d}.json",
@@ -185,6 +200,13 @@ def run_series(
             raise RuntimeError(
                 f"sub-game {number} ({role_name}) exited with code "
                 f"{completed.returncode}; series stopped without fabricating later results"
+            )
+        result = _load_subgame_result(output_dir, game_id, number)
+        if result.get("outcome") == "technical_loss" or result.get("mutual_sign_off") is not True:
+            raise RuntimeError(
+                f"sub-game {number} ({role_name}) ended as "
+                f"{result.get('outcome')!r} with mutual_sign_off="
+                f"{result.get('mutual_sign_off')!r}; series stopped for diagnosis/replay"
             )
 
     final_path = output_dir / f"result_{game_id}.json"

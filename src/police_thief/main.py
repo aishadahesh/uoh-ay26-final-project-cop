@@ -157,16 +157,19 @@ def _peer(args: argparse.Namespace) -> None:
         first_role = (
             AgentRole.COP if args.series_first_role == "police" else AgentRole.THIEF
         )
-        run_series(
-            current_role=AgentRole.COP,
-            first_role=first_role,
-            current_repo=project_root,
-            sibling_repo=args.sibling_repo,
-            config_root=args.config_root,
-            output_dir=Path(defaults["output"]),
-            game_id=defaults["game"],
-            first_sub_game=int(defaults["subgame"]),
-        )
+        try:
+            run_series(
+                current_role=AgentRole.COP,
+                first_role=first_role,
+                current_repo=project_root,
+                sibling_repo=args.sibling_repo,
+                config_root=args.config_root,
+                output_dir=Path(defaults["output"]),
+                game_id=defaults["game"],
+                first_sub_game=int(defaults["subgame"]),
+            )
+        except RuntimeError as exc:
+            raise SystemExit(f"Series stopped: {exc}") from None
         return
     network = load_network_config(AgentRole.COP, args.config_root)
     try:

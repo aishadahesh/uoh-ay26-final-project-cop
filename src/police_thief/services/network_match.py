@@ -502,15 +502,17 @@ def _updated_candidate_stability(
 def _truthful_capture_claim(
     role: AgentRole,
     own_position: Position,
+    plausible_thief_positions: tuple[Position, ...] = (),
 ) -> list[int] | None:
-    """Challenge the Police post-move cell after every Police movement.
+    """Challenge the Police post-move cell only when public evidence supports it.
 
-    Capture correctness must not depend on an imperfect private belief or a
-    uniquely localizable scent peak.  A wrong challenge is legal and receives
-    ``caught=false``; a matching challenge receives the Thief's signed
-    ``caught=true`` response and terminates the game.
+    Some peers treat any capture_claim as a terminal assertion, so do not use it
+    as a generic position-confirmation probe.  A matching challenge receives the
+    Thief's signed ``caught=true`` response and terminates the game.
     """
     if role is not AgentRole.COP:
+        return None
+    if own_position not in plausible_thief_positions:
         return None
     return [own_position.row, own_position.col]
 
@@ -1053,6 +1055,7 @@ class NetworkMatchRunner:
                 capture_claim = _truthful_capture_claim(
                     self.settings.role,
                     own_position,
+                    public_thief_candidates,
                 )
                 if capture_claim is not None:
                     emit(

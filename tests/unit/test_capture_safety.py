@@ -104,15 +104,19 @@ def test_confirmed_cop_may_occupy_its_own_newly_blocked_barrier_cell():
     assert belief.belief_at(target) == 0.0
 
 
-def test_police_always_claims_its_post_move_cell_without_belief_gate():
+def test_police_does_not_claim_without_public_thief_evidence():
     cop = Position(3, 3)
 
-    assert _truthful_capture_claim(AgentRole.COP, cop) == [3, 3]
+    assert _truthful_capture_claim(AgentRole.COP, cop) is None
     assert _truthful_capture_claim(AgentRole.THIEF, cop) is None
 
 
-def test_cop_claims_recorded_step_13_post_move_cell():
-    assert _truthful_capture_claim(AgentRole.COP, Position(5, 6)) == [5, 6]
+def test_cop_claims_post_move_cell_when_public_evidence_matches():
+    assert _truthful_capture_claim(
+        AgentRole.COP,
+        Position(5, 6),
+        (Position(5, 6), Position(4, 6)),
+    ) == [5, 6]
 
 
 def test_final_audit_detects_recorded_step_13_collision_across_peer_formats():
