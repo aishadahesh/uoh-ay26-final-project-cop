@@ -7,11 +7,15 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
 from police_thief.shared.constants import AgentRole
 from police_thief.shared.game_config import load_match_parameters
+
+SUBGAME_LAUNCH_ATTEMPTS = 3
+SUBGAME_RELAUNCH_DELAY_SECONDS = 3.0
 
 
 def role_for_series_game(first_role: AgentRole, sub_game_number: int) -> AgentRole:
@@ -165,17 +169,9 @@ def run_series(
         )
 
     for number in range(start_number, num_games + 1):
-        _archive_incomplete_attempt(output_dir, game_id, number)
         role = role_for_series_game(first_role, number)
         repo = current_repo if role is current_role else sibling_repo
         role_name = "police" if role is AgentRole.COP else "thief"
-        state = _load_state(state_path, game_id)
-        state.setdefault("games", {})[str(number)] = {
-            "role": role_name,
-            "started_at": datetime.now().astimezone().isoformat(),
-        }
-        _save_state(state_path, state)
-        print(f"Starting sub-game {number}/{num_games} as {role_name.upper()} from {repo}")
         command = [
             sys.executable, "-m", "police_thief", "peer", "--role", role_name,
             "--config-root", str(repo / "config"),
@@ -193,15 +189,57 @@ def run_series(
         environment["PYTHONPATH"] = str(repo / "src") + (
             os.pathsep + existing_pythonpath if existing_pythonpath else ""
         )
-        completed = subprocess.run(
-            command, cwd=repo, env=environment, check=False,
-        )
-        if completed.returncode != 0:
-            raise RuntimeError(
-                f"sub-game {number} ({role_name}) exited with code "
-                f"{completed.returncode}; series stopped without fabricating later results"
+        result = None
+        last_returncode = 0
+        for attempt in range(1, SUBGAME_LAUNCH_ATTEMPTS + 1):
+            _archive_incomplete_attempt(output_dir, game_id, number)
+            state = _load_state(state_path, game_id)
+            state.setdefault("games", {})[str(number)] = {
+                "role": role_name,
+                "started_at": datetime.now().astimezone().isoformat(),
+                "attempt": attempt,
+            }
+            _save_state(state_path, state)
+            suffix = (
+                ""
+                if attempt == 1
+                else f" (launch attempt {attempt}/{SUBGAME_LAUNCH_ATTEMPTS})"
             )
-        result = _load_subgame_result(output_dir, game_id, number)
+            print(
+                f"Starting sub-game {number}/{num_games} as "
+                f"{role_name.upper()} from {repo}{suffix}"
+            )
+            completed = subprocess.run(
+                command, cwd=repo, env=environment, check=False,
+            )
+            last_returncode = completed.returncode
+            result_path = output_dir / f"result_{game_id}_g{number:02d}.json"
+            if result_path.is_file():
+                result = _load_subgame_result(output_dir, game_id, number)
+                break
+            if attempt < SUBGAME_LAUNCH_ATTEMPTS:
+                print(
+                    f"sub-game {number} ({role_name}) exited with code "
+                    f"{completed.returncode} before writing a result; relaunching "
+                    f"in {SUBGAME_RELAUNCH_DELAY_SECONDS:g}s"
+                )
+                time.sleep(SUBGAME_RELAUNCH_DELAY_SECONDS)
+                continue
+            if completed.returncode != 0:
+                raise RuntimeError(
+                    f"sub-game {number} ({role_name}) exited with code "
+                    f"{completed.returncode} after {SUBGAME_LAUNCH_ATTEMPTS} "
+                    "launch attempts; series stopped without fabricating later results"
+                )
+            raise RuntimeError(
+                f"sub-game {number} ({role_name}) finished without writing "
+                f"a result after {SUBGAME_LAUNCH_ATTEMPTS} launch attempts"
+            )
+        if result is None:
+            raise RuntimeError(
+                f"sub-game {number} ({role_name}) produced no result; "
+                f"last child exit code was {last_returncode}"
+            )
         if result.get("outcome") == "technical_loss" or result.get("mutual_sign_off") is not True:
             raise RuntimeError(
                 f"sub-game {number} ({role_name}) ended as "
