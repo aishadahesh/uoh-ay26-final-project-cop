@@ -10,6 +10,7 @@ import time
 from fastmcp import Client
 
 from police_thief.services.mcp_server import PeerInboxes
+from police_thief.services.wire_trace import trace_wire
 
 
 class PeerClientError(RuntimeError):
@@ -63,9 +64,17 @@ class McpPeerTransport:
             ) as client:
                 result = await client.call_tool(tool, {argument_name: payload})
         except Exception as exc:
+            trace_wire(
+                direction="out", tool=tool, peer=self.opponent_url,
+                payload=payload, error=str(exc),
+            )
             raise PeerClientError(
                 f"failed to call {tool} at {self.opponent_url}: {exc}",
             ) from exc
+        trace_wire(
+            direction="out", tool=tool, peer=self.opponent_url,
+            payload=payload, result="http-ok",
+        )
         return result.data
 
     def _send(self, tool: str, argument_name: str, payload: dict, timeout: float) -> dict:
@@ -79,8 +88,16 @@ class McpPeerTransport:
                 time.sleep(self.retry_interval)
                 continue
             if response.get("ok") is True or response.get("accepted") is True:
+                trace_wire(
+                    direction="out", tool=tool, peer=self.opponent_url,
+                    payload=payload, result="accepted",
+                )
                 return response
             rejection = PeerClientError(f"{tool} rejected by opponent: {response}")
+            trace_wire(
+                direction="out", tool=tool, peer=self.opponent_url,
+                payload=payload, result="rejected", error=str(response),
+            )
             if self._is_boundary_retry(tool, response):
                 last_error = rejection
                 remaining = deadline - time.monotonic()

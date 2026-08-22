@@ -46,3 +46,7 @@ def test_sealed_step_zero_contains_the_serving_git_commit(monkeypatch):
     assert record["payload"]["git_commit_hash"] == commit
     assert record["payload"]["github_commit"] == commit
     assert verify_record(record)
+
+
+def test_negotiation_identity_declares_wire_role() -> None:
+    assert _runner()._identity()["role"] == "police"

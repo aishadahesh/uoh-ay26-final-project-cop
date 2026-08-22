@@ -12,6 +12,8 @@ import anyio
 import uvicorn
 from fastmcp import FastMCP
 
+from police_thief.services.wire_trace import trace_wire
+
 TOOL_SCHEMA_VERSION = "3.0.0"
 
 
@@ -64,25 +66,41 @@ def build_peer_server(role: str, inboxes: PeerInboxes) -> FastMCP:
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def negotiate(message: dict) -> dict:
         """Receive signed terms and the opponent's public identity."""
-        inboxes.enqueue_once("agreements", message)
+        queued = inboxes.enqueue_once("agreements", message)
+        trace_wire(
+            direction="in", tool="negotiate", payload=message,
+            result="accepted", queued=queued,
+        )
         return {"ok": True, "accepted": True, "kind": "negotiate", "errors": []}
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def receive_turn(message: dict) -> dict:
         """Receive one public sealed turn; private truth remains committed."""
-        inboxes.enqueue_once("turns", message)
+        queued = inboxes.enqueue_once("turns", message)
+        trace_wire(
+            direction="in", tool="receive_turn", payload=message,
+            result="accepted", queued=queued,
+        )
         return {"ok": True, "accepted": True, "kind": "turn", "errors": []}
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def submit_audit(payload: dict) -> dict:
         """Receive end-of-game records and nonce reveals for verification."""
-        inboxes.enqueue_once("audits", payload)
+        queued = inboxes.enqueue_once("audits", payload)
+        trace_wire(
+            direction="in", tool="submit_audit", payload=payload,
+            result="accepted", queued=queued,
+        )
         return {"ok": True, "accepted": True, "kind": "audit", "errors": []}
 
     @mcp.tool(version=TOOL_SCHEMA_VERSION)
     def receive_control(message: dict) -> dict:
         """Receive enable, status, restart, or quit lifecycle messages."""
         inboxes.controls.put(message)
+        trace_wire(
+            direction="in", tool="receive_control", payload=message,
+            result="accepted", queued=True,
+        )
         return {"ok": True, "accepted": True, "kind": "control", "errors": []}
 
     return mcp

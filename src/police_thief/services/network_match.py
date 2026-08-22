@@ -40,6 +40,7 @@ from police_thief.services.match_reports import (
 )
 from police_thief.services.mcp_client import McpPeerTransport, PeerClientError
 from police_thief.services.mcp_server import PeerInboxes
+from police_thief.services.wire_trace import trace_wire
 from police_thief.services.network_protocol import (
     WIRE_ROLES,
     AuditPayload,
@@ -151,6 +152,11 @@ class _OrderedTurnReceiver:
         buffered = self._buffered.pop(expected_slot, None)
         if buffered is not None:
             emit(f"Step {expected_step}: replaying buffered {expected_sender} turn")
+            trace_wire(
+                direction="local", tool="turn_buffer", payload=buffered.to_dict(),
+                result="replayed", expected_step=expected_step,
+                expected_sender=expected_sender,
+            )
             return buffered
 
         # Retries and future messages do not extend the per-turn deadline.
@@ -174,7 +180,15 @@ class _OrderedTurnReceiver:
                     raw_message = turns.get(timeout=min(0.25, remaining))
                 except queue.Empty:
                     continue
-            message = TurnMessage.from_dict(raw_message)
+            try:
+                message = TurnMessage.from_dict(raw_message)
+            except NetworkProtocolError as exc:
+                trace_wire(
+                    direction="local", tool="turn_buffer", payload=raw_message,
+                    result="malformed", error=str(exc),
+                    expected_step=expected_step, expected_sender=expected_sender,
+                )
+                raise
             slot = (message.sender, message.step)
 
             prior_commit = self._slot_commits.get(slot)
@@ -189,6 +203,11 @@ class _OrderedTurnReceiver:
                     f"Step {expected_step}: absorbed duplicate {message.sender} "
                     f"turn {message.step} (commit {message.commit[:12]}...)"
                 )
+                trace_wire(
+                    direction="local", tool="turn_buffer", payload=raw_message,
+                    result="duplicate", expected_step=expected_step,
+                    expected_sender=expected_sender,
+                )
                 continue
 
             prior_slot = self._commit_slots.get(message.commit)
@@ -201,18 +220,33 @@ class _OrderedTurnReceiver:
             self._commit_slots[message.commit] = slot
 
             if message.sender != expected_sender:
+                trace_wire(
+                    direction="local", tool="turn_buffer", payload=raw_message,
+                    result="wrong-sender", expected_step=expected_step,
+                    expected_sender=expected_sender,
+                )
                 raise NetworkProtocolError(
                     "received a wrong-role turn: "
                     f"expected sender={expected_sender!r}, step={expected_step}; "
                     f"received sender={message.sender!r}, step={message.step}"
                 )
             if message.step < expected_step:
+                trace_wire(
+                    direction="local", tool="turn_buffer", payload=raw_message,
+                    result="stale", expected_step=expected_step,
+                    expected_sender=expected_sender,
+                )
                 raise NetworkProtocolError(
                     "received an unrecognized stale turn: "
                     f"expected sender={expected_sender!r}, step={expected_step}; "
                     f"received sender={message.sender!r}, step={message.step}"
                 )
             if message.step == expected_step:
+                trace_wire(
+                    direction="local", tool="turn_buffer", payload=raw_message,
+                    result="delivered", expected_step=expected_step,
+                    expected_sender=expected_sender,
+                )
                 return message
             if (
                 message.step - expected_step > self._max_buffered
@@ -224,6 +258,11 @@ class _OrderedTurnReceiver:
                     f"limit={self._max_buffered}"
                 )
             self._buffered[slot] = message
+            trace_wire(
+                direction="local", tool="turn_buffer", payload=raw_message,
+                result="buffered", expected_step=expected_step,
+                expected_sender=expected_sender,
+            )
             emit(
                 f"Step {expected_step}: buffered early {message.sender} "
                 f"turn {message.step} while waiting for the missing turn"
@@ -1808,6 +1847,7 @@ class NetworkMatchRunner:
         return {
             "group_id": s.team_name.lower().replace(" ", "-"),
             "group_name": s.team_name,
+            "role": WIRE_ROLES[s.role.value],
             "members": list(s.members),
             "repos": {"cop": s.own_cop_repo, "thief": s.own_thief_repo},
             "mcp_servers": {s.role.value: s.public_url},
