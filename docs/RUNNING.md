@@ -143,7 +143,7 @@ Each sub-game must finish with a verified audit for mutual sign-off. The aggrega
 Open a signed log in the replay viewer:
 
 ```powershell
-uv run python -m police_thief replay --log results/network/log_G009_g01.json
+uv run python -m police_thief replay --log results/log_G009_g01.json
 ```
 
 ### Generate a replay GIF
@@ -152,7 +152,7 @@ Generate a README-ready animation:
 
 ```powershell
 uv run python scripts/visualize_game_log.py `
-  --input results/network/log_G009_g01.json `
+  --input results/log_G009_g01.json `
   --output assets/replays/my-replay.gif `
   --format gif --duration 350 --resolution 960x540
 ```
