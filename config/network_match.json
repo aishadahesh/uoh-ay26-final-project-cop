@@ -3,33 +3,39 @@
   "peer": {
     "role": "cop",
     "local_port": 8801,
-    "opponent_url": "https://screens-margaret-creatures-integration.trycloudflare.com/mcp",
+    "opponent_url": "https://opponent-url.example/mcp",
     "public_url": "https://cop.uohay26game.com/mcp"
   },
   "match": {
-    "game_id": "G003",
+    "game_id": "G009",
     "sub_game_number": 1,
     "shared_match_secret": "50",
     "output_directory": "results/network"
   },
   "team_1": {
     "name": "uoh-ay26",
-    "members": ["Aisha Abu Dahesh", "Yousef Asadi"],
+    "members": [
+      "Aisha Abu Dahesh",
+      "Yousef Asadi"
+    ],
     "repos": {
       "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
       "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
     }
   },
- "team_2": {
-    "name": "sharNamr",
-    "members": ["Sharbel Maroun", "Amr safadi"],
+  "team_2": {
+    "name": "group2-name",
+    "members": [
+      "group2-member1",
+      "group2-member2"
+    ],
     "repos": {
-      "cop": "https://github.com/SharbelMaroun/p2p-cop-agent",
-      "thief": "https://github.com/SharbelMaroun/p2p-thief-agent"
+      "cop": "https://github.com/group2-name/group2-cop-repo",
+      "thief": "https://github.com/group2-name/group2-thief-repo"
     }
   },
   "email": {
-    "automatic": false,
+    "automatic": true,
     "recipient": "rmisegal+uoh26finalgame@gmail.com"
   }
 }
