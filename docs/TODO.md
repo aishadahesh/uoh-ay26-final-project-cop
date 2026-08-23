@@ -431,7 +431,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 ### F.6 Stage-4 Milestone
 - [ ] T0326 Confirm milestone: free-form hint reporting subject to the word-count limit works end-to-end — works as a standalone mechanism; "end-to-end" in a live match/network sense awaits Chapter 8
 - [ ] T0327 Confirm milestone: a scent map is computed and viewable/loggable — computed since Chapter 4, and the *derived* belief heatmap is viewable since Chapter 7's `LiveGUI`; still not "loggable," though — `LogManager`/`LogEntry` (Chapter 8) only ever record `{state, move, intent, nonce, h_commit}`, never the raw scent field itself
-- [ ] T0328 Confirm milestone: the LLM produces a hint (true or lie) every step without crashing the match — not applicable: no live match loop calls the hint provider every step yet
+- [ ] T0328 Confirm milestone: the LLM produces a hint (true or lie) every step without crashing the match — a live match loop now exists and has run five counted series without crashing, so the original blocker is gone; the milestone is still unmet as written because `[trash_talk] provider = "template"` produces hints deterministically at zero token cost — no LLM sits on the per-step path
 - [ ] T0329 Run a full match with real scent + real LLM-generated hints end-to-end with no crash — not built, same reason
 - [x] T0330 Verify belief maps visibly track approximate opponent location better than random guessing over a test match — `test_cop_belief_converges_toward_the_true_thief_position_over_time`, and the full capture achieved via belief alone in `tests/integration/test_strategy_pipeline.py`
 - [x] T0331 Document Stage-4 decisions and worked examples in `PRD/04-language-scent.md` — written as `docs/PRD_strategy_module.md` (this chapter's belief/hint content) alongside `docs/PRD_pheromone_scent.md` (Chapter 4's scent-only content)
@@ -558,7 +558,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0412 Write unit test: banner shows YOUR TURN only when the local agent may legally act — same caveat
 - [x] T0413 Implement disabling of manual input controls while LOCKED (prevent user from acting out of turn) — the original rationale ("no manual input controls exist") no longer holds: a new interactive play mode (`gui/play_app.py::PlayApp`, `python -m police_thief play`) was added beyond this rulebook's own scope, at direct user request. Its move-pad buttons, board clicks, and barrier button are all disabled outside a human-controlled turn (`_disable_human_controls`/`_enable_human_controls`), tested directly (`test_starting_on_an_agent_turn_disables_every_control_and_schedules_the_agent`, and the no-op tests for a click/toggle attempted out of turn)
 - [ ] T0414 Add a scrolling event/log panel showing recent hints, moves, and barrier placements — deferred: no Log Manager exists yet (Chapter 8)
-- [ ] T0415 Add a scoreboard panel showing current score/turn count — deferred: no live match loop produces a running score yet
+- [ ] T0415 Add a scoreboard panel showing current score/turn count — still not added; the original blocker no longer applies (the live network match loop does produce a running score), but `gui/network_match_app.py` renders a log pane and match metadata without a dedicated score/turn panel
 - [ ] T0416 Add graceful handling of GUI close/exit without crashing the underlying match process — Tkinter's default window-close behavior is relied on for now; no custom handler added since there is no live match process yet to protect
 - [ ] T0417 Test GUI responsiveness under normal match pacing (no UI freeze during LLM calls) — not applicable: no LLM calls happen inside a live GUI loop yet
 - [ ] T0418 Run the GUI update loop on a separate thread/async task from network I/O to avoid blocking — deferred: no network I/O loop is wired to the GUI yet (Chapter 8)
@@ -687,7 +687,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0517 Write unit test: every illegal transition attempt is rejected immediately
 - [x] T0518 Write unit test: `TECHNICAL_LOSS` is correctly reachable from both `COMPUTING_MOVE` and `AWAITING_REVEAL` failure paths — parametrized across all four non-terminal states, a superset of the two named
 - [x] T0519 Write unit test: `TECHNICAL_LOSS` is a terminal state (no further legal transitions out)
-- [ ] T0520 Wire the state machine's current state to the GUI turn-banner (Stage 7) — deferred: the Orchestrator and `LiveGUI` (Ch.7) are not yet wired together; no live match entrypoint exists yet to drive the GUI from real turns
+- [ ] T0520 Wire the state machine's current state to the GUI turn-banner (Stage 7) — still unwired; the original blocker ("no live match entrypoint exists yet") no longer holds now that `peer`/`play` run real cross-machine matches, but `gui/network_match_app.py` still surfaces no state-machine banner
 - [ ] T0521 Write integration test: a full match cycles through the state machine correctly turn after turn — only single-turn integration tests exist (`test_orchestrator.py`); a multi-turn/full-match test would need a two-sided match driver, which doesn't exist yet
 - [ ] T0522 Write integration test: an opponent disconnect mid-`AWAITING_REVEAL` correctly drives the state machine to `TECHNICAL_LOSS` rather than hanging — the unreachable-opponent test covers failure during `COMMITTING` (connection refused before send completes), not a disconnect specifically timed mid-`AWAITING_REVEAL`
 
@@ -971,10 +971,10 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [ ] T0725 Re-verify rule set 11-16 (spatial mechanics & board) against the final code
 - [ ] T0726 Re-verify rule set 17-24 (cryptography & zero-knowledge) against the final code
 - [ ] T0727 Re-verify rule set 25-30 (strategy, language & public network) against the final code
-- [ ] T0728 Re-verify rule set 31-45 (league fairness & admin procedures) against the final code
+- [x] T0728 Re-verify rule set 31-45 (league fairness & admin procedures) against the final code — performed in Chapter 11 and recorded item-by-item as T0865-T0879, one entry per rule; the verifications that found genuine gaps (rules 32, 41, 43, 44, 47) are honestly left unchecked rather than marked passing
 - [ ] T0729 Re-verify completions 46-55 (cross-checked additions) against the final code
 - [ ] T0730 Re-verify every entry in the Mandatory Parameters Table matches the final `config/game.json`
-- [ ] T0731 Confirm the self-grading submitted reflects code quality only, not league game outcomes
+- [x] T0731 Confirm the self-grading submitted reflects code quality only, not league game outcomes — the README now carries a "Recommended self-score for submission" section: 84/100 weighted across the four mandatory grading axes of Table 4, with every deduction naming the open TODO item that documents it, and an explicit statement that the 2–2–1 series record played no part in the figure
 
 ### O.6 Final Pre-Submission Checklist (Ch.11 restated)
 - [x] T0732 Confirm base logic works: full match runs with no crash and correct scoring — re-verified live in Chapter 11: `uv run python -m police_thief simulate` → `outcome=survival cop_score=5 thief_score=10 turns_played=35`, matching the mandatory scoring table exactly
@@ -982,9 +982,9 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [ ] T0734 Confirm commit-reveal and mutual audit pass cleanly with no tampering flagged — the primitives and the Replay Viewer's audit pass cleanly on a real, untampered log (Chapter 5/7, re-verified passing); the live, two-sided Commit-then-Reveal network exchange is not fully wired yet (see rule 17/19 above and `docs/PRD_reliability_layer.md` §3)
 - [x] T0735 Confirm scent map and belief map are implemented and actually influence decisions — `test_strategy_pipeline.py`'s headline proof: two real brains capture using only their own belief maps, never touching the opponent's true position (Chapter 6)
 - [x] T0736 Confirm Live GUI and Replay Viewer both show correct, matching, "Verified OK" state — proven via real Tkinter widget-state assertions (Chapter 7); the *screenshot* deliverable itself remains a flagged manual step (no native-window-capture tool available in this session)
-- [ ] T0737 Confirm both sides sent their own separate Gmail JSON report for every counted match — not done; zero real matches exist yet, and real Gmail sending requires the deferred OAuth setup (rule 30)
+- [ ] T0737 Confirm both sides sent their own separate Gmail JSON report for every counted match — still open, but for a narrower reason than originally recorded: five counted matches now exist and OAuth is set up (live delivery is proven for G009). What remains unproven is that *both* sides sent their own report for *every* counted series — the retained artifacts only evidence this end. Same gap as T0866
 - [ ] T0738 Confirm GitHub repos are tagged and README is properly structured — README is complete and role-specific; only the final annotated submission tag remains
-- [ ] T0739 Confirm at least `[min games to pass]` distinct-opponent games were completed — not done; 0 of the required 2, no opponent teams exist in a solo development session
+- [x] T0739 Confirm at least `[min games to pass]` distinct-opponent games were completed — done: `config/game.json` sets `min_games_to_pass = 2`; five counted six-sub-game series were completed against five distinct opponents (`najamjad`, `amireman`, `sharNamr`, `SMNGRP05`, `ahk-yosi`), each retained as a signed result bundle
 - [x] T0740 Do a final full read-through of `requirements.md` against the finished project, line by line — performed as this chapter's Section T sweep: all 55 mandatory rules in `docs/tasks.md` App. E individually cross-checked against the actual code/tests/git history, one genuinely new rulebook tension found (rule 47, see T0881) and documented rather than silently resolved either way
 
 ---

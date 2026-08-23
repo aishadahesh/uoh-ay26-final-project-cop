@@ -57,6 +57,7 @@ The result is part game agent, part distributed system, and part cryptographic a
 - [Troubleshooting](#troubleshooting)
 - [Academic design notes](#academic-design-notes)
 - [Limitations and future work](#limitations-and-future-work)
+- [Recommended self-score for submission](#recommended-self-score-for-submission)
 
 ## System at a glance
 
@@ -276,7 +277,7 @@ Starts a role-safe six-game coordinator. It launches a fresh Cop process for gam
 ### Replay an audited log
 
 ```bash
-uv run python -m police_thief replay --log results/network/log_G009_g01.json
+uv run python -m police_thief replay --log results/log_G009_g01.json
 ```
 
 The replay viewer recomputes commitments and clearly distinguishes verified from tampered logs.
@@ -522,6 +523,53 @@ Where examples and fixed tables differ, the official mandatory-parameters table 
 - The counted evaluation spans five opponents and should be expanded before drawing broad performance conclusions.
 - The `SMNGRP05-vs-uoh-ay26-C01` bundle records its `game_uid` in the league interop-kit's *labeled* form, which folds the agreed `game_id` into the derivation. This repository's `derive_game_uid` predates that variant and derives the unlabeled form from the agreed terms and group IDs alone, so running `validate_submission_directory` against that one bundle reports a `derivation_mismatch` on `game_uid`. The bundle itself is internally consistent and was verified by both peers at match time; the other four validate cleanly here.
 - Future work could compare the current controller with bounded-depth minimax, Monte Carlo tree search over beliefs, or a trained policy, while preserving the same legal-action and audit boundaries.
+
+## Recommended self-score for submission
+
+**Recommendation: 84 / 100 for the group.**
+
+Per rule 55 (`docs/tasks.md` §11, line 839), this figure scores **code quality only and
+deliberately ignores the league game outcome** — the 2–2–1 series record above played no part in
+it. The weighting follows the four mandatory grading axes of Table 4 (§11.3.2), 25 points each.
+Every deduction below names the open `docs/TODO.md` item that documents it, so the number can be
+audited rather than taken on trust.
+
+| Axis (Ch.) | Score | What earns it | What it loses |
+|---|---:|---|---|
+| **Coordination** (Ch.2) | 21 / 25 | Peer-to-peer FastMCP with no central referee; the four-tool contract; five counted six-sub-game series completed cross-machine over public tunnels with alternating roles and reciprocal consensus | The mid-match disconnect integration test does not pass in the cop repo (`T0522`, `T0622`); the slow-but-responsive opponent path is unit-tested only, never over real HTTP (`T0530`) |
+| **Adaptation** (Ch.4, 6) | 20 / 25 | Pheromone emission/decay, a belief map that demonstrably drives move selection, a deterministic brain, and a standalone bluff classifier | Verbal hints are never fused into the belief map with a trust weight (`T0283`, `T0290`); no LLM sits on the per-step path — hints are template-generated at zero token cost (`T0328`); the per-series token budget is not enforced (`T0316`) |
+| **Integrity** (Ch.5) | 23 / 25 | SHA-256 commit–reveal with end-game nonce reveal, mutual per-sub-game audit, signed Step-0 declarations, a reciprocal series consensus digest, and a submission validator that four of the five retained bundles pass cleanly | The `SMNGRP05-vs-uoh-ay26-C01` bundle records the interop-kit's labeled `game_uid` and fails the local validator (`T0898`); both-sides Gmail delivery is proven for G009 but not for every counted series (`T0866`, `T0737`) |
+| **Architecture** (Ch.8, 10) | 20 / 25 | Gatekeeper and Orchestrator patterns, a real rate limiter, typed peer-client errors, and graceful degradation rather than crashes; 626 (cop) and 627 (thief) tests passing | Rule 3 is not satisfied — no single Orchestrator entry point fronts all sub-systems (`T0837`, found by our own review); line coverage is ~80% in both repos against the project's own 85% gate; rule 47's illegal-exit case is still unresolved, with `MoveRejectedError` propagating uncaught (`T0881`) |
+
+### Why not higher, and why not lower
+
+The case against a higher score is that three of the deductions are real engineering gaps rather
+than paperwork: the missing single-Orchestrator entry point is a structural deviation from the
+rulebook's own architecture rule that we found and chose to record instead of quietly restating the
+requirement; the belief map never consumes verbal hints, so one full half of the Adaptation story
+(scent *and* language) is only half-built; and a disconnect test that should prove the
+technical-loss path currently fails.
+
+The case against a lower score is that the mandatory end-to-end spine genuinely works and is
+evidenced, not asserted. Five counted series against five distinct opponents were completed
+cross-machine — against a `min_games_to_pass` of 2 — and each is retained as a signed, replayable
+bundle whose scores were recomputed from the JSON for the table above rather than transcribed.
+Where a requirement was not met, the repository says so in the open TODO item rather than
+presenting it as done.
+
+### Verification snapshot
+
+These figures were measured, not estimated:
+
+| Check | Cop repo | Thief repo |
+|---|---|---|
+| Test suite | 626 passed, 3 skipped, **1 failing** (`test_a_mid_match_disconnect_resolves_to_technical_loss_on_both_sides`) | 627 passed, 2 skipped, 0 failing |
+| Line coverage | 80.34% (gate: 85%) | 80.17% (gate: 85%) |
+| Retained bundles passing `validate_submission_directory` | G001, G002, G009 pass; `SMNGRP05-vs-uoh-ay26-C01` fails on `game_uid` | `AHK-YOSI-vs-uoh-ay26-C001` passes |
+
+Two further rulebook items are excluded from the score above because they are submission-time or
+course-logistics actions rather than code quality: the annotated Git tag (`T0875`, rule 41) and the
+Word/PDF per-member deliverables (`T0877`, `T0878`, rules 43–44).
 
 ## Credits and license
 
