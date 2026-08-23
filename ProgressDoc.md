@@ -36,7 +36,7 @@ print(send_move('http://127.0.0.1:8801/mcp', signed_move='N', signature='abc123'
 
 ## Current verified project status
 
-As of 2026-08-14, the team has completed three counted six-sub-game series
+As of 2026-08-23, the team has completed four counted six-sub-game series
 against distinct opponents. Every aggregate listed below records
 `mutual_agreement.confirmed=true`.
 
@@ -45,7 +45,8 @@ against distinct opponents. Every aggregate listed below records
 | G001 | `najamjad` | 0–6 | 30–90 | Loss |
 | G002 | `amireman` | 4–2 | 60–40 | Win |
 | G009 | `sharNamr` | 2–4 | 40–60 | Loss |
-| **Total** | 3 distinct teams | **6–12** | **130–190** | **1–2** |
+| `SMNGRP05-vs-uoh-ay26-C01` | `SMNGRP05` | 3–3 | 47–47 | Tie |
+| **Total** | 4 distinct teams | **9–15** | **177–237** | **1–2–1** |
 
 The current live path includes cross-machine FastMCP, Cloudflare endpoints,
 Step-0 attestation, sealed turns, end-game nonce reveal, signed Capture Claim

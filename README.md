@@ -15,7 +15,7 @@ The two applications are deliberately separate. Each process owns its private st
 
 This repository presents an evidence-driven autonomous pursuer for a decentralized, partially observable grid game. The engineering problem is broader than shortest-path search: two independently operated agents must coordinate turns over an unreliable public network, preserve private state during play, resist retrospective tampering, and still derive the same result without a trusted referee. The implementation therefore combines a probabilistic opponent model, deterministic legal-action and barrier analysis, bounded Gemini assistance, FastMCP orchestration, SHA-256 commit–reveal records, Step-0 environment attestation, mutual replay audit, and machine-readable reporting.
 
-The central design claim is that competitive strength and protocol integrity should reinforce one another. The Cop pursues a belief distribution rather than hidden truth; every proposed action is checked by deterministic board physics; and every outcome remains traceable to signed, replayable evidence. Three counted six-sub-game series against independent teams provide the empirical basis reported below. Both a successful capture and a failed pursuit are retained as reproducible artifacts so the report documents capability and limitation with equal transparency.
+The central design claim is that competitive strength and protocol integrity should reinforce one another. The Cop pursues a belief distribution rather than hidden truth; every proposed action is checked by deterministic board physics; and every outcome remains traceable to signed, replayable evidence. Four counted six-sub-game series against independent teams provide the empirical basis reported below. Both a successful capture and a failed pursuit are retained as reproducible artifacts so the report documents capability and limitation with equal transparency.
 
 ### Contributions
 
@@ -383,20 +383,21 @@ Treat the shared JSON as match law. Treat role TOML and secrets as local operati
 
 ## Verified match history
 
-The team has completed **three counted six-sub-game series**. “Series W/L” is from `uoh-ay26`'s perspective.
+The team has completed **four counted six-sub-game series**. “Series W/L” is from `uoh-ay26`'s perspective.
 
 | Series | Opponent | Series W/L | Sub-games won | Score | Mutual agreement |
 |---|---|---:|---:|---:|---|
 | G001 | `najamjad` | Loss | 0–6 | 30–90 | Confirmed |
 | G002 | `amireman` | Win | 4–2 | 60–40 | Confirmed |
 | G009 | `sharNamr` | Loss | 2–4 | 40–60 | Confirmed |
-| **Total** | 3 opponents | **1–2** | **6–12** | **130–190** | 3 verified series |
+| `SMNGRP05-vs-uoh-ay26-C01` | `SMNGRP05` | Tie | 3–3 | 47–47 | Confirmed |
+| **Total** | 4 opponents | **1–2–1** | **9–15** | **177–237** | 4 verified series |
 
 The table is derived from the saved aggregate result JSON files, not from screenshots or memory. Friendly/non-counted verification runs are excluded.
 
 ## Experimental methodology
 
-The empirical evaluation uses three counted series against three independently implemented opponent teams. Each series contains six sub-games with alternating roles. A row enters the table only after the local aggregate and the opponent's aggregate agree on all six outcomes, scores, winner, and consensus digest; friendly and aborted runs are excluded.
+The empirical evaluation uses four counted series against four independently implemented opponent teams. Each series contains six sub-games with alternating roles. A row enters the table only after the local aggregate and the opponent's aggregate agree on all six outcomes, scores, winner, and consensus digest; friendly and aborted runs are excluded.
 
 The primary outcome measures are sub-games won and role-correct score. Integrity is reported separately through mutual agreement rather than inferred from competitive outcome. This distinction matters: a legal loss with a verified audit is valid evidence, whereas an apparent win with unverifiable records is not. The 18-sub-game sample demonstrates cross-implementation compatibility and exposes strategy weaknesses, but it is too small and opponent-dependent to support a claim of statistical superiority.
 
@@ -517,7 +518,7 @@ Where examples and fixed tables differ, the official mandatory-parameters table 
 - The belief update depends on the informativeness of the public scent field and can remain diffuse when evidence saturates.
 - Heuristic barrier evaluation is interpretable but does not exhaustively solve the adversarial game tree.
 - Public-tunnel availability remains an infrastructure dependency outside the core strategy.
-- The counted evaluation spans three opponents and should be expanded before drawing broad performance conclusions.
+- The counted evaluation spans four opponents and should be expanded before drawing broad performance conclusions.
 - Future work could compare the current controller with bounded-depth minimax, Monte Carlo tree search over beliefs, or a trained policy, while preserving the same legal-action and audit boundaries.
 
 ## Credits and license

@@ -3,13 +3,14 @@
 ## Counted-series evidence now available
 
 The original analysis below used the earliest supplied G001 logs. The repository
-now holds three mutually verified counted-series aggregates:
+now holds four mutually verified counted-series aggregates:
 
 | Series | Opponent | uoh-ay26 sub-games | Score |
 |---|---|---:|---:|
 | G001 | `najamjad` | 0–6 | 30–90 |
 | G002 | `amireman` | 4–2 | 60–40 |
 | G009 | `sharNamr` | 2–4 | 40–60 |
+| `SMNGRP05-vs-uoh-ay26-C01` | `SMNGRP05` | 3–3 | 47–47 |
 
 These results show that legality and audit correctness do not imply a guaranteed
 strategy win. The README therefore includes both win and loss replays. Cop
