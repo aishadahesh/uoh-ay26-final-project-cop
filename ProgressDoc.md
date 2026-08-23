@@ -49,6 +49,13 @@ against distinct opponents. Every aggregate listed below records
 | `AHK-YOSI-vs-uoh-ay26-C001` | `ahk-yosi` | 5–1 | 75–35 | Win |
 | **Total** | 5 distinct teams | **14–16** | **252–272** | **2–2–1** |
 
+One known limitation in the retained evidence: the `SMNGRP05-vs-uoh-ay26-C01` bundle records the league interop-kit's *labeled* `game_uid`
+(the agreed `game_id` folded into the derivation), while this repository derives the
+unlabeled form from the agreed terms and group IDs. Re-running the local
+`validate_submission_directory` over that one bundle therefore reports a
+`derivation_mismatch` on `game_uid`. The bundle is internally consistent and was
+confirmed by both peers at match time; the other four series validate cleanly.
+
 The current live path includes cross-machine FastMCP, Cloudflare endpoints,
 Step-0 attestation, sealed turns, end-game nonce reveal, signed Capture Claim
 responses, preserved gameplay outcomes on audit-envelope incompatibility,

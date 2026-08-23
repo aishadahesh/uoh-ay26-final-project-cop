@@ -1188,6 +1188,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0887 Verify rule 53: the commit-hash identifier is recorded and updated in every Step-0 declaration — `get_git_commit_hash()`/`Step0Declaration.git_commit_hash` (Chapter 5), tested against this real repository
 - [x] T0888 Verify rule 54: the final-results JSON reports total token consumption — `MatchResult.total_tokens_used`, sourced from `TokenUsage.total` (Chapter 9)
 - [x] T0889 Verify rule 55: self-scoring reflects code quality only, not league game outcome — a submission-process discipline for the humans involved, not a code-level mechanism; noted here as a reminder for whoever fills out the final self-grading, not something this codebase itself can enforce
+- [ ] T0898 Reconcile `game_uid` derivation with the league interop-kit's labeled form — `SMNGRP05-vs-uoh-ay26-C01` records the labeled uid, so `validate_submission_directory` reports `derivation_mismatch` for that bundle only; accepted as a known limitation rather than changing the shipped derivation before submission
 
 ---
 
