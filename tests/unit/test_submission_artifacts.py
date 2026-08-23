@@ -127,8 +127,14 @@ def test_series_consensus_payload_matches_exact_cross_team_preimage():
     }
 
     assert series_consensus_payload("G002", "shared-uid", series) == {
-        "game_id": "G002",
-        "game_uid": "shared-uid",
+        "aggregate": {
+            "total_score": {"alpha": 15, "beta": 25},
+            "sub_games_won": {"alpha": 1, "beta": 1},
+            "ties": 0,
+            "winner_group": "beta",
+            "series_tie": False,
+        },
+        "game_id": "alpha-vs-beta-G002",
         "sub_games": [
             {
                 "sub_game_number": 1,
@@ -173,8 +179,14 @@ def test_series_consensus_zeroes_technical_loss_without_winner():
     }
 
     assert series_consensus_payload("G010", "shared-uid", series) == {
-        "game_id": "G010",
-        "game_uid": "shared-uid",
+        "aggregate": {
+            "total_score": {"alpha": 0, "beta": 0},
+            "sub_games_won": {"alpha": 0, "beta": 0},
+            "ties": 0,
+            "winner_group": None,
+            "series_tie": False,
+        },
+        "game_id": "alpha-vs-beta-G010",
         "sub_games": [
             {
                 "sub_game_number": 1,
@@ -186,7 +198,7 @@ def test_series_consensus_zeroes_technical_loss_without_winner():
         ],
     }
     assert series_consensus_hash("G010", "shared-uid", series) == (
-        "715a7428d92c51a7f39fa53cd4b3133c3eca98e4fbb6854e805322913b38b35a"
+        "ef6889d97c33cc214266da54218662b3bce9dd52b22b1257aee73b76ec265342"
     )
 
 

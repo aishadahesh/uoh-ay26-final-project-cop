@@ -215,7 +215,15 @@ def test_finalize_completed_series_builds_six_game_result(tmp_path, monkeypatch)
         "police_thief.services.network_match.derive_game_uid",
         lambda _terms, _groups, **_kwargs: "uid",
     )
-    monkeypatch.setattr("police_thief.services.network_match.finalize_submission_bundle", lambda *args, **kwargs: [tmp_path / "result_G003.json"])
+    def fake_finalize_submission_bundle(*args, **kwargs):
+        target = tmp_path / "result_alpha-vs-beta-G003.json"
+        target.write_text(json.dumps({
+            "sub_games": kwargs["series_result"]["sub_games"],
+            "consensus_confirmed": kwargs["series_result"]["consensus_confirmed"],
+        }), encoding="utf-8")
+        return [target]
+
+    monkeypatch.setattr("police_thief.services.network_match.finalize_submission_bundle", fake_finalize_submission_bundle)
     monkeypatch.setattr("police_thief.services.network_match.save_series_result", lambda result, directory, game_id: (directory / f"result_{game_id}.json").write_text(json.dumps(result), encoding="utf-8"))
 
     observed = {}
@@ -233,7 +241,7 @@ def test_finalize_completed_series_builds_six_game_result(tmp_path, monkeypatch)
     monkeypatch.setattr("police_thief.services.network_match.McpPeerTransport", lambda *args, **kwargs: Transport())
     monkeypatch.setattr("police_thief.services.network_match.NetworkMatchRunner._terms", lambda self, value: {})
     path = finalize_completed_series(settings, PeerInboxes(), state, AgentRole.COP)
-    assert path == tmp_path / "result_G003.json"
+    assert path == tmp_path / "result_alpha-vs-beta-G003.json"
     result = json.loads(path.read_text(encoding="utf-8"))
     assert len(result["sub_games"]) == 6
     assert result["consensus_confirmed"] is True

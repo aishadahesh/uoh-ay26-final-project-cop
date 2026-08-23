@@ -64,6 +64,16 @@ def canonical_hash(value: Any) -> str:
     return hashlib.sha256(canonical_bytes(value)).hexdigest()
 
 
+def canonical_game_id(game_id: str, group_ids: list[str]) -> str:
+    pair = sorted(str(group_id) for group_id in group_ids)
+    label = str(game_id).strip()
+    if "-vs-" in label:
+        return label
+    if re.fullmatch(r"[A-Za-z]+\d{3,}", label):
+        return f"{pair[0]}-vs-{pair[1]}-{label}"
+    return label or f"{pair[0]}-vs-{pair[1]}"
+
+
 def series_consensus_payload(
     game_id: str, game_uid: str, series_result: dict[str, Any],
 ) -> dict[str, Any]:
@@ -85,24 +95,51 @@ def series_consensus_payload(
         winner = None if len(set(score.values())) == 1 else max(score, key=score.get)
         rows.append({
             "sub_game_number": int(row["sub_game_number"]),
-            "result": row["outcome"],
+            "result": row.get("outcome", row.get("result")),
             "roles": dict(sorted(roles.items())),
             "score": score,
             "winner_group": winner,
         })
     if not rows:
         raise ValueError("series consensus requires at least one sub-game")
+    group_ids = sorted(rows[0]["roles"])
+    totals = {key: sum(int(row["score"].get(key, 0)) for row in rows) for key in group_ids}
+    wins = {key: sum(row["winner_group"] == key for row in rows) for key in group_ids}
+    ties = sum(row["winner_group"] is None and any(row["score"].values()) for row in rows)
+    series_tie = len(set(totals.values())) == 1 and any(totals.values())
+    if series_tie:
+        totals = {key: value + FIXED_TIE_SCORE for key, value in totals.items()}
+    winner = None if series_tie or not any(totals.values()) else max(totals, key=totals.get)
     return {
-        "game_id": game_id,
-        "game_uid": game_uid,
+        "aggregate": {
+            "total_score": dict(sorted(totals.items())),
+            "sub_games_won": dict(sorted(wins.items())),
+            "ties": ties,
+            "winner_group": winner,
+            "series_tie": series_tie,
+        },
+        "game_id": canonical_game_id(game_id, group_ids),
         "sub_games": rows,
     }
+
+
+def series_consensus_preimage(
+    game_id: str, game_uid: str, series_result: dict[str, Any],
+) -> str:
+    return json.dumps(
+        series_consensus_payload(game_id, game_uid, series_result),
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(", ", ": "),
+    )
 
 
 def series_consensus_hash(
     game_id: str, game_uid: str, series_result: dict[str, Any],
 ) -> str:
-    return canonical_hash(series_consensus_payload(game_id, game_uid, series_result))
+    return hashlib.sha256(
+        series_consensus_preimage(game_id, game_uid, series_result).encode("utf-8")
+    ).hexdigest()
 
 
 def derive_game_uid(
@@ -197,6 +234,11 @@ def finalize_submission_bundle(
     series_result: dict[str, Any],
     game_started_at: str,
     token_budget: int,
+    source_game_id: str | None = None,
+    counted: bool = False,
+    previous_counted_games: int = 0,
+    first_meeting_between_groups: bool = False,
+    games_played_including_this: dict[str, int] | None = None,
 ) -> list[Path]:
     """Replace internal artifacts with the canonical email-ready envelopes."""
     if len(participants) != 2:
@@ -204,11 +246,13 @@ def finalize_submission_bundle(
             f"submission requires exactly two distinct groups; received {sorted(participants)}"
         )
     num_games = int(series_result["num_games"])
-    game_uid = derive_game_uid(terms, list(participants), game_id=game_id)
-    links = _links(game_id, participants)
+    source_game_id = source_game_id or game_id
+    report_game_id = canonical_game_id(game_id, list(participants))
+    game_uid = derive_game_uid(terms, list(participants), game_id=report_game_id)
+    links = _links(report_game_id, participants)
     base = {
         "schema_version": SCHEMA_VERSION,
-        "game_id": game_id,
+        "game_id": report_game_id,
         "game_uid": game_uid,
         "links": links,
     }
@@ -228,7 +272,7 @@ def finalize_submission_bundle(
     result_rows: list[dict[str, Any]] = []
     for row in series_result["sub_games"]:
         number = int(row["sub_game_number"])
-        config_name = f"config_{game_id}_g{number:02d}.json"
+        config_name = f"config_{report_game_id}_g{number:02d}.json"
         config_doc = {
             **base,
             "sub_game_number": number,
@@ -237,7 +281,7 @@ def finalize_submission_bundle(
         }
         paths.append(_write(directory / config_name, config_doc))
 
-        raw_log_path = directory / f"log_{game_id}_g{number:02d}.json"
+        raw_log_path = directory / f"log_{source_game_id}_g{number:02d}.json"
         try:
             raw = json.loads(raw_log_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
@@ -274,7 +318,7 @@ def finalize_submission_bundle(
             "summary": summary,
             "records": records,
         }
-        log_name = f"log_{game_id}_g{number:02d}.json"
+        log_name = f"log_{report_game_id}_g{number:02d}.json"
         paths.append(_write(directory / log_name, log_doc))
         result_rows.append({
             "sub_game_number": number,
@@ -302,13 +346,13 @@ def finalize_submission_bundle(
         key: sum(item["winner_group"] == key for item in result_rows) for key in participants
     }
     ties = sum(item["tie"] for item in result_rows)
-    series_tie = len(set(totals.values())) == 1
+    series_tie = len(set(totals.values())) == 1 and any(totals.values())
     if series_tie:
         # Tie Rule (Sec. 9.2.8-9.2.9 / Appendix F Table 17 row 5): a tied
         # cumulative series credits each side the fixed tie score on top of
         # its raw subtotal, so e.g. 75-75 is reported as 77-77.
         totals = {key: value + FIXED_TIE_SCORE for key, value in totals.items()}
-    winner = None if series_tie else max(totals, key=totals.get)
+    winner = None if series_tie or not any(totals.values()) else max(totals, key=totals.get)
     token_totals = {
         key: sum(int(item["tokens"].get(key, 0)) for item in result_rows)
         for key in participants
@@ -321,13 +365,30 @@ def finalize_submission_bundle(
         "series_tie": series_tie,
         "tokens_total_series": token_totals,
     }
-    consensus_sha = series_consensus_hash(game_id, game_uid, series_result)
+    if games_played_including_this is None:
+        increment = 1 if counted else 0
+        games_played_including_this = {
+            key: int(previous_counted_games) + increment for key in participants
+        }
+    diversity_reward_applied = dict.fromkeys(participants, False)
+    if counted and first_meeting_between_groups and winner is not None:
+        diversity_reward_applied[winner] = True
+    final.update({
+        "games_played_including_this": dict(sorted(games_played_including_this.items())),
+        "first_meeting_between_groups": bool(first_meeting_between_groups),
+        "diversity_reward_applied": dict(sorted(diversity_reward_applied.items())),
+    })
+    consensus_sha = series_consensus_hash(report_game_id, game_uid, series_result)
     result_doc = {
         **base,
         "report_type": "final_game_result",
         "timezone": "Asia/Jerusalem",
         "groups": sorted(participants),
         "num_sub_games": num_games,
+        "league": {
+            "counted": bool(counted),
+            "reason": "counted" if counted else "friendly",
+        },
         "sub_games": result_rows,
         "final_result": final,
         "mutual_agreement": {
@@ -336,7 +397,7 @@ def finalize_submission_bundle(
         },
     }
     paths.append(_write(directory / links["result"], result_doc))
-    errors, required_paths = validate_submission_directory(directory, game_id)
+    errors, required_paths = validate_submission_directory(directory, report_game_id)
     if errors:
         raise SubmissionBundleError("submission validation failed:\n" + "\n".join(str(e) for e in errors))
     return required_paths

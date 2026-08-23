@@ -59,7 +59,7 @@ class NetworkMatchApp:
         cards.pack(fill="x")
         for label, value in (
             ("ROLE", self.settings.role.value.upper()),
-            ("LOCAL ENDPOINT", f"0.0.0.0:{self.settings.local_port}/mcp"),
+            ("LOCAL ENDPOINT", f"127.0.0.1:{self.settings.local_port}/mcp"),
             ("GAME", f"{self.settings.game_id} / G{self.settings.sub_game_number:02d}"),
         ):
             card = ttk.Frame(cards, style="Card.TFrame", padding=14)
@@ -113,7 +113,7 @@ class NetworkMatchApp:
             server = build_peer_server(self.settings.role.value, self.inboxes)
             self.events.put(("log", f"MCP server listening on port {self.settings.local_port}"))
             run_peer_server(
-                server, host="0.0.0.0", port=self.settings.local_port,
+                server, host="127.0.0.1", port=self.settings.local_port,
                 stop_event=self.stop_event,
             )
         except Exception as exc:

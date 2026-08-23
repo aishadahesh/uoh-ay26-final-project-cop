@@ -63,6 +63,7 @@ from police_thief.services.step0 import (
 )
 from police_thief.services.submission_artifacts import (
     SubmissionBundleError,
+    canonical_game_id,
     derive_game_uid,
     finalize_submission_bundle,
     public_participant,
@@ -2227,6 +2228,7 @@ def finalize_completed_series(
 
     if participants is None:
         raise RuntimeError("series completed without participant metadata")
+    report_game_id = canonical_game_id(settings.game_id, list(participants))
     totals = {
         group: sum(int(row["score"].get(group, 0)) for row in subgames)
         for group in participants
@@ -2248,12 +2250,19 @@ def finalize_completed_series(
         "team_scores": ordered_totals,
         "winner": winners[0] if len(winners) == 1 else "tie",
     }
+    local_path = save_series_result(series_result, settings.output_dir, settings.game_id)
+    _emit_series_summary(series_result, emit)
+    emit(f"Local aggregate result saved to {local_path}")
     transport = McpPeerTransport(
         settings.opponent_url, inboxes, sender=settings.role.value,
     )
     terms = NetworkMatchRunner(settings, inboxes, transport=transport)._terms(params)
-    game_uid = derive_game_uid(terms, list(participants), game_id=settings.game_id)
-    local_sha = series_consensus_hash(settings.game_id, game_uid, series_result)
+    game_uid = derive_game_uid(terms, list(participants), game_id=report_game_id)
+    local_sha = series_consensus_hash(report_game_id, game_uid, series_result)
+    emit(
+        "Waiting for final series consensus exchange; "
+        f"local consensus_sha={local_sha}"
+    )
     consensus_timeout = max(
         params.network_league.response_timeout_sec,
         SERIES_CONSENSUS_TIMEOUT_SECONDS,
@@ -2279,6 +2288,13 @@ def finalize_completed_series(
             and peer.result_claim == "series_consensus"
             and peer.consensus_sha == local_sha
         )
+        if consensus_confirmed:
+            emit("Final series consensus confirmed by both sides")
+        else:
+            emit(
+                "Final series consensus was not mutually confirmed; "
+                f"peer_sha={peer.consensus_sha or 'missing'}"
+            )
     except (PeerClientError, NetworkProtocolError) as exc:
         emit(f"Final series consensus exchange failed: {exc}")
     series_result["consensus_sha"] = local_sha
@@ -2294,23 +2310,46 @@ def finalize_completed_series(
             series_result=series_result,
             game_started_at=state.get("series_started_at", now_iso()),
             token_budget=params.network_league.token_budget_per_series,
+            source_game_id=settings.game_id,
+            counted=settings.counted and str(settings.game_id).upper().startswith("C"),
+            previous_counted_games=getattr(settings, "previous_counted_games", 0),
         )
     except SubmissionBundleError as exc:
-        errors, _ = validate_submission_directory(settings.output_dir, settings.game_id)
+        errors, _ = validate_submission_directory(settings.output_dir, report_game_id)
         report = save_submission_validation_report(
-            settings.output_dir, settings.game_id, errors, str(exc),
+            settings.output_dir, report_game_id, errors, str(exc),
         )
-        path = settings.output_dir / f"result_{settings.game_id}.json"
+        path = settings.output_dir / f"result_{report_game_id}.json"
         emit(f"WARNING: final bundle invalid; details saved to {report}")
         _deliver_unverified_result(path, params, settings, emit)
         return path
-    path = settings.output_dir / f"result_{settings.game_id}.json"
+    path = settings.output_dir / f"result_{report_game_id}.json"
     emit(f"Series complete; {len(paths)} validated submission JSON files are ready")
     if settings.email_mode == "real":
         _try_email_result(path, params, settings, emit)
     else:
         emit("Email mode is dry_run; aggregate JSON created but not sent")
     return path
+
+
+def _emit_series_summary(series_result: dict, emit: EventSink) -> None:
+    scores = series_result.get("team_scores") or {}
+    ordered = sorted(scores.items(), key=lambda item: item[0].casefold())
+    score_text = ", ".join(f"{group}={score}" for group, score in ordered)
+    emit(
+        f"Six sub-games complete; local total score: {score_text}; "
+        f"winner={series_result.get('winner', 'unknown')}"
+    )
+    for row in series_result.get("sub_games") or []:
+        row_scores = row.get("score") or {}
+        row_score_text = ", ".join(
+            f"{group}={score}"
+            for group, score in sorted(row_scores.items(), key=lambda item: item[0].casefold())
+        )
+        emit(
+            f"g{int(row.get('sub_game_number', 0)):02d}: "
+            f"{row.get('outcome', 'unknown')} ({row_score_text})"
+        )
 
 
 class NetworkMatchSeriesRunner:
