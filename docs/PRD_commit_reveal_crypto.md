@@ -11,7 +11,7 @@
 > turn, exchanges complete nonce reveals after terminal gameplay, attaches the
 > signed `step: 0` / `type: "system_spec"` attestation, verifies peer records,
 > and gates mutual sign-off on matching result evidence. This path has completed
-> four mutually verified counted six-game series.
+> five mutually verified counted six-game series.
 
 ## 1. Description & Theoretical Background
 
