@@ -1,0 +1,1729 @@
+{
+  "game_id": "G001",
+  "game_uid": "e247c3af-7fd5-b058-213f-4aaed5a2e4d8",
+  "links": {
+    "config": "config_G001_g<NN>.json",
+    "declaration": "declaration_G001.json",
+    "github": {
+      "najamjad": {
+        "cop": "https://github.com/najikay/najamjad-cop",
+        "thief": "https://github.com/najikay/najamjad-thief"
+      },
+      "uoh-ay26": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      }
+    },
+    "log": "log_G001_g<NN>.json",
+    "result": "result_G001.json"
+  },
+  "records": [
+    {
+      "commit": "41c4aff2af208b1a0b616ddc93f150bc2ede9fb0d227883c953aa092ec636c8c",
+      "nonce": "4d5434ac21b41e4e619d0edb5248a4aa",
+      "payload": {
+        "hint": "You will not find me anywhere near the East Village.",
+        "intent": "lie",
+        "move": "MOVE:S",
+        "position": [
+          4,
+          3
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[4, 3];barriers=[]",
+        "step": 1,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "6a9cf21e1375e0427bd2dae89ae0315b567d4a001e9d8e67401900104b6daf6e",
+      "nonce": "77cda7cd76b33e225b0e832735afd25f567a6c1fe42a455419c85e319a4c0fd5",
+      "payload": {
+        "barrier_placed": [
+          1,
+          1
+        ],
+        "capture_claim": [
+          1,
+          0
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          1,
+          0
+        ],
+        "role": "police",
+        "state": {
+          "col": 0,
+          "row": 0
+        },
+        "step": 1
+      }
+    },
+    {
+      "commit": "c2c6e46a0ec1817a270096f617c5561f1d067f59445bef08c69263b4b49afe19",
+      "nonce": "26e9514c5670e97b45e944f70971bb22",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            0
+          ]
+        },
+        "hint": "I'm hiding near the Brooklyn Bridge, watching the river.",
+        "intent": "lie",
+        "move": "MOVE:S",
+        "position": [
+          5,
+          3
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[5, 3];barriers=[[1, 1]]",
+        "step": 2,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "82712766e5f88f958da3433996e35d0f64f432432c7603b7e9fbc3dc5aadd071",
+      "nonce": "04da347faf759606326bf390aa09b98f7b104fb3e72699521f81c9c10c83e6d6",
+      "payload": {
+        "capture_claim": [
+          2,
+          0
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          2,
+          0
+        ],
+        "role": "police",
+        "state": {
+          "col": 0,
+          "row": 1
+        },
+        "step": 2
+      }
+    },
+    {
+      "commit": "2675e86e068f5eb0f0ec2f7a9fff37e541c7d9183b31f8f3b852c7e76c5d4618",
+      "nonce": "7be6959759f8da9be397e83ce4c483c2",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            0
+          ]
+        },
+        "hint": "Taking the long way round by Harlem.",
+        "intent": "lie",
+        "move": "MOVE:S",
+        "position": [
+          6,
+          3
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 3];barriers=[[1, 1]]",
+        "step": 3,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "a9e3ee85b1d8c2ae0e20255358565d4ec135de4bb8382ac02594309285228750",
+      "nonce": "27d4dbcccf7d12994d2fcc6d0eb1f569059ca9172e196a047b23906976dddf55",
+      "payload": {
+        "barrier_placed": [
+          2,
+          2
+        ],
+        "capture_claim": [
+          2,
+          1
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          2,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 0,
+          "row": 2
+        },
+        "step": 3
+      }
+    },
+    {
+      "commit": "717ee25b1771a40f2e695cf3dbb7a09583704a4eec6cc607de11d9f18f0daf45",
+      "nonce": "7f054500112bd8ecf580b4bf77542c73",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            1
+          ]
+        },
+        "hint": "Still moving east — Wall Street is behind me now.",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "position": [
+          6,
+          4
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 4];barriers=[[1, 1], [2, 2]]",
+        "step": 4,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "f6b296bd81778b449d892e20c05f4f9edcb4ea0c5920131450fb67b809d1f638",
+      "nonce": "69aeb4d3c364cc936d011d71bcb9471ca7154b2c692f94573ba638ec12be697a",
+      "payload": {
+        "capture_claim": [
+          3,
+          1
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          3,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 2
+        },
+        "step": 4
+      }
+    },
+    {
+      "commit": "822bfdd63ce8bdfed028f7961989ca1f1d5ad3f7aeb733bce3fc63df921e016c",
+      "nonce": "9fe28150dc0b2412fef9394f8b240a30",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            1
+          ]
+        },
+        "hint": "Taking the long way round by the East Village.",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [2, 2]]",
+        "step": 5,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "0862b62a4d1633b71df884ae96e2b1cc9ebe675bc2f6b5e91cb0943c7951920b",
+      "nonce": "031d89f5252da527cb874e1310155f411aba3abba1aa7b284f861c73d19a316c",
+      "payload": {
+        "capture_claim": [
+          3,
+          2
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          3,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 3
+        },
+        "step": 5
+      }
+    },
+    {
+      "commit": "8808f1b785ccfb75c67b47d4c2f880f3f5917415214f9b72ab09eab01bf06e0a",
+      "nonce": "2598f3935c4b18d4c89ddbc5366bbe03",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            2
+          ]
+        },
+        "hint": "I'm hiding near the old library, behind the stone lions.",
+        "intent": "lie",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [2, 2]]",
+        "step": 6,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "3f939adb38c771719bf2103e2e0c0d2dd73c3e523255e85aa4090c8d39b3036e",
+      "nonce": "42e0cb25a62fa115e7d1859580c4d38672ddfa527637d39b700fa8145005157e",
+      "payload": {
+        "capture_claim": [
+          3,
+          3
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          3,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 6
+      }
+    },
+    {
+      "commit": "b3e77b60fbb10988a6980b602996559d0f637f8b7f94f634992632e6583df803",
+      "nonce": "3fc05b21c3cee61c097b0fb73a53dcd2",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            3
+          ]
+        },
+        "hint": "You will not find me anywhere near Central Park.",
+        "intent": "lie",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [2, 2]]",
+        "step": 7,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "342617db94957f868e5792a0b9253cd1e6fc6c5b5b4f1f238e5cc58e8f75f490",
+      "nonce": "7d287bb985fac6e63bca8f951e2c52632ee775b6cc7a18811eb894948abbc2b7",
+      "payload": {
+        "barrier_placed": [
+          1,
+          3
+        ],
+        "capture_claim": [
+          2,
+          3
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          2,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 7
+      }
+    },
+    {
+      "commit": "fb5a93f0b3b5b0f26419566a275e0a41c54aa5ba2fbf1d35ed2add516aacda24",
+      "nonce": "255f971e6194004ff73564d214a9741e",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            3
+          ]
+        },
+        "hint": "I'm near the Brooklyn Bridge, watching the river.",
+        "intent": "lie",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 8,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "32e60ca23a19bdfed57ff917c7ae356a117a6b3f7a7916ecffe9f0ef63aa2b99",
+      "nonce": "e34e3180153c330dcda7c85235178fdba15250fa2f6eda65e103ab680ce89c60",
+      "payload": {
+        "capture_claim": [
+          2,
+          4
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          2,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 2
+        },
+        "step": 8
+      }
+    },
+    {
+      "commit": "5988b02d0130e143b9e38c4fb90860305ee66cbbe78c706d9cbd245b6110d473",
+      "nonce": "3b92f57a612f367fcc9a64ceb8a9f573",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            4
+          ]
+        },
+        "hint": "Slipping past Wall Street while you look the wrong way.",
+        "intent": "lie",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 9,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "160af9c9993902f23af812902922c2cd06e7fc994308f4c31f7e999a246efb21",
+      "nonce": "4ae0ef19e737418a7345c4f9ff5cdfa5837637acaa67df32a49c18e0e3a5543e",
+      "payload": {
+        "capture_claim": [
+          3,
+          4
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          3,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 2
+        },
+        "step": 9
+      }
+    },
+    {
+      "commit": "f8684bd6c1c18b07632413fae5d850e8bd53f1eab17b34c96c3d32e8857ac93c",
+      "nonce": "79a03c7e1701e83bb3a7d7b22bd875ec",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            4
+          ]
+        },
+        "hint": "You will not find me anywhere near Central Park.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 10,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "cb940bf6bdf5c9339ad8fd23b3e301bccebe67eeb2f59e01cf49d77755ed0173",
+      "nonce": "9a7a4fa4624319ef880aa0ee79becd1ecb049430b1f70be85349a5280c1b031e",
+      "payload": {
+        "capture_claim": [
+          3,
+          3
+        ],
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          3,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 3
+        },
+        "step": 10
+      }
+    },
+    {
+      "commit": "d9e1a60399aed80f32fe886c925fb8f0208dd6407f48fdc96ff082bb95ee83d6",
+      "nonce": "02862640a1dda9c9b0ad2bf78d6e4a93",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            3
+          ]
+        },
+        "hint": "You will not find me anywhere near Central Park.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 11,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "729be38eb4eb84f74a99474172b03926bc6d15c4931f71837c87d47e819909d9",
+      "nonce": "5685dfa0929e0ed38bf6a129d8ac53f9060178df0012581df1e457adacc276f9",
+      "payload": {
+        "capture_claim": [
+          2,
+          3
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          2,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 11
+      }
+    },
+    {
+      "commit": "b10e036e39813067f9249d5f49d2bf1a13eb3b76b5f2c537fb7de94474dc7c99",
+      "nonce": "2b76b66630e6177ba16da14f61ca40c6",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            3
+          ]
+        },
+        "hint": "I'm near the docks, waiting by the water.",
+        "intent": "lie",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 12,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "4826f38422ace900666582142a9a62ec417351591b58db5256438ce3bb87b720",
+      "nonce": "ba0f4cff55df262d04d4897f3db9689213f30e7ad40fcf97168450666eb70b9a",
+      "payload": {
+        "capture_claim": [
+          2,
+          4
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          2,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 2
+        },
+        "step": 12
+      }
+    },
+    {
+      "commit": "764e07302d7dd7ad88eedd58d8ae7025887a361db07e39abea7e4d146f9b862a",
+      "nonce": "3a49aeacc193f17be827faae5025caf1",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            4
+          ]
+        },
+        "hint": "You will not find me anywhere near Times Square.",
+        "intent": "lie",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 13,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "b8ada514ca1f99777ec749c91e676bc3a9242a750423fed6e0d7a3243821837f",
+      "nonce": "aaf67e59ca0c3ec349c44b860e9211e858e1510ad01d3026fd301a34fb2eb448",
+      "payload": {
+        "capture_claim": [
+          1,
+          4
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          1,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 2
+        },
+        "step": 13
+      }
+    },
+    {
+      "commit": "c95e5cecabe4187c978d05e2fafa624248f833c488e97700d3e4a9c38184d1a3",
+      "nonce": "58eb028c14dee729c0cd15be717a866f",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            4
+          ]
+        },
+        "hint": "Still moving through the streets.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 5];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 14,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "9866048280a45372b61310283866cd26704d0091c68dcbdd18d63d29eff2c8f9",
+      "nonce": "0fa378e48e984f22702419365a4d01110e21ebd5e868e244f13e69ea45d5c63c",
+      "payload": {
+        "capture_claim": [
+          1,
+          5
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          1,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 1
+        },
+        "step": 14
+      }
+    },
+    {
+      "commit": "4c645830ec97b2453bc553edd4f39b7bf7a1b245b9e510ccee223d2bedf2367a",
+      "nonce": "3c1fc1fc16ce8c7649f65aa60280bd9d",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            5
+          ]
+        },
+        "hint": "Still moving south — Harlem is behind me now.",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "position": [
+          6,
+          4
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 4];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 15,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "36a0f78b4478e041dfb5226586371c2b5176bafba78a6e001cf5f509e153904c",
+      "nonce": "9cc070d3e8f3aec876d69ff21d7a51980f74ae613242ea60381fc852c0fc5386",
+      "payload": {
+        "capture_claim": [
+          2,
+          5
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          2,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 1
+        },
+        "step": 15
+      }
+    },
+    {
+      "commit": "6f7aba0aed941355f97a426b1e2c4a572fc15a3e7490c1630ca2b395f048c4fc",
+      "nonce": "e7d1ba9dc7a621bca87772a60e966d14",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            5
+          ]
+        },
+        "hint": "Slipping past the East Village while you look the wrong way.",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "position": [
+          6,
+          3
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 3];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 16,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "687b2b826bbf09718e42cd77830d98b69dc5a8f5c455492d93a1bb32081679f8",
+      "nonce": "3a85f219a8e3788ba8c581a6343e5b0e4e681199b8459dbc3e1911e9c0b7c677",
+      "payload": {
+        "capture_claim": [
+          2,
+          4
+        ],
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          2,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 2
+        },
+        "step": 16
+      }
+    },
+    {
+      "commit": "ff2be1a2c9eb8a04940c3b99ccbd0de22662f8a344366806cb90731c6fae8e25",
+      "nonce": "d68a32c033aaeb851ad3980a6e44b110",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            4
+          ]
+        },
+        "hint": "Taking the long way round by Harlem.",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "position": [
+          6,
+          2
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 2];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 17,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "e7070bae44abc6a36dc3657b5293cc42f28c862f56d86416cb057b1aac1b7af1",
+      "nonce": "d35bd8d0148cf65831193f8ab9bf0ece0ab88dfb809c725bcab4e66ba78f43d9",
+      "payload": {
+        "capture_claim": [
+          1,
+          4
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          1,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 2
+        },
+        "step": 17
+      }
+    },
+    {
+      "commit": "69541f484e6bf4c31dc7fa865aea729792e8b8c7dd560a0ed95ecdbbb0b7fba3",
+      "nonce": "bc90b791e67e3ee92583392eca8a30b3",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            4
+          ]
+        },
+        "hint": "I'm by the Brooklyn Bridge, enjoying the view.",
+        "intent": "lie",
+        "move": "MOVE:W",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 18,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "5a0dc14716a5f5452c56ce8ef74b0fbd265b3e4fe6bbec0a051757e6a66837c6",
+      "nonce": "ac9a3fa24b12522df68de559330d869a57558aa4d8badc88771fb70e125e22db",
+      "payload": {
+        "capture_claim": [
+          1,
+          5
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          1,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 1
+        },
+        "step": 18
+      }
+    },
+    {
+      "commit": "1d3eb60e157c616ce31b8e99f914f3856922b80921d9df934e46e0a92d85f953",
+      "nonce": "7288dd6b7ef9b4937b6fa5d526f0a5c1",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            5
+          ]
+        },
+        "hint": "Slipping past Central Park while you look the wrong way.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [2, 2]]",
+        "step": 19,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "ca6a866c3073fed51c193377fbf59cfccb30d9c73896fda9e51ccf01b7534485",
+      "nonce": "468eb76ba40c5b6aa5d0aa5b7d74038fb4ceb54fe8131cace440488819df6d72",
+      "payload": {
+        "barrier_placed": [
+          1,
+          5
+        ],
+        "capture_claim": [
+          2,
+          5
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          2,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 1
+        },
+        "step": 19
+      }
+    },
+    {
+      "commit": "e119660e6df06bbeea3868a66ad571e2906f4010b400bac4187b58dc25b27fd1",
+      "nonce": "36669d7724f5b33ff48ac1d13815ce5a",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            5
+          ]
+        },
+        "hint": "Taking the long way round by Times Square.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2]]",
+        "step": 20,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "5951c4bef07e9264ce7508f2e05c5414d400c9b59b5ae775c09e15badca8a914",
+      "nonce": "fa91a4a8b2ec41c340b8bafdc37de1fedb3e697033e03958c6a544a2cfde62cb",
+      "payload": {
+        "capture_claim": [
+          3,
+          5
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          3,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 2
+        },
+        "step": 20
+      }
+    },
+    {
+      "commit": "b883797d8f7a5024a6e9e1ed3fb748f06c6da0496beaffae8cbf12f960e3023e",
+      "nonce": "9a06789947d7d62171f148079e16b242",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            5
+          ]
+        },
+        "hint": "You will not find me anywhere near Wall Street.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2]]",
+        "step": 21,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "10e195b2511b8d3822f3e652fd6d6939b38960ba3930bdbe1019262824ed57d7",
+      "nonce": "c8f96a4e3f0f9d98d32ec6304f833aee75b0ae1a9a5bdebb333a26f79fda391f",
+      "payload": {
+        "barrier_placed": [
+          2,
+          4
+        ],
+        "capture_claim": [
+          3,
+          4
+        ],
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          3,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 3
+        },
+        "step": 21
+      }
+    },
+    {
+      "commit": "8d68c26a8570b264c388bb77de435ce1a011ae60baa643aa87fd3ac17ccf515b",
+      "nonce": "f6e4534c3f560502b53af3cb887ebf37",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            4
+          ]
+        },
+        "hint": "I am in New York right now.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4]]",
+        "step": 22,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "91d815ad02f6580bed828f041f5b1fab23c3fae77610a8a4f0189410ef45f1f4",
+      "nonce": "27d977b003f53bbfda9097987f92fe94a1a51743986147de42a5210103e345c5",
+      "payload": {
+        "barrier_placed": [
+          3,
+          3
+        ],
+        "capture_claim": [
+          3,
+          3
+        ],
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          3,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 3
+        },
+        "step": 22
+      }
+    },
+    {
+      "commit": "23b6fc53563d1fe94cb2cf34aa9992ace956dc39c9e8d2f91715f0d3bdc84401",
+      "nonce": "0f368e874c32b38b031ddaf15c82d976",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            3
+          ]
+        },
+        "hint": "Still moving east — Central Park is behind me now.",
+        "intent": "lie",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3]]",
+        "step": 23,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "3ebaa61902ff1027b40a85557686602a596ca55e6d3b01e4c633df00aebdcd6e",
+      "nonce": "64c9f546265810513a213de8555cd2fd782335ce648820137146d457aa41ccc1",
+      "payload": {
+        "capture_claim": [
+          4,
+          3
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          4,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 23
+      }
+    },
+    {
+      "commit": "75f1ff85b506a96a129e657016a76a7777838feb1e776423e53cf5108a158425",
+      "nonce": "51d1b66fd9cfce929c74cb7f4ad35ec8",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            3
+          ]
+        },
+        "hint": "Still moving west — Times Square is behind me now.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3]]",
+        "step": 24,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "1f6ca914dc94428c84efde741c27332a28c0c02d4f72d4683ca27620e7dc7e95",
+      "nonce": "b8c68215c42972057f0a9dc5bdb94d1c1da006b07156f20b4f41322f2754eab1",
+      "payload": {
+        "capture_claim": [
+          4,
+          4
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          4,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 4
+        },
+        "step": 24
+      }
+    },
+    {
+      "commit": "0b8fb3e040d0b2fc199b83376c168278ee4c8c75195c54fcb49f2b2414dd8e82",
+      "nonce": "b954eec20d6587912706189cb473d036",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            4
+          ]
+        },
+        "hint": "Still moving north — Times Square is behind me now.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3]]",
+        "step": 25,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "fe1a2f415a25d06be4aec4af4f48e7750eafd5e979822f7429dc9f9b72796fc7",
+      "nonce": "edcd4899c2477fc8d63221b3e8f61008ac89fd25562553d45fb36c8bf5d4d3c9",
+      "payload": {
+        "barrier_placed": [
+          3,
+          5
+        ],
+        "capture_claim": [
+          4,
+          5
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          4,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 4
+        },
+        "step": 25
+      }
+    },
+    {
+      "commit": "9766505eadf15a7ecbbc0a8c908d931102b268f788e80be8e9ef5940fc9c2613",
+      "nonce": "fe3a40844e6d429676afb582d65fe855",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            5
+          ]
+        },
+        "hint": "Still moving east — the Brooklyn Bridge is behind me now.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5]]",
+        "step": 26,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "4b832af706f10017df57b1a52662a10e010d4d988a37ac0f9eec96978657a425",
+      "nonce": "84e005800de2a59ef280453f75cf4b38c1c9a7c5113f582699904e5f52afe843",
+      "payload": {
+        "capture_claim": [
+          4,
+          6
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          4,
+          6
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 4
+        },
+        "step": 26
+      }
+    },
+    {
+      "commit": "b505b9a712a5d54a6d217adcd172504ad477cdacebdeb193c84535c078452942",
+      "nonce": "382ac91e32a1cdfbe3849afe7147dfb4",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            6
+          ]
+        },
+        "hint": "Taking the long way round by Harlem.",
+        "intent": "lie",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5]]",
+        "step": 27,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "0dade1d35c339c6b70005a5f7fb14e04c2b0dddb4b5f9c5b6fc9181fd9ad43fc",
+      "nonce": "fa17ba5683d95384bc2f71eb72e456091e9c4ddb9a52338c425b83dfb288fbe0",
+      "payload": {
+        "capture_claim": [
+          5,
+          6
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          5,
+          6
+        ],
+        "role": "police",
+        "state": {
+          "col": 6,
+          "row": 4
+        },
+        "step": 27
+      }
+    },
+    {
+      "commit": "225c08ccfdcaed718cda27cb3578465f558ccfcd52def2e7c247f6a7f8156486",
+      "nonce": "624bd4fe4474e85cd1ddf531101af989",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            6
+          ]
+        },
+        "hint": "I'm near the big library in Midtown, watching the crowds.",
+        "intent": "lie",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5]]",
+        "step": 28,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "37261887f02b5ddaaa8ff183bb8a2f274120ff07dc0b2bc4fed279985be3c1c8",
+      "nonce": "22242f8cf95a0e7173b96aa80463899055b3574bcb777c2d0cc32a63ea3aa96a",
+      "payload": {
+        "capture_claim": [
+          5,
+          5
+        ],
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          5,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 6,
+          "row": 5
+        },
+        "step": 28
+      }
+    },
+    {
+      "commit": "e0e26f503d3c4d8e0854354b5adde48714634786ae9143f19ee408ba422c1012",
+      "nonce": "fc5f3e8bda68f034edc31ab91f496a34",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            5
+          ]
+        },
+        "hint": "Still moving east — the waterfront is behind me now.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5]]",
+        "step": 29,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "da338e2c972d82a820719c3eeb50ccbf552b70df10e6fc83213d2c4422eeef6e",
+      "nonce": "f5473ab3bbf4bf896758bb36cacf8348e83d8e49d6b1a549c7bac8bd0bf95d7c",
+      "payload": {
+        "barrier_placed": [
+          4,
+          4
+        ],
+        "capture_claim": [
+          4,
+          5
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          4,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 5
+        },
+        "step": 29
+      }
+    },
+    {
+      "commit": "df4ca8e2c0503b93620aff280b2ad1f65fb3800daa40c4130e0af0d89ebdf475",
+      "nonce": "29eadffffc232b47b1c2f263a1a58438",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            5
+          ]
+        },
+        "hint": "Still moving through the streets.",
+        "intent": "truth",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[6, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5], [4, 4]]",
+        "step": 30,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "928a6d53252eff49afeeac26ad864ec2107f24310fa672850fe82c9f30eb8104",
+      "nonce": "ee968b53242067ec93909948de5f76f8e33c4fb6b901d8c0ca54293787adb374",
+      "payload": {
+        "barrier_placed": [
+          5,
+          5
+        ],
+        "capture_claim": [
+          5,
+          5
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          5,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 4
+        },
+        "step": 30
+      }
+    },
+    {
+      "commit": "bc9f11af9509e37ab1a1d78a86425eb92b9a7e4ae7b9a7654fec2b9e94c802f3",
+      "nonce": "0b71d26d96da42e45ce4fb02bf8e0906",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            5
+          ]
+        },
+        "hint": "Still moving west — Times Square is behind me now.",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "position": [
+          5,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[5, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5], [4, 4], [5, 5]]",
+        "step": 31,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "6550846c7f7b1fdc1937b2b595a1ae5aa7c26943135b9af0ae4a26e62ae50eaa",
+      "nonce": "2d3d5c8859cb95452c0ddedda006c72f04eb18b3e23a95343be9daa10688e25f",
+      "payload": {
+        "capture_claim": [
+          5,
+          5
+        ],
+        "hint": "I stayed put.",
+        "intent": true,
+        "move": "STAY",
+        "position": [
+          5,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 5
+        },
+        "step": 31
+      }
+    },
+    {
+      "commit": "52ac8fa4b114d5e2d8c2b3b76844b0331383651fe945effb98d7c067b925092b",
+      "nonce": "ceb640d46ce028b49a27f809ba4eaac0",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            5
+          ]
+        },
+        "hint": "Slipping past the Brooklyn Bridge while you look the wrong way.",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "position": [
+          4,
+          1
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[4, 1];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5], [4, 4], [5, 5]]",
+        "step": 32,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "137d9d754de3b5cf9b98e383bf0b6887a1719df5e1a172fa81c2cd0a5ac08edd",
+      "nonce": "3b50d26c89895e478597ea7ba495ef92e6867a6bbef8706223d157af5a3cf4b6",
+      "payload": {
+        "capture_claim": [
+          6,
+          5
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          6,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 5
+        },
+        "step": 32
+      }
+    },
+    {
+      "commit": "83b7d786b20900f4b8aaf89c9164bad750fb6fe603e4f17395f24321e8e3c7c6",
+      "nonce": "1a1d5b81c96dc7a6d63c8b5fd9220a1f",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            6,
+            5
+          ]
+        },
+        "hint": "You will not find me anywhere near the East Village.",
+        "intent": "lie",
+        "move": "MOVE:W",
+        "position": [
+          4,
+          0
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[4, 0];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5], [4, 4], [5, 5]]",
+        "step": 33,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "c388135904928e2db4e7d95c4363150cf033ae4a3b50195e31c245e8faa28b9f",
+      "nonce": "963a5c3897f26ad810d4362ef0ce5635b4d30317a7e59f1ee84fb52f862be8e7",
+      "payload": {
+        "capture_claim": [
+          6,
+          4
+        ],
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          6,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 6
+        },
+        "step": 33
+      }
+    },
+    {
+      "commit": "18a6a6753c8fc9ab4e5736cb25a196cbc4358c43d21d5426d7d9c0fbd2c72799",
+      "nonce": "5e5be1573eef2df470da0a8958f73937",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            6,
+            4
+          ]
+        },
+        "hint": "Still moving west — the East Village is behind me now.",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "position": [
+          3,
+          0
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[3, 0];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5], [4, 4], [5, 5]]",
+        "step": 34,
+        "sub_game": 5
+      }
+    },
+    {
+      "commit": "e9698f3f6218c165a2296f071cdc7cf75d1910e4e0531753d038ac6c1d11bd61",
+      "nonce": "3111b478c8773daa1b3b02a0b59daaf288b27f6fd20846c6275f888c9e6d49ce",
+      "payload": {
+        "capture_claim": [
+          6,
+          3
+        ],
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          6,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 6
+        },
+        "step": 34
+      }
+    },
+    {
+      "commit": "59b08d06a1bc400d652f6f8993d52a5e34a079f0905f9a759de1e97487b80159",
+      "nonce": "77fe493d5d480801e161bab3ccd03888",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            6,
+            3
+          ]
+        },
+        "hint": "Taking the long way round by the Brooklyn Bridge.",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "position": [
+          2,
+          0
+        ],
+        "role": "thief",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[2, 0];barriers=[[1, 1], [1, 3], [1, 5], [2, 2], [2, 4], [3, 3], [3, 5], [4, 4], [5, 5]]",
+        "step": 35,
+        "sub_game": 5,
+        "win_claim": {
+          "type": "survival"
+        }
+      }
+    }
+  ],
+  "schema_version": "1.1",
+  "sub_game_number": 5,
+  "summary": {
+    "audit": {
+      "failed_steps": [],
+      "passed": true
+    },
+    "ended_at": "2026-08-08T18:38:43.880677+03:00",
+    "result": "survival",
+    "roles": {
+      "najamjad": "thief",
+      "uoh-ay26": "police"
+    },
+    "started_at": "2026-08-08T18:28:33.966270+03:00",
+    "steps": 35,
+    "sub_game_number": 5,
+    "winner_group": "najamjad"
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "cop_score": 20,
+  "game_id": "G001",
+  "log_sha256": "3bf8bf5e1b04bd0ce3607f21e8e95ad5915f2009fa3d422e064a9cc78141221c",
+  "mutual_sign_off": true,
+  "outcome": "capture",
+  "participants": {
+    "najamjad": {
+      "code_version": "3.0.0",
+      "github_commit": "d8625d10e5da24c090433089fb0bed518e26f2b6",
+      "group_id": "najamjad",
+      "group_name": "NajAmjad",
+      "hardware_spec": {
+        "cpu_cores": 8,
+        "cpu_freq_mhz": 2800,
+        "cpu_model": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+        "cpu_type": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+        "gpu_model": "none detected",
+        "gpu_type": "none detected",
+        "os": "Linux 6.6.87.2-microsoft-standard-WSL2",
+        "python": "3.12.3",
+        "ram_gb": 7.5,
+        "vram_gb": 0.0
+      },
+      "llm_model": "deepseek-v4-flash",
+      "mcp_servers": {
+        "cop": "https://thief.4laboratory.com/mcp",
+        "thief": "https://thief.4laboratory.com/mcp"
+      },
+      "members": [
+        "Naji Kayal",
+        "Amjad Abed"
+      ],
+      "repos": {
+        "cop": "https://github.com/najikay/najamjad-cop",
+        "thief": "https://github.com/najikay/najamjad-thief"
+      },
+      "signature": "sha256:0554306a5ca4ac4c159f93d84e894fd40eab8ad3e37450f79fe58d7e51484c99"
+    },
+    "uoh-ay26": {
+      "code_version": "3.0.0",
+      "github_commit": "d214ed66b6b2593f804e2f43db1051040b50732f",
+      "group_id": "uoh-ay26",
+      "group_name": "uoh-ay26",
+      "hardware_spec": {
+        "cpu_cores": 16,
+        "cpu_freq_mhz": "unknown",
+        "cpu_type": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+        "gpu_cores_or_cuda": "unknown",
+        "gpu_type": "unknown",
+        "os": "Windows",
+        "ram_gb": 15.71,
+        "vram_gb": "unknown"
+      },
+      "llm_model": "gemini-3.1-flash-lite",
+      "mcp_servers": {
+        "thief": "https://cop.uohay26game.com/mcp"
+      },
+      "members": [
+        "Aisha Abu Dahesh",
+        "Yousef Asadi"
+      ],
+      "repos": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      },
+      "signature": "sha256:2a18167a3fe53f500ca18891a21ac124fee7ff25f668989de9ee1e1fbcb3ea29"
+    }
+  },
+  "repo_links": {
+    "team_a_cop_repo": "https://github.com/najikay/najamjad-cop",
+    "team_a_thief_repo": "https://github.com/najikay/najamjad-thief",
+    "team_b_cop_repo": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+    "team_b_thief_repo": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+  },
+  "sub_game_number": 2,
+  "team_a": {
+    "members": [
+      "Naji Kayal",
+      "Amjad Abed"
+    ],
+    "team_name": "NajAmjad"
+  },
+  "team_b": {
+    "members": [
+      "Aisha Abu Dahesh",
+      "Yousef Asadi"
+    ],
+    "team_name": "uoh-ay26"
+  },
+  "thief_score": 5,
+  "token_usage_by_group": {
+    "najamjad": 0,
+    "uoh-ay26": 3507
+  },
+  "total_tokens_used": 3507
+}

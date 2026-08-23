@@ -1,0 +1,2069 @@
+{
+  "game_id": "G009",
+  "game_uid": "7b1d942e-5a9c-6e0c-312a-761dd7dec131",
+  "links": {
+    "config": "config_G009_g<NN>.json",
+    "declaration": "declaration_G009.json",
+    "github": {
+      "sharNamr": {
+        "cop": "https://github.com/SharbelMaroun/p2p-cop-agent",
+        "thief": "https://github.com/SharbelMaroun/p2p-thief-agent"
+      },
+      "uoh-ay26": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      }
+    },
+    "log": "log_G009_g<NN>.json",
+    "result": "result_G009.json"
+  },
+  "records": [
+    {
+      "commit": "83194b49ccaa15dc1ceb1952951685f5f04ee1e77e32361384da7cc1e243604f",
+      "nonce": "128d6edc37f3e97c4bf4dad50c0a480069450d3d2f37278a462d2399f0ecc332",
+      "payload": {
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "STAY",
+        "position": [
+          3,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 1
+      }
+    },
+    {
+      "commit": "3768a6902842b3b0a387fbf98e399a196b9ed3ce19735b552612fd4318153bf1",
+      "nonce": "2e7a76b27c35cc853ec0373e72e719cf",
+      "payload": {
+        "barriers": [],
+        "hint": "heading toward the the north edge",
+        "intent": "truth",
+        "move": "MOVE:EAST",
+        "position": [
+          0,
+          1
+        ],
+        "state": "grid=7x7;self=[0, 1];barriers=[]",
+        "step": 1,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "1b35a886969072f185ffde6b9fbc30cfe1018d6f75bab9e91d50dd7c574e2884",
+      "nonce": "7d30a88b508adbcce26278d9de3c77e342537953d8fdf6005af623ba43be81b9",
+      "payload": {
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "STAY",
+        "position": [
+          3,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 2
+      }
+    },
+    {
+      "commit": "0af925a613b7293833c3ea477a5436ce4c295d62674666ae24a5cb5c2d1cbe13",
+      "nonce": "7ab6a8278dfa929855010dd3327959c4",
+      "payload": {
+        "barriers": [],
+        "hint": "way past the the north edge",
+        "intent": "bluff",
+        "move": "MOVE:EAST",
+        "position": [
+          0,
+          2
+        ],
+        "state": "grid=7x7;self=[0, 2];barriers=[]",
+        "step": 2,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "823836e46558eb95a086547ad76bb5b091d61b64b4361db764931be0046d480e",
+      "nonce": "ff4b1c61c4488ede8ab3ad1febfedc2213934174cb339d10ecc54551bcb6fd4f",
+      "payload": {
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          3,
+          4
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 3
+      }
+    },
+    {
+      "commit": "0da5444735466fe6e17d6b902964202bd91c11286186cb5a4b84c62af980c0cc",
+      "nonce": "26c8caf4089e8d4443c4397b85342781",
+      "payload": {
+        "barriers": [],
+        "hint": "closing in near the the north edge",
+        "intent": "truth",
+        "move": "MOVE:SOUTH",
+        "position": [
+          1,
+          2
+        ],
+        "state": "grid=7x7;self=[1, 2];barriers=[]",
+        "step": 3,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "3c5c58744e63e0b4c739d12395075f8861188e713eb8825608b7efafeca62150",
+      "nonce": "27b32885ad4fea14b5d5cf46697062f1e5801307b34690fe01ee75bb20840405",
+      "payload": {
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          3,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 4,
+          "row": 3
+        },
+        "step": 4
+      }
+    },
+    {
+      "commit": "929e42ae613cd11bb0d44025e6f7eae478d340f367e3c647f8d4ff2d4b3ad703",
+      "nonce": "be72db5d606794c8ad764d14976c5318",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ]
+        ],
+        "hint": "far from the the north edge",
+        "intent": "bluff",
+        "move": "BARRIER:[2, 2]",
+        "position": [
+          1,
+          2
+        ],
+        "state": "grid=7x7;self=[1, 2];barriers=[[2, 2]]",
+        "step": 4,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "b1bf91d96ca609512a0f8a5cf84dfed47a6a2171c82059550a8f2d7c118b68e3",
+      "nonce": "14ff4c220613e445547183f11aaa9c02e7b8c3856854e9d9da9e9e34b5b8710c",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            2
+          ]
+        },
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          4,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 5
+      }
+    },
+    {
+      "commit": "162e47b186dab893c0daece2e4b463f6937445b8db16e523bb0684a53d86c714",
+      "nonce": "9a8407bc351e1caeb99cfdced5337ac2",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ]
+        ],
+        "hint": "somewhere by the the north edge",
+        "intent": "truth",
+        "move": "MOVE:EAST",
+        "position": [
+          1,
+          3
+        ],
+        "state": "grid=7x7;self=[1, 3];barriers=[[2, 2]]",
+        "step": 5,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "55c67b2b9e03173121fb61b07f1aa98d91c0bbb4f22fdc871547d04924ee17e5",
+      "nonce": "7b2f1b9eeebb134cd87fea1201d3503e3e396b322c77b747bed9f1400bcc109f",
+      "payload": {
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          3,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 4
+        },
+        "step": 6
+      }
+    },
+    {
+      "commit": "8a5c345d67e86ca9ef420529dbfe6679a246d0071c3fa0f4140bac3b79f23813",
+      "nonce": "7a91382de3678def2d172d96295eeb39",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        "hint": "nowhere near the the north edge",
+        "intent": "bluff",
+        "move": "BARRIER:[2, 3]",
+        "position": [
+          1,
+          3
+        ],
+        "state": "grid=7x7;self=[1, 3];barriers=[[2, 2], [2, 3]]",
+        "step": 6,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "05b4e3e82b913a5d624418afb87c109aa3eab28e0ffa23e30e6946db39a18e52",
+      "nonce": "cf828c54a40d0e2f854638f97b5c4a87f85749a491f808516632c376ab8cec2f",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            3
+          ]
+        },
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          3,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 7
+      }
+    },
+    {
+      "commit": "93b181a96c9846bac0472b8e66c63c941d5f1e1998677f5e636f6f2475f841f4",
+      "nonce": "98953c5992c3a5801ccb9faf76034859",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        "hint": "heading toward the the east side",
+        "intent": "truth",
+        "move": "MOVE:EAST",
+        "position": [
+          1,
+          4
+        ],
+        "state": "grid=7x7;self=[1, 4];barriers=[[2, 2], [2, 3]]",
+        "step": 7,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "a2ffa67d1ad52bdadd79faf75f2f4e15653c4262b8cb3ee8a0a57c187a1f0e6a",
+      "nonce": "ca90b742762bbac383fcf060b3454ca1d8b198d4827914bac4002b652197a1d4",
+      "payload": {
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          3,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 8
+      }
+    },
+    {
+      "commit": "8e7d452b39a4bef844ad1f1dc2b4c25ec8a91abff8261c59eed92f82415e5c5b",
+      "nonce": "dfeebe7dd22520c94a34f8c4b7a8c2ec",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ],
+        "hint": "way past the the east side",
+        "intent": "bluff",
+        "move": "BARRIER:[2, 4]",
+        "position": [
+          1,
+          4
+        ],
+        "state": "grid=7x7;self=[1, 4];barriers=[[2, 2], [2, 3], [2, 4]]",
+        "step": 8,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "8856e6808877a3f7c0c1ba2af451c2cbea141e7a92cd7cdf98da36d3cc895c1e",
+      "nonce": "c42b7b2df50e210e562614ebb9b04e52637b3ceb3f5ce7a62b7956b30c57a286",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            4
+          ]
+        },
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          4,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 9
+      }
+    },
+    {
+      "commit": "0f93961a317a23459bec34ccfb1f40780a7d33b7aa604981bee45e8c93b2e4f8",
+      "nonce": "c33c5b15048f98735c2e7a0face8b136",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ],
+        "hint": "closing in near the the east side",
+        "intent": "truth",
+        "move": "MOVE:EAST",
+        "position": [
+          1,
+          5
+        ],
+        "state": "grid=7x7;self=[1, 5];barriers=[[2, 2], [2, 3], [2, 4]]",
+        "step": 9,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "2cebe40236635f9808dd12c3c240063c0064036906d3d83a5f6184efd44c7782",
+      "nonce": "bbe3f18ae4eaa539dd68d91351ba18bd7a040975f57f736b4ddbb6289b5f565a",
+      "payload": {
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          3,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 4
+        },
+        "step": 10
+      }
+    },
+    {
+      "commit": "c86a3847a36eb0e3fd8e9b1be116706a4d8f16db891711e524e315149bd8a7ba",
+      "nonce": "eb0434df77c83c557db7e2934d1454f6",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ],
+        "hint": "far from the the east side",
+        "intent": "bluff",
+        "move": "MOVE:SOUTH",
+        "position": [
+          2,
+          5
+        ],
+        "state": "grid=7x7;self=[2, 5];barriers=[[2, 2], [2, 3], [2, 4]]",
+        "step": 10,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "e3ed4ea69fc0412d824d8c6e687ab8b54d2e6a90acc10351ff238cedd3a1ee7d",
+      "nonce": "89a261fccbcb36f11f2d806afd6d343c1a991ab03ad18143893f29ab462c8611",
+      "payload": {
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          3,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 11
+      }
+    },
+    {
+      "commit": "cc0067c512df7ac42b30a1cb5f4dd693ccc11612e32e8461f30e223179fd372f",
+      "nonce": "330e02174741e56819ecbab72ba11d75",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ],
+        "hint": "somewhere by the the east side",
+        "intent": "truth",
+        "move": "MOVE:SOUTH",
+        "position": [
+          3,
+          5
+        ],
+        "state": "grid=7x7;self=[3, 5];barriers=[[2, 2], [2, 3], [2, 4]]",
+        "step": 11,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "d0b9106e690a6726c7dad9ea2a6f24292021a0d1dde679f63537b3589324dfb2",
+      "nonce": "df9e9e5ea000375cadd8a739a55c81a37e2a52ac35926768aed32dc617bbf396",
+      "payload": {
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          3,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 12
+      }
+    },
+    {
+      "commit": "22998458661079efc5b8ca51a174a1ce53f81d053ebf1f88719f523dec4af180",
+      "nonce": "913abd9ea0e87ca1858589a876b526a4",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "hint": "nowhere near the the east side",
+        "intent": "bluff",
+        "move": "BARRIER:[3, 4]",
+        "position": [
+          3,
+          5
+        ],
+        "state": "grid=7x7;self=[3, 5];barriers=[[2, 2], [2, 3], [2, 4], [3, 4]]",
+        "step": 12,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "22d13c3013322801c10da61f0737a37173ddc7fe625f4fa4b6258510702f59ff",
+      "nonce": "7cb35439543779064bb1acd278a96009c8274349c9065b10b5137ee07bef3375",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            4
+          ]
+        },
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          4,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 13
+      }
+    },
+    {
+      "commit": "8c499ae9af30bc02cf936e937d806fe413d123f8bee658d9ca3aafd94fd53016",
+      "nonce": "496a5c1c6afa13e531270d6bf709b059",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "hint": "heading toward the the west side",
+        "intent": "truth",
+        "move": "MOVE:SOUTH",
+        "position": [
+          4,
+          5
+        ],
+        "state": "grid=7x7;self=[4, 5];barriers=[[2, 2], [2, 3], [2, 4], [3, 4]]",
+        "step": 13,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "67a125e91a24c9db8d8f96478c89b70103639924b3698ba2503ecd502e794675",
+      "nonce": "0b4984e2f573fd3d7531d25decfb88295e074ac518d8a8299829a11c49743f6e",
+      "payload": {
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          4,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 4
+        },
+        "step": 14
+      }
+    },
+    {
+      "commit": "306e4d9f2f6cede579271efcd00c2d9d1fb719f2b0c9b3d063e8b6aa4fa90b6b",
+      "nonce": "5bbc9813b54326a4929d3fefb034bdb0",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "way past the the west side",
+        "intent": "bluff",
+        "move": "BARRIER:[4, 4]",
+        "position": [
+          4,
+          5
+        ],
+        "state": "grid=7x7;self=[4, 5];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 4]]",
+        "step": 14,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "206a4ca24f6663deb0a1a2e460e837472527f99bce8ecd593447ac3effb48bce",
+      "nonce": "b20c93732371db837f05647ad454ddcac1d01112d32dc485cecb3c3c20dcd924",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            4
+          ]
+        },
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          3,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 4
+        },
+        "step": 15
+      }
+    },
+    {
+      "commit": "cf01f0105df354888c6822eb8ee657cac1b31b2f478b79ce4d36bf89fb2e6634",
+      "nonce": "8f98f5595db79f01d3438d18e1b8531a",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "closing in near the the west side",
+        "intent": "truth",
+        "move": "MOVE:SOUTH",
+        "position": [
+          5,
+          5
+        ],
+        "state": "grid=7x7;self=[5, 5];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 4]]",
+        "step": 15,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "7e7ec3cd60245fc79a3df881a0cd143ddb63a0ffca480edfd6fbba96fcbefc6c",
+      "nonce": "5aeb14679813c6081340660c114380fdccd303145916bbea9734f1e84b279975",
+      "payload": {
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          3,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 16
+      }
+    },
+    {
+      "commit": "386f379f359a6b29faded2439111ec932d2c20a8ebaadd69634bc6039196cbd9",
+      "nonce": "31c0066ff351c782a5773fa0ed07f64d",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "far from the the west side",
+        "intent": "bluff",
+        "move": "MOVE:WEST",
+        "position": [
+          5,
+          4
+        ],
+        "state": "grid=7x7;self=[5, 4];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 4]]",
+        "step": 16,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "098691d8c75ad08a0c3782e8dccb70e3126720b611b10675aa47077f7a1d3509",
+      "nonce": "a788524a5d3d848bd165f7dbd0e2df503b8f4e42a2cb5cb01e3346066b52df6d",
+      "payload": {
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          3,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 3
+        },
+        "step": 17
+      }
+    },
+    {
+      "commit": "9637e1a44b9591a18d0b305e93c46c4e90050514d152f3081954b079ab43a14e",
+      "nonce": "289058afb01559e69100573485e23b41",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "somewhere by the the south edge",
+        "intent": "truth",
+        "move": "MOVE:WEST",
+        "position": [
+          5,
+          3
+        ],
+        "state": "grid=7x7;self=[5, 3];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 4]]",
+        "step": 17,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "b241b044729fba6cc1ac06ae75aee49ec51489a5fdd7c56da2e7777fc96af400",
+      "nonce": "1ba35a56e44c8c87ac9846d6214d0ef9fa1459e35f167349fd536949b7dbca68",
+      "payload": {
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          4,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 18
+      }
+    },
+    {
+      "commit": "fdd1a48e17bf8b37cf58f1ebac3c90fa17d7004915528c0b81b8db2980bb9175",
+      "nonce": "ab1b1d8b4f0c054dc69557b6a51a5409",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "nowhere near the the south edge",
+        "intent": "bluff",
+        "move": "BARRIER:[4, 3]",
+        "position": [
+          5,
+          3
+        ],
+        "state": "grid=7x7;self=[5, 3];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 3], [4, 4]]",
+        "step": 18,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "9bf56bbdd39fb14a2c67ae0d368a29116497e4ee14938f0b1748712329dd912e",
+      "nonce": "3d9f893b72c48e0b6d9870f016002f3aaeb53e1b25f2fbca35b6b85b4341e768",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            3
+          ]
+        },
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          3,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 4
+        },
+        "step": 19
+      }
+    },
+    {
+      "commit": "7d0243328c4fbdf8792b9bbc6ada0e191712458816d549a652194ce48a62fa87",
+      "nonce": "4070658e80c294458722afdba00cb379",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "heading toward the the south edge",
+        "intent": "truth",
+        "move": "MOVE:WEST",
+        "position": [
+          5,
+          2
+        ],
+        "state": "grid=7x7;self=[5, 2];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 3], [4, 4]]",
+        "step": 19,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "0a9c66a62be8507315d23805d174d4724505bf20f754fcc171253f55bd310c86",
+      "nonce": "cba037cbb5bb33568d051a9b47baaaf2fb054d36255e40b2ea274713993caf25",
+      "payload": {
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          3,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 20
+      }
+    },
+    {
+      "commit": "1f1e48cf6dd3a6b99bcfd45d2fd031e542a68f168ca846dcfaaa5055fc0fc086",
+      "nonce": "ec31de666d1909c1926254de1c8ef939",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "way past the the south edge",
+        "intent": "bluff",
+        "move": "BARRIER:[4, 2]",
+        "position": [
+          5,
+          2
+        ],
+        "state": "grid=7x7;self=[5, 2];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 20,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "e3fb55c6fca054ffe9bfda65c148e24380a269b4ee72a3de3f247f507a44fd57",
+      "nonce": "9742c869a3d498a371a006b877aa047e9bf1d235b8c7d348d98914bf1dda2756",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            2
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          3,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 3
+        },
+        "step": 21
+      }
+    },
+    {
+      "commit": "969aa0626f38b5de4222ed15f2f741453237aa8f2220be1115840322b35bb308",
+      "nonce": "8acac28d6917ac55fe497eb1965c91d4",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "closing in near the the south edge",
+        "intent": "truth",
+        "move": "MOVE:WEST",
+        "position": [
+          5,
+          1
+        ],
+        "state": "grid=7x7;self=[5, 1];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 21,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "fded5655d7339f5cef99a7db8b8077ef2976edb0425179db4411a887b4d8d8c8",
+      "nonce": "41e3e492d7992b4ea80e5829dda113e867ecd39b4ba9aaa7204aa7691535e1d0",
+      "payload": {
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          3,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 22
+      }
+    },
+    {
+      "commit": "43de70d83a8d684e2fdee2604f502f06ca7e4e8f2b9612a6a1198ff73504231d",
+      "nonce": "71a1ccf8039ea25ff9ba0921fee8a956",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "far from the the south edge",
+        "intent": "bluff",
+        "move": "MOVE:NORTH",
+        "position": [
+          4,
+          1
+        ],
+        "state": "grid=7x7;self=[4, 1];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 22,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "0d29c4927f6f7727a4616a140437ebdf76db793b512cc8f1afca75e8a10edb31",
+      "nonce": "fdcf7b7823389a910828b666df15ba490a6e34d451806e838dd164e76c71d913",
+      "payload": {
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          2,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 3
+        },
+        "step": 23
+      }
+    },
+    {
+      "commit": "9167520c5f035b5b296df7f75927423120fba976f4f6d5bc7b24d3e3bd7545c8",
+      "nonce": "393ab84c8ebda0ad782c0f3d740293f4",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "somewhere by the the north edge",
+        "intent": "truth",
+        "move": "MOVE:NORTH",
+        "position": [
+          3,
+          1
+        ],
+        "state": "grid=7x7;self=[3, 1];barriers=[[2, 2], [2, 3], [2, 4], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 23,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "d880bcff23c1da9aef7d3d0fc9693bb1d802ae1f59588bdffd815278798041b6",
+      "nonce": "fbe6f24f1ad2b5b88eb8fa364e5f7e406e4e19319d631914c260502da758b53f",
+      "payload": {
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          1,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 2
+        },
+        "step": 24
+      }
+    },
+    {
+      "commit": "f5f5ceb25656bd262973dd24e76a0ef1d09a908d3acc2c2d1d2f36af9ad19b61",
+      "nonce": "682eb56b29184f1e5ec11f19d8b51f5c",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "nowhere near the the north edge",
+        "intent": "bluff",
+        "move": "BARRIER:[3, 2]",
+        "position": [
+          3,
+          1
+        ],
+        "state": "grid=7x7;self=[3, 1];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 24,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "4899a055cbf97bc4c565ca2fdc3442064b351be3e0862e582c11b9b79fd35b5b",
+      "nonce": "3e16d76c8e238e379a25d328b77aab8d1d49aa21c0c9e28f9db3036e5f0cb201",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            2
+          ]
+        },
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          1,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 1
+        },
+        "step": 25
+      }
+    },
+    {
+      "commit": "cd64eac7bda1f9773a43c1629ca2b44eec854ed1652ac745681881b06395ac46",
+      "nonce": "701117804d2e9866aa2970577292e560",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "heading toward the the north edge",
+        "intent": "truth",
+        "move": "MOVE:NORTH",
+        "position": [
+          2,
+          1
+        ],
+        "state": "grid=7x7;self=[2, 1];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 25,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "068eb289bedc3ef488b7779f646b979a254895fb805840fedce7e5e1903647e6",
+      "nonce": "e855fe819470f4035aff9cf4d28a7eb503dfb5b8b9b9d02d6ff4d7cab3dc3e4c",
+      "payload": {
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          1,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 1
+        },
+        "step": 26
+      }
+    },
+    {
+      "commit": "ab0c98048afa23b144170aa88ae0ed980f75f3d932e87268906254d54e4cc32d",
+      "nonce": "167023b3435bed216ccb81010558d6d5",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "way past the the north edge",
+        "intent": "bluff",
+        "move": "MOVE:NORTH",
+        "position": [
+          1,
+          1
+        ],
+        "state": "grid=7x7;self=[1, 1];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 26,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "758258d707388f1469daf3f81f6bce67c6b88571f206a8bc78d4e0639d0bfccc",
+      "nonce": "25bb465c39cc55d16e4badc57e49b5604b3bde420b0a80516e736cda8942126b",
+      "payload": {
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          1,
+          4
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 1
+        },
+        "step": 27
+      }
+    },
+    {
+      "commit": "e1b44854bc303b40a2c9c6d0404148149759234834e5227b0c86682f89dfb6cd",
+      "nonce": "672d1c13428859f2b554ffd7acded0a7",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "closing in near the the north edge",
+        "intent": "truth",
+        "move": "MOVE:EAST",
+        "position": [
+          1,
+          2
+        ],
+        "state": "grid=7x7;self=[1, 2];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 27,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "9c5771589de9499cc511e72d5cc7fa8f1b57028c348db7913f409fd2dde38c88",
+      "nonce": "52c06c05ded9b1275db761bd09a99ebf6b67e78efe206cca10c7f8513e439526",
+      "payload": {
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          1,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 4,
+          "row": 1
+        },
+        "step": 28
+      }
+    },
+    {
+      "commit": "fc9d90422ecc1237242f218b76e62bcf18619a686b6585911a101db7b44d13ab",
+      "nonce": "afc5e56b755534956e93247ef5613241",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "far from the the north edge",
+        "intent": "bluff",
+        "move": "MOVE:EAST",
+        "position": [
+          1,
+          3
+        ],
+        "state": "grid=7x7;self=[1, 3];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 28,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "a51cba74fe44456fe761a4686621fa4989a726728ec7f703b6ec45c086ab011d",
+      "nonce": "8fadb0a7fd8e76736c178543fd80e2f309cd0d896e3b882e54b945a9f8e06a1e",
+      "payload": {
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          2,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 1
+        },
+        "step": 29
+      }
+    },
+    {
+      "commit": "9fd998ed5499de35c8ea246f5c2de5c4bf75f072ba6446a736cd16febfde1bfd",
+      "nonce": "0550c3a7b7ef565a847828e2ca00aa3e",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "somewhere by the the east side",
+        "intent": "truth",
+        "move": "MOVE:EAST",
+        "position": [
+          1,
+          4
+        ],
+        "state": "grid=7x7;self=[1, 4];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 29,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "27e21a309a6680ff98fbaac15f5dbb26058f0c1e8e1716dc0023cd24eec07c93",
+      "nonce": "5faa4ba2b9b01755cb1cc4c73ceb81f5648eb3b4fcc491db8f95e950e31f990a",
+      "payload": {
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          3,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 2
+        },
+        "step": 30
+      }
+    },
+    {
+      "commit": "42f510ea42d860e1e2d2739d1915ee1c4f9575a1ef18be415616c2018c50ef32",
+      "nonce": "97e552dfc045af19a06d886ec033140a",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "nowhere near the the east side",
+        "intent": "bluff",
+        "move": "MOVE:EAST",
+        "position": [
+          1,
+          5
+        ],
+        "state": "grid=7x7;self=[1, 5];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 30,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "00f7bc49a33763022b3edfd5b09820bdca8728ed28f6e6772c454fe983e4afbf",
+      "nonce": "08f4fe529ef256a20a1b8d89323656a3f460eed9bc0fa5fce32477d293de400e",
+      "payload": {
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          4,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 3
+        },
+        "step": 31
+      }
+    },
+    {
+      "commit": "313dd5858378a6744d69b164aa1e24e16bcf40f01d9b992c0453b444b807207c",
+      "nonce": "cd63658dfd839306fce8822275c161a4",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "heading toward the the east side",
+        "intent": "truth",
+        "move": "MOVE:SOUTH",
+        "position": [
+          2,
+          5
+        ],
+        "state": "grid=7x7;self=[2, 5];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 31,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "b76c05df3d4e395a319f68ea00b5a3f3e045c998f9144638f26bcfe5a54e22f0",
+      "nonce": "e8e64e377cc5488d43faa31ecc2f2204b9e29f6289d31ab7bac2ca160ca5c0c9",
+      "payload": {
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          5,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 4
+        },
+        "step": 32
+      }
+    },
+    {
+      "commit": "bc8ef60de365b05b4fee8dd7ce61ee9e361517deddb36c995f686d3550d222bc",
+      "nonce": "c6ebcd0011b19407e1bf67eb29a70461",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "way past the the east side",
+        "intent": "bluff",
+        "move": "MOVE:SOUTH",
+        "position": [
+          3,
+          5
+        ],
+        "state": "grid=7x7;self=[3, 5];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 32,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "2cb95a303b027912d06534b52f94ee94337d8a2f01b4c75da3dfbe424cf3a90e",
+      "nonce": "82e97f0a7ef0ac9e8f1029cf82a620f50c7aebf5790c6fbd806bbbcbb8c82418",
+      "payload": {
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          5,
+          4
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 5
+        },
+        "step": 33
+      }
+    },
+    {
+      "commit": "d6162ede6b1d2a371f40b9ba1cd83f17499ad5c4798678c87499e8baa5b2b405",
+      "nonce": "f0382ca0d9f8fe436a91b7c65a568432",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "closing in near the the west side",
+        "intent": "truth",
+        "move": "MOVE:SOUTH",
+        "position": [
+          4,
+          5
+        ],
+        "state": "grid=7x7;self=[4, 5];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 33,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "ef15d973a55d3ffd4cd068be35b31974f45f542d6e70c7e45b9bfc272759feea",
+      "nonce": "cd5a4bc190c97cfcf88f9ce5a49f7befb90ab221d6e17313c2809723e9a43f7c",
+      "payload": {
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          5,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 4,
+          "row": 5
+        },
+        "step": 34
+      }
+    },
+    {
+      "commit": "58e09f8646d0a0b168302bb53d89bc98102ba2bb34888cd079dddc361df47b58",
+      "nonce": "8eb1939823f3b484a96e306dfc471546",
+      "payload": {
+        "barriers": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            4,
+            4
+          ]
+        ],
+        "hint": "far from the the west side",
+        "intent": "bluff",
+        "move": "MOVE:SOUTH",
+        "position": [
+          5,
+          5
+        ],
+        "state": "grid=7x7;self=[5, 5];barriers=[[2, 2], [2, 3], [2, 4], [3, 2], [3, 4], [4, 2], [4, 3], [4, 4]]",
+        "step": 34,
+        "verdict": "bluff"
+      }
+    },
+    {
+      "commit": "d8fc4133217a1a3db7a147d7695653c952fdf4cc40e989cee95521a569bae634",
+      "nonce": "6a62c6ca3f00b993419a1019fe5261238a731b7acd91d2cc587d8d1190a90a16",
+      "payload": {
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          5,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 5
+        },
+        "step": 35,
+        "win_claim": {
+          "type": "survival"
+        }
+      }
+    }
+  ],
+  "schema_version": "1.1",
+  "sub_game_number": 4,
+  "summary": {
+    "audit": {
+      "failed_steps": [],
+      "passed": true
+    },
+    "ended_at": "2026-08-13T23:17:10.856194+03:00",
+    "result": "survival",
+    "roles": {
+      "sharNamr": "police",
+      "uoh-ay26": "thief"
+    },
+    "started_at": "2026-08-13T23:07:23.694047+03:00",
+    "steps": 35,
+    "sub_game_number": 4,
+    "winner_group": "uoh-ay26"
+  }
+}

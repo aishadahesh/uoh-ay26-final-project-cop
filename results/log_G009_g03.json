@@ -1,0 +1,1740 @@
+{
+  "game_id": "G009",
+  "game_uid": "7b1d942e-5a9c-6e0c-312a-761dd7dec131",
+  "links": {
+    "config": "config_G009_g<NN>.json",
+    "declaration": "declaration_G009.json",
+    "github": {
+      "sharNamr": {
+        "cop": "https://github.com/SharbelMaroun/p2p-cop-agent",
+        "thief": "https://github.com/SharbelMaroun/p2p-thief-agent"
+      },
+      "uoh-ay26": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      }
+    },
+    "log": "log_G009_g<NN>.json",
+    "result": "result_G009.json"
+  },
+  "records": [
+    {
+      "commit": "99756c24caa4ed20188018a0e54fdb10db1d48e596d7b7179147b69d3bdb87c9",
+      "nonce": "ebd2cf576e56aa5e795cac1ffe437c3d",
+      "payload": {
+        "hint": "I am always one step ahead of you.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          4,
+          3
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[4, 3];barriers=[]",
+        "step": 1,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "c10df1f0795758516ff18ae6496ded9a7e88e79251686a364d4c686c445cd843",
+      "nonce": "128c95d3862cbd5c04fcac57ecffe699a01a4fb087b0911d0e04beaae9e41dee",
+      "payload": {
+        "capture_claim": [
+          1,
+          0
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          1,
+          0
+        ],
+        "role": "police",
+        "state": {
+          "col": 0,
+          "row": 0
+        },
+        "step": 1
+      }
+    },
+    {
+      "commit": "22646fa3aee152d2a57f08f9e273f8a7a32119a876dcc3030eb039d8bba45284",
+      "nonce": "e97c098d704072f55b3299639533c465",
+      "payload": {
+        "hint": "Keep guessing, you are colder than you think.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          5,
+          3
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[5, 3];barriers=[]",
+        "step": 2,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "ebd85b2287c710598786be5ae171e55cd2c344ff0d3747092b8ae9ccab1913f1",
+      "nonce": "918b2b34f38a5e57d80e41975e0d073cda641314fd2db14dd0b2c111c877536d",
+      "payload": {
+        "capture_claim": [
+          1,
+          1
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          1,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 0,
+          "row": 1
+        },
+        "step": 2
+      }
+    },
+    {
+      "commit": "a199c38ebaec816702be8c6cc4d08267476d0de0da38d88a74ecc44840d2252f",
+      "nonce": "df2ace226b9fee7565fc6623619da38e",
+      "payload": {
+        "hint": "The shadows here hide me well tonight.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:EAST",
+        "position": [
+          5,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[5, 4];barriers=[]",
+        "step": 3,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "a2a66e8ea23c3315754afd8036dbb00f58e8dfb4e9695da0cabe6bbbac53f712",
+      "nonce": "84cded8c6d8b3926fdf29ca31dbcae213fb732e63de9c96e2d53ee02a25a52e3",
+      "payload": {
+        "capture_claim": [
+          2,
+          1
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          2,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 1
+        },
+        "step": 3
+      }
+    },
+    {
+      "commit": "a924164b39f283842392c28e017baccd04b7e8b4b787f5a279c68e095a82552b",
+      "nonce": "e4a160795e1aefc2e001ad23642c8c9a",
+      "payload": {
+        "hint": "Chase all you like, the streets are mine.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:EAST",
+        "position": [
+          5,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[5, 5];barriers=[]",
+        "step": 4,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "91416662c09d14274934d0d7a1271734d25f83fe1cdefe54976942217bc7a74d",
+      "nonce": "92ca070544a3baa40752d62d5b322360f383688de77f3a92c11d2cced6ae04a5",
+      "payload": {
+        "capture_claim": [
+          2,
+          2
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          2,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 2
+        },
+        "step": 4
+      }
+    },
+    {
+      "commit": "fd929fe674499d38d14ad3cf4ecc7a929893c1f5ba9a91caf95a3977daad615a",
+      "nonce": "e58c57f29663efbc8acdcd43810794ae",
+      "payload": {
+        "hint": "You will not catch me this time, officer.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          6,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 5];barriers=[]",
+        "step": 5,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "a66bb97dea90bccfd3dec3796b496565f63c2054478af384c4b9a9b3fdd3d26d",
+      "nonce": "6dedd55f57952676507e8f279a4b82dcf2e125f7f3ddda8e7e3773549d05741c",
+      "payload": {
+        "capture_claim": [
+          3,
+          2
+        ],
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          3,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 2
+        },
+        "step": 5
+      }
+    },
+    {
+      "commit": "ce4cecbba5a2516d8ffb4da654daaa008d60c60b81e190f0cbe6b7cb451a5214",
+      "nonce": "8c4b1bb8e0afe452663bc09994897315",
+      "payload": {
+        "hint": "I am always one step ahead of you.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          5,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[5, 5];barriers=[]",
+        "step": 6,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "7384b0b8ce61c3da83e5d80c71b32652a8b1060138200ec4d97e4cde9beb77d1",
+      "nonce": "ecbf313b1145dbf53fb531244acef5853c906a2ec9b2633959212eb32791589a",
+      "payload": {
+        "capture_claim": [
+          3,
+          3
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          3,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 6
+      }
+    },
+    {
+      "commit": "caf28f96d20ef4310eed929af95ffbc409469938c81de2c79e4afab7db880646",
+      "nonce": "eb905ea25687f0d723f224e54e5dca8c",
+      "payload": {
+        "hint": "Keep guessing, you are colder than you think.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          6,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 5];barriers=[]",
+        "step": 7,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "49d966766af00719dd66f890352791954a370c61ec1c7035edf05ec082e251aa",
+      "nonce": "287090752c76942fde840faf0a992337aa49b9f6438f96617176e0fd69eadf2e",
+      "payload": {
+        "capture_claim": [
+          4,
+          3
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          4,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 7
+      }
+    },
+    {
+      "commit": "be5585588c9f3e5d7c1957476683e1d4a5038e60eda0d25333e22c76f0d4737f",
+      "nonce": "a04e8bc1d1b715555666bdda83806bae",
+      "payload": {
+        "hint": "The shadows here hide me well tonight.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          5,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[5, 5];barriers=[]",
+        "step": 8,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "e3251379d9d19c545665b919cd2fa3112bfee29d90655762b0a636dabf69159f",
+      "nonce": "b5d91d1f54fb54255fee8bf93055bdf501fc8bad836a850cc818e858fefd7771",
+      "payload": {
+        "capture_claim": [
+          4,
+          4
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          4,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 4
+        },
+        "step": 8
+      }
+    },
+    {
+      "commit": "073a0159609abc72ed22ff57c6a96b514f79c8bf2fa59e19a6e080c9c2f8f7f7",
+      "nonce": "06b0e6a6b786dbadbbe50f65607db9cf",
+      "payload": {
+        "hint": "Chase all you like, the streets are mine.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          6,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 5];barriers=[]",
+        "step": 9,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "23ed99d6a9f22319f3424898d7c67257fa354a354d312d0373d7ccd7f2e976de",
+      "nonce": "8b0f8909a4eacfaa2f2d3a9703be2cd18ba680943248c384a8da3c6698297ef6",
+      "payload": {
+        "capture_claim": [
+          5,
+          4
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          5,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 4
+        },
+        "step": 9
+      }
+    },
+    {
+      "commit": "f086db8581e141edf1e795a59c8d3929c97b958bc4789f36d17f85179b060dac",
+      "nonce": "b7a3f3d17ca69463a320f2e9c75a28ae",
+      "payload": {
+        "hint": "You will not catch me this time, officer.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:EAST",
+        "position": [
+          6,
+          6
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 6];barriers=[]",
+        "step": 10,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "08d938dec633a611445af0dee7d40debee45253eb1c3ce69663e78f04a875668",
+      "nonce": "ed92a7bac4d9834edaf84a7ee86c0f2ddc62b62b8bf752725c7863296b0d0dcc",
+      "payload": {
+        "capture_claim": [
+          5,
+          5
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          5,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 5
+        },
+        "step": 10
+      }
+    },
+    {
+      "commit": "3ade01a702548116a424b56bc522aeb0a37c2c2b767b1939867e136da3fb3ac8",
+      "nonce": "e6d4f7785a273ee203607f5481b7f95f",
+      "payload": {
+        "hint": "I am always one step ahead of you.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:STAY",
+        "position": [
+          6,
+          6
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 6];barriers=[]",
+        "step": 11,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "807d259fec05f9d9829b9d6bde68d1b5afc236fb79803f4893e7b83cc22a5db7",
+      "nonce": "88ab94e8722305d146d7b07cf31897a776d68ddf18f8b55c54e44250bf18b48a",
+      "payload": {
+        "capture_claim": [
+          4,
+          5
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          4,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 5
+        },
+        "step": 11
+      }
+    },
+    {
+      "commit": "54edbb6864cb045568401f52943d256646f2a3f950bdcedd77fe8364d9c65e3f",
+      "nonce": "31f6cea3db0066b0e2b8bbbaa2b09f8c",
+      "payload": {
+        "hint": "Keep guessing, you are colder than you think.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          5,
+          6
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[5, 6];barriers=[]",
+        "step": 12,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "6ad06677d2e492a9d746a7faf6e856940d9adb0d4f4495a57408fe6ae345f335",
+      "nonce": "2e09c53c1211e5750b91086b7a409b183141609cbfc53aa211e6552c58427baa",
+      "payload": {
+        "barrier_placed": [
+          5,
+          5
+        ],
+        "capture_claim": [
+          4,
+          5
+        ],
+        "hint": "I stayed put.",
+        "intent": true,
+        "move": "STAY",
+        "position": [
+          4,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 4
+        },
+        "step": 12
+      }
+    },
+    {
+      "commit": "fa1515f7aa3662497393e1f081b3f5b9f46a0faee81ab1ee75ab2f4c2478c2ec",
+      "nonce": "c7ccffd57dd858394761f45ca85256dd",
+      "payload": {
+        "hint": "The shadows here hide me well tonight.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          6,
+          6
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 6];barriers=[[5, 5]]",
+        "step": 13,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "ebaad022454fffa712772d987a60f1a7a170e586e5630d264158473a774595e6",
+      "nonce": "cbbd02d9a525bade5542659a1dc7dd19a6cdc839051112ce98e768d3b496d86d",
+      "payload": {
+        "barrier_placed": [
+          4,
+          6
+        ],
+        "capture_claim": [
+          4,
+          5
+        ],
+        "hint": "I stayed put.",
+        "intent": true,
+        "move": "STAY",
+        "position": [
+          4,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 4
+        },
+        "step": 13
+      }
+    },
+    {
+      "commit": "ecdf767348837c49e16e6e321ec021af1415e3351932d07021580eb25e53f01e",
+      "nonce": "5458ab5452dda99eb252d22eefbfbca2",
+      "payload": {
+        "hint": "Chase all you like, the streets are mine.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:WEST",
+        "position": [
+          6,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 5];barriers=[[4, 6], [5, 5]]",
+        "step": 14,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "c4faac6a644173b09336fe458c15046deacc5bbcc04d8b0b3d573dcf65f49269",
+      "nonce": "353ae275517c0cd1a947b4f24c75c23ef03cbe50e110ca1261808b9327757cfc",
+      "payload": {
+        "capture_claim": [
+          4,
+          4
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          4,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 4
+        },
+        "step": 14
+      }
+    },
+    {
+      "commit": "4202255a2a67d5d1674558d8440c273147fccc34e0753cf2e05ff0b875c0b3fd",
+      "nonce": "0b8803157c6c981d289f3769ae3c0561",
+      "payload": {
+        "hint": "You will not catch me this time, officer.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:WEST",
+        "position": [
+          6,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 15,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "be3a82fdf4557eb9d73e9c4b2015a860ce4d9a31af97309a8dd1bbbeb9a14b24",
+      "nonce": "215334801497df21df81b04549531ccad26585fc5646d62936f1f737aba1d008",
+      "payload": {
+        "capture_claim": [
+          5,
+          4
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          5,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 4
+        },
+        "step": 15
+      }
+    },
+    {
+      "commit": "1d6fbb89d7910fff6be63c7c86d4f453ffe52551bcd3242eeace2b285ca84679",
+      "nonce": "495141f1c4c63f18f010d1818e8304a4",
+      "payload": {
+        "hint": "I am always one step ahead of you.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:WEST",
+        "position": [
+          6,
+          3
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 3];barriers=[[4, 6], [5, 5]]",
+        "step": 16,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "9d1667ef8d909c60ca9e0972b593e4532756b23495b963dc36a598f0c1da1783",
+      "nonce": "8c90542aaa9ff43572b7e0376b3684998a6253ef8243d9a6d96edbaa8fee897a",
+      "payload": {
+        "capture_claim": [
+          5,
+          3
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          5,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 5
+        },
+        "step": 16
+      }
+    },
+    {
+      "commit": "c26c5ff81501716699967ce9187bc8289cb2084e2db7327eaf49b936e088a00a",
+      "nonce": "3049203966b0104d6b9135c2aae2bb6d",
+      "payload": {
+        "hint": "Keep guessing, you are colder than you think.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:EAST",
+        "position": [
+          6,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[6, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 17,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "149455f9a0252bb25c27e630233e0e10c1341ff4327f58deeebc1f62369cdbe8",
+      "nonce": "5bbba42d37c651e1178d0740a090855a0292b848b2cedeef98933172238b1785",
+      "payload": {
+        "capture_claim": [
+          6,
+          3
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          6,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 5
+        },
+        "step": 17
+      }
+    },
+    {
+      "commit": "7673565ed4a94590207c371570bc2c738fce0039cd5fbf648b3e152c87f23fe9",
+      "nonce": "2beb9f740bac65979a1992734c39bd0f",
+      "payload": {
+        "hint": "The shadows here hide me well tonight.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          5,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[5, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 18,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "9836abef805c30e0e95048a80d2aca7a861a784724457a91b0e931827a7f727d",
+      "nonce": "26dea101ff5ea62d89c56e28ab604db28668eae59fb3409a4717f9be8b5c8fe3",
+      "payload": {
+        "capture_claim": [
+          6,
+          4
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          6,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 6
+        },
+        "step": 18
+      }
+    },
+    {
+      "commit": "d432a47fb2f7b9c0d468d5fa53dc13c9297f074a977727f4305f543c6a90457c",
+      "nonce": "e0da80fd1ef20b4feb852585ec5007fa",
+      "payload": {
+        "hint": "Chase all you like, the streets are mine.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          4,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[4, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 19,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "15ba1b03a1d6dd74566bb0081f4c6ceb7a4b4054a72a87d07282a3ce46d52f85",
+      "nonce": "79d8e2ac88c1cb023f22f9cf3bea1feda1534eb1b30f5814dd40f2517d30af20",
+      "payload": {
+        "capture_claim": [
+          5,
+          4
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          5,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 6
+        },
+        "step": 19
+      }
+    },
+    {
+      "commit": "3f1136f1045bde38d714a4df65f2a1247cddd4fc1aa1b0ef0a8d898b75a3e540",
+      "nonce": "8d19c6ca2fa96cde3f5b0c96e300cdce",
+      "payload": {
+        "hint": "You will not catch me this time, officer.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          3,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[3, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 20,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "64dcb6159e1e87e21e833d489944d1e05bb1b7749cb842d83bdc88d35048ade7",
+      "nonce": "14ca4a9b0e5f4fc9d3479d4528f26c9a078d705628c39d20b5fa7670349dc31a",
+      "payload": {
+        "capture_claim": [
+          4,
+          4
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          4,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 5
+        },
+        "step": 20
+      }
+    },
+    {
+      "commit": "d2ab7fc7589d36ea2899ee8a7380fdd416d44b04a44db9cb88c9d8035640a97a",
+      "nonce": "361d75c4f9fe2dd70297b9c1e66323a8",
+      "payload": {
+        "hint": "I am always one step ahead of you.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          2,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[2, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 21,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "55c5830d6bbb694d12e3c5c813d2fbf2c65641ed1cb7757e409e28f259e864b6",
+      "nonce": "1adeaebe700d5dd7790a34c5c29413319124f76f281b1f65881aa5374a169b84",
+      "payload": {
+        "capture_claim": [
+          3,
+          4
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          3,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 4
+        },
+        "step": 21
+      }
+    },
+    {
+      "commit": "d30c0bf770efe322ec3e9bab38ab36a022c3cdddb93e464c659d3c08eff0180d",
+      "nonce": "d65193d1c46d550003bc54fee999e745",
+      "payload": {
+        "hint": "Keep guessing, you are colder than you think.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          1,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[1, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 22,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "1080b2bbc9647b4a208316f31c0711125a0b295c196cdd7dc9c1305830e49ea9",
+      "nonce": "b31f4e6e76f890b15cc4da49081a88ebd485aedd8dc8fe09cbddef164489d742",
+      "payload": {
+        "capture_claim": [
+          2,
+          4
+        ],
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          2,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 3
+        },
+        "step": 22
+      }
+    },
+    {
+      "commit": "94cb8b79175a3b573b32cfc3a49b68234dcdd28c463bc777e23a58cd31d7ca5f",
+      "nonce": "74fae6ffa490935124491cc337ae2d30",
+      "payload": {
+        "hint": "The shadows here hide me well tonight.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:EAST",
+        "position": [
+          1,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[1, 5];barriers=[[4, 6], [5, 5]]",
+        "step": 23,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "21a38cab4b730e21530ab51d33e3098f0c0622f762745ad41c0f5dfdb58e3b67",
+      "nonce": "61eb6f3d26c0d2acff6a6b72a76006b0a4b9d16e35d54d5cf84321e365f63b19",
+      "payload": {
+        "capture_claim": [
+          1,
+          4
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          1,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 2
+        },
+        "step": 23
+      }
+    },
+    {
+      "commit": "624bb188a29bfe79b65bd8a546ebf77358384027a8ac76a87f41bdcd70cca423",
+      "nonce": "2ab9a2141c8f1a216bf6d4681545b025",
+      "payload": {
+        "hint": "Chase all you like, the streets are mine.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          2,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[2, 5];barriers=[[4, 6], [5, 5]]",
+        "step": 24,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "f2bb87de9cb1af4063a9145f73a4961c093a46aa776401400e30dd2a259feaec",
+      "nonce": "c6c9db850e132d92eb6a924cb50ddd28016644f807207e27cc1ed31fdc9c7de0",
+      "payload": {
+        "capture_claim": [
+          1,
+          5
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          1,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 1
+        },
+        "step": 24
+      }
+    },
+    {
+      "commit": "0eef5ad2f03e5cf0af3c5000c3bb3801692dc6e59585c1058591fe47bac4b91b",
+      "nonce": "bc4d4388baedcfd668e286a888d27a06",
+      "payload": {
+        "hint": "You will not catch me this time, officer.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          3,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[3, 5];barriers=[[4, 6], [5, 5]]",
+        "step": 25,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "10523b5f873499d68308cc18d5fb1168ab68d01e9b3811ead9361ea1d5eec392",
+      "nonce": "8b16ec855f2930125e4a08c092d5d9c6dbae815c0a30d61e1eb695df67f7f3b7",
+      "payload": {
+        "capture_claim": [
+          2,
+          5
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          2,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 1
+        },
+        "step": 25
+      }
+    },
+    {
+      "commit": "b762cedb812f45488844a51a6615548da844aa192f2b3d6c565ad725abb44573",
+      "nonce": "730393f6b05330d5ac5fa5e8b16d2b2d",
+      "payload": {
+        "hint": "I am always one step ahead of you.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:WEST",
+        "position": [
+          3,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[3, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 26,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "847f85b664ccfbae9dd06cb90c32b30878ad880c684fc0ccc8559d7942324a81",
+      "nonce": "644ebd67778221ed7876cad088979d36e7328f1cfc87cfb80f297c9b1d67830a",
+      "payload": {
+        "capture_claim": [
+          3,
+          5
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          3,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 2
+        },
+        "step": 26
+      }
+    },
+    {
+      "commit": "a71828ba2405f4394f6cbb5cbb3a4e9f31a6da06c6e1789a249adda3ea1df663",
+      "nonce": "257ad8dea70fd2da85615b5629d8084f",
+      "payload": {
+        "hint": "Keep guessing, you are colder than you think.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          2,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[2, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 27,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "2d038098a61c031761f86665b58cbc55f5695d786f47245b607e573acf037cff",
+      "nonce": "a1dd63b349e8a552e310d50b21179e83283ecbc7988b3f9efb55a00c44e3624c",
+      "payload": {
+        "capture_claim": [
+          3,
+          4
+        ],
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          3,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 3
+        },
+        "step": 27
+      }
+    },
+    {
+      "commit": "a2c38b8a9105023056459a5d6d17ce8e23fae466330e80a27dcf330324e1faeb",
+      "nonce": "2e4839fd3f7738a4f4094ad9fb4dba7c",
+      "payload": {
+        "hint": "The shadows here hide me well tonight.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          1,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[1, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 28,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "629124395a362e08aba99877ed98d79818c5ea1cced681aa6ae9f181653b6036",
+      "nonce": "4161047d4afa04733849845ad78870f621403f716d7cdce7defbdb5116d2c8a5",
+      "payload": {
+        "capture_claim": [
+          2,
+          4
+        ],
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          2,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 3
+        },
+        "step": 28
+      }
+    },
+    {
+      "commit": "d54f432f7a2152d72cd80b18f096ef3fe9d60ec0ad19fca79756ef1abdf6ff4a",
+      "nonce": "84be86af5ba73cc54606af207608d4a3",
+      "payload": {
+        "hint": "Chase all you like, the streets are mine.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:EAST",
+        "position": [
+          1,
+          5
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[1, 5];barriers=[[4, 6], [5, 5]]",
+        "step": 29,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "ce8fd640773ee324f8c8794ff8d0b6c650462be4aaeffccf3e3fa02b86612b2c",
+      "nonce": "408c01f0d59a88b295b69ae7adbe2523851c2595df1b7bf122358a3a703b9bb7",
+      "payload": {
+        "capture_claim": [
+          2,
+          5
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          2,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 2
+        },
+        "step": 29
+      }
+    },
+    {
+      "commit": "f44d41663739b2981f285472adf98a77c38a8f04d22ad29d5b6fd6e66cc7eb24",
+      "nonce": "1a3fc51d7f94182e9f799bd6461b6daa",
+      "payload": {
+        "hint": "You will not catch me this time, officer.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:WEST",
+        "position": [
+          1,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[1, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 30,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "1cecded160bb49f59bf19182c9f61d316a5990daaa9cc67be2ae46b78f9a9566",
+      "nonce": "7c11489707084f4421723668f59c9c639fc5d3fce698fe5b22d6cbe1606dcf95",
+      "payload": {
+        "capture_claim": [
+          1,
+          5
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          1,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 2
+        },
+        "step": 30
+      }
+    },
+    {
+      "commit": "3a5f82672240348ab1a4863acd4b78fdfbec9c2cb39dcb18ed0d26a072e23e51",
+      "nonce": "ca55ba355d25b02c64b9b38573cd3c64",
+      "payload": {
+        "hint": "I am always one step ahead of you.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          2,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[2, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 31,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "c195fcdfdc30c6cadc4609416e7d016527cf2e07e3393c8868e09c5aafda6554",
+      "nonce": "fdef5881f0923680d9781d5ae6d74b9451aa62a0046fa4a632e0f3c942ff6305",
+      "payload": {
+        "capture_claim": [
+          1,
+          4
+        ],
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          1,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 1
+        },
+        "step": 31
+      }
+    },
+    {
+      "commit": "c7cd5c0b10c9c5526be0a4bbf455ad7f1282d2c3d32003ce10ee842f9395f1e7",
+      "nonce": "65da88158dc852233238eeda81af8d73",
+      "payload": {
+        "hint": "Keep guessing, you are colder than you think.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          3,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[3, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 32,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "bf701cefc5eff92b60c507c38ee662c0b953cb1497865d21aaaa008c93a7c1d5",
+      "nonce": "845c1844ceb721350333d1ab7c080e42698c5300686cb4e4db7a48067facb834",
+      "payload": {
+        "capture_claim": [
+          2,
+          4
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          2,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 1
+        },
+        "step": 32
+      }
+    },
+    {
+      "commit": "26560146db6bd69530324c387fc79865e58e6f310e8c6c09920733425809432b",
+      "nonce": "6907402937b86bae63eb0f2d43c5ebe6",
+      "payload": {
+        "hint": "The shadows here hide me well tonight.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:SOUTH",
+        "position": [
+          4,
+          4
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[4, 4];barriers=[[4, 6], [5, 5]]",
+        "step": 33,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "137f34ad32f317feff1442a73568395059d8facb1ffd45b700f8773dc910ca71",
+      "nonce": "f86c67c9acddad64f9d65a257c9ecc8626b04f82d30b518c73afb479a4490583",
+      "payload": {
+        "capture_claim": [
+          3,
+          4
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          3,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 2
+        },
+        "step": 33
+      }
+    },
+    {
+      "commit": "a92124eefe4cb0423813c69e5a2d0618b38cc1abf43ec2242c03357b0337fd1b",
+      "nonce": "8b54300e4221442e3b62016b570b2fff",
+      "payload": {
+        "hint": "Chase all you like, the streets are mine.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:WEST",
+        "position": [
+          4,
+          3
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[4, 3];barriers=[[4, 6], [5, 5]]",
+        "step": 34,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    },
+    {
+      "commit": "24a18c3ee4359e32558e7f4f2bfcb76c2ed4fe5d90a353caff16edaea3da33fc",
+      "nonce": "e60dba254b1fc681e5741fda6185e8dbe1b7ae1e807593bae588aa7fe86aebc6",
+      "payload": {
+        "capture_claim": [
+          4,
+          4
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          4,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 3
+        },
+        "step": 34
+      }
+    },
+    {
+      "commit": "d820185ae3b4b7bc462ae6925ea93b09c35852389e9e6fe412d412ed79644d8b",
+      "nonce": "7fbc95d38dded59cda446b94ed750e33",
+      "payload": {
+        "hint": "You will not catch me this time, officer.",
+        "intent": "truth",
+        "model": "unknown",
+        "move": "MOVE:NORTH",
+        "position": [
+          3,
+          3
+        ],
+        "prompt_discussion": {
+          "bluff_classification": "truth",
+          "llm_prompt": "",
+          "llm_reasoning": ""
+        },
+        "random_move": false,
+        "response_seconds": 0.0,
+        "state": "grid=7x7;self=[3, 3];barriers=[[4, 6], [5, 5]]",
+        "step": 35,
+        "tokens_step": 0,
+        "tokens_total": 0,
+        "verdict": "truth"
+      }
+    }
+  ],
+  "schema_version": "1.1",
+  "sub_game_number": 3,
+  "summary": {
+    "audit": {
+      "failed_steps": [],
+      "passed": true
+    },
+    "ended_at": "2026-08-13T23:07:23.413958+03:00",
+    "result": "survival",
+    "roles": {
+      "sharNamr": "thief",
+      "uoh-ay26": "police"
+    },
+    "started_at": "2026-08-13T22:57:24.401383+03:00",
+    "steps": 35,
+    "sub_game_number": 3,
+    "winner_group": "sharNamr"
+  }
+}

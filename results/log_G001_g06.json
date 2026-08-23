@@ -1,0 +1,303 @@
+{
+  "game_id": "G001",
+  "game_uid": "e247c3af-7fd5-b058-213f-4aaed5a2e4d8",
+  "links": {
+    "config": "config_G001_g<NN>.json",
+    "declaration": "declaration_G001.json",
+    "github": {
+      "najamjad": {
+        "cop": "https://github.com/najikay/najamjad-cop",
+        "thief": "https://github.com/najikay/najamjad-thief"
+      },
+      "uoh-ay26": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      }
+    },
+    "log": "log_G001_g<NN>.json",
+    "result": "result_G001.json"
+  },
+  "records": [
+    {
+      "commit": "9bb033aa3daef275ce677c24b8c0bdd9217eebc27a48f752996f71af9d92543b",
+      "nonce": "ea13b4af5d4103842e8b00d488336ef011844424a762ddc3ee79ef05645f4cd2",
+      "payload": {
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          4,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 1
+      }
+    },
+    {
+      "commit": "6cf16a38141ad5128617b49f028257a2494d0694b0fa36afa587734207596cd2",
+      "nonce": "6791781020d07e322c91e31cccaa6400",
+      "payload": {
+        "hint": "Every road past Central Park is watched now.",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "position": [
+          1,
+          0
+        ],
+        "role": "police",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[1, 0];barriers=[]",
+        "step": 1,
+        "sub_game": 6
+      }
+    },
+    {
+      "commit": "86a32c6465131b52ed0898e542741a12d973ee7fb5bf95fe56043e9336e8d07a",
+      "nonce": "54fd370d44a6f2e3cb3058eae89c34436018fe65670fa458898bf885eb15095e",
+      "payload": {
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          5,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 4
+        },
+        "step": 2
+      }
+    },
+    {
+      "commit": "bf009e71df1613a01504d47bad97c28aed00eddf1518f82d26ed354b8178ea38",
+      "nonce": "cb77007c73c20ebad23d0eb1886f322c",
+      "payload": {
+        "hint": "Still moving through the streets.",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "position": [
+          2,
+          0
+        ],
+        "role": "police",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[2, 0];barriers=[]",
+        "step": 2,
+        "sub_game": 6
+      }
+    },
+    {
+      "commit": "1c65fb0515e7d8ea5dac406560301b3ffed96ced24a858f196b99aadd6a5aeff",
+      "nonce": "f07d3261f0e0d8abea4649bb8da8e5068b95c2a2fd562abd2eee076ab6c00993",
+      "payload": {
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          6,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 5
+        },
+        "step": 3
+      }
+    },
+    {
+      "commit": "c163028c0dfe226bc92bd8635d68ad0b4529b95d914a0cad5c6a25a066460bdc",
+      "nonce": "9bccbc91e06c354fc60189ab1b7465e3",
+      "payload": {
+        "hint": "Closing in near Harlem — nowhere left to run.",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "position": [
+          2,
+          1
+        ],
+        "role": "police",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[2, 1];barriers=[]",
+        "step": 3,
+        "sub_game": 6
+      }
+    },
+    {
+      "commit": "3ea2fbe0716e4b64a1ed4a1ff9f1d0e8048c350cb8bac0595d5e2b19fce03156",
+      "nonce": "17ba658700d03fb402efce9611568e11d6655a813915da469968b15775979434",
+      "payload": {
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          6,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 6
+        },
+        "step": 4
+      }
+    },
+    {
+      "commit": "ec42b2d69bfcfbf4be89cc79b4dde308e5f038825d58e9bd8cd033bfeb775ab8",
+      "nonce": "bce8082f394cd018edaf24e02e2cc9b4",
+      "payload": {
+        "hint": "Still moving through the streets.",
+        "intent": "lie",
+        "move": "MOVE:S",
+        "position": [
+          3,
+          1
+        ],
+        "role": "police",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[3, 1];barriers=[]",
+        "step": 4,
+        "sub_game": 6
+      }
+    },
+    {
+      "commit": "f9ea5509356f5477793eb4ac049c0738fcce278b73a1940f6c420cdda2737f47",
+      "nonce": "2c7e73f81d1efcc3d76ecbe68ef080e50a4aa5cd410133677335806723aec710",
+      "payload": {
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          6,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 6
+        },
+        "step": 5
+      }
+    },
+    {
+      "commit": "3368016cf4e1b9ca93eeaea56e4f1cdf5b0e0eb3a92d45a67e150921518a4031",
+      "nonce": "40036cbdb6ddd9835a354728e7f27f78",
+      "payload": {
+        "hint": "I have Times Square covered; try heading west.",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "position": [
+          4,
+          1
+        ],
+        "role": "police",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[4, 1];barriers=[]",
+        "step": 5,
+        "sub_game": 6
+      }
+    },
+    {
+      "commit": "1dd9f9ea3380de4f3be8c40e0cb7ec6e0418b3c03d49146178844e64fcd106d4",
+      "nonce": "fff87e13affec1e861cb52e27312d67730dfbcf869f6f6309b51782340cc1691",
+      "payload": {
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          6,
+          0
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 6
+        },
+        "step": 6
+      }
+    },
+    {
+      "commit": "bce10c134d658e5e75f02d55e5c2767e7d17d24bad7065a41ab7c8e699c2c719",
+      "nonce": "aa96ef5af4ba32e8135bc2d90e438df1",
+      "payload": {
+        "hint": "I'm closing in, but you might still slip away.",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "position": [
+          5,
+          1
+        ],
+        "role": "police",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[5, 1];barriers=[]",
+        "step": 6,
+        "sub_game": 6
+      }
+    },
+    {
+      "commit": "cebed4dbf695ca9b42808e3c13e1e06027671571afaa8a30c60c13d42e9010de",
+      "nonce": "2df2280a5887da8f3b0634e399010dbdc14b352d265f83cfeb146696bc7d9b7e",
+      "payload": {
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          5,
+          0
+        ],
+        "role": "thief",
+        "state": {
+          "col": 0,
+          "row": 6
+        },
+        "step": 7
+      }
+    },
+    {
+      "commit": "f7c001eb083a9a2a354eaaaa38afe193d8b95573c67a370f05897be4b10cbcd6",
+      "nonce": "8b80f67cb368a2032d9ae84d4cd1d8ac",
+      "payload": {
+        "capture_claim": [
+          5,
+          0
+        ],
+        "hint": "Working my way east from Harlem.",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "position": [
+          5,
+          0
+        ],
+        "role": "police",
+        "smell_grid": {},
+        "state": "grid=7x7;self=[5, 0];barriers=[]",
+        "step": 7,
+        "sub_game": 6
+      }
+    }
+  ],
+  "schema_version": "1.1",
+  "sub_game_number": 6,
+  "summary": {
+    "audit": {
+      "failed_steps": [],
+      "passed": true
+    },
+    "ended_at": "2026-08-08T18:41:16.235487+03:00",
+    "result": "capture",
+    "roles": {
+      "najamjad": "police",
+      "uoh-ay26": "thief"
+    },
+    "started_at": "2026-08-08T18:38:43.880677+03:00",
+    "steps": 7,
+    "sub_game_number": 6,
+    "winner_group": "najamjad"
+  }
+}

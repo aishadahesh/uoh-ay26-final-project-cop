@@ -1,0 +1,1490 @@
+{
+  "game_id": "G002",
+  "game_uid": "605f754b-7c28-3691-a5cf-f655e485e8ca",
+  "links": {
+    "config": "config_G002_g<NN>.json",
+    "declaration": "declaration_G002.json",
+    "github": {
+      "amireman": {
+        "cop": "https://github.com/AMIR13BD/Game-P2P-Cop-Chase-Police",
+        "thief": "https://github.com/AMIR13BD/Game-P2P-Cop-Chase-Thief"
+      },
+      "uoh-ay26": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      }
+    },
+    "log": "log_G002_g<NN>.json",
+    "result": "result_G002.json"
+  },
+  "records": [
+    {
+      "commit": "359f2fb29cd26f2968c26a5ca8b14a50009862d15fb8b860009b388bac68a98b",
+      "nonce": "91432f8621982c826e0b856a9b6564910745f04b8d38f906981a11b50a886d17",
+      "payload": {
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          3,
+          4
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 1
+      }
+    },
+    {
+      "commit": "d547c7b298b863efbc4213f6b490dba73266405d0b154c3189b0490d7b6b1b39",
+      "nonce": "5cff8fbeb579abbb421fee432ddc2f5f",
+      "payload": {
+        "capture_claim": [
+          0,
+          1
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "police",
+        "state": "grid=7;self=[0, 1]",
+        "step": 1
+      }
+    },
+    {
+      "commit": "ceff010e0656c775cd9a42733b1dbedf6a4ad03d96124791d8c8cdce6905122b",
+      "nonce": "61d9f350ec1b820c8b722145882c4ea05689e75f7954fb2a2ef83c8588122951",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            0,
+            1
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          4,
+          4
+        ],
+        "role": "thief",
+        "state": {
+          "col": 4,
+          "row": 3
+        },
+        "step": 2
+      }
+    },
+    {
+      "commit": "62a7146567597de6ab171324532870ea30a63d8ae3b706494bf438eb33da6757",
+      "nonce": "af73f35ef8022a1f97e575d91512320c",
+      "payload": {
+        "capture_claim": [
+          1,
+          1
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[1, 1]",
+        "step": 2
+      }
+    },
+    {
+      "commit": "f2d17d6dc5957bc79043619edf8c89bc22d1e46d2f2533d85ef74774d8054755",
+      "nonce": "0acc9f308637f15f5b2341c9d02b3327b37d5f364cf400736a93423d243bb75e",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            1
+          ]
+        },
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          4,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 4,
+          "row": 4
+        },
+        "step": 3
+      }
+    },
+    {
+      "commit": "8bf7656489cb8937eb7e150f6297c015ef106308e412af2580db79a206fda4c2",
+      "nonce": "44b9b587b13708d1e8b7fa13703f2971",
+      "payload": {
+        "capture_claim": [
+          2,
+          1
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[2, 1]",
+        "step": 3
+      }
+    },
+    {
+      "commit": "ae8d281eff2bd8bac8191b8fa5af9acdb0d5a007b5d665716fac0e11543acbb6",
+      "nonce": "4b67dc925e4b04196863cbdbaa82f98b4ee604d4bb339b96a3d5aefa63a3c153",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            1
+          ]
+        },
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          5,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 4
+        },
+        "step": 4
+      }
+    },
+    {
+      "commit": "00eba01fa7e1af1c551f9a05fdc62b08ba9f2fe5a66d963863fe81941ce46bc0",
+      "nonce": "fb33b369b628963f2a706d554f8af0e1",
+      "payload": {
+        "capture_claim": [
+          2,
+          2
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "police",
+        "state": "grid=7;self=[2, 2]",
+        "step": 4
+      }
+    },
+    {
+      "commit": "74cdae05549061737c5fcef43d18f330a4891efee6a4a332168096b4dda327bf",
+      "nonce": "7eedc06d281555f2e52bec9d59eea050442e368f58c1f8d26289217799eb28dd",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            2
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          5,
+          6
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 5
+        },
+        "step": 5
+      }
+    },
+    {
+      "commit": "dcd130a95661f1528169319c42f18e1e073f81d46b398b735b79557731d9859c",
+      "nonce": "0a39306edb2a57059f27014f0b83c02a",
+      "payload": {
+        "capture_claim": [
+          2,
+          3
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "police",
+        "state": "grid=7;self=[2, 3]",
+        "step": 5
+      }
+    },
+    {
+      "commit": "f7d56905bd06d5f23c6da3f1c9ea57c25f979d7568e65d6e1969ab4c4e7e7540",
+      "nonce": "f878dcd7f8bab94913b1593ba3b1e6643f106ba8fd4d98c4ea3d3269fa312606",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            3
+          ]
+        },
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          4,
+          6
+        ],
+        "role": "thief",
+        "state": {
+          "col": 6,
+          "row": 5
+        },
+        "step": 6
+      }
+    },
+    {
+      "commit": "8069756dc4b6f55079a4b3aa3b9c4c9e0dafd7dc14e08afe4eb19b3f606ecc79",
+      "nonce": "966d0c1192030630b617b474af1495f4",
+      "payload": {
+        "capture_claim": [
+          3,
+          3
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[3, 3]",
+        "step": 6
+      }
+    },
+    {
+      "commit": "f3a95767390fa609e4ca34354e3241fa2c20eec3ece7adcda8d40bfb9d9cae3d",
+      "nonce": "a56cbafbadcaa7a64ffd586e6552cc2a221d9d6c778ddbf29e4fa8138a0e9ded",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            3
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          5,
+          6
+        ],
+        "role": "thief",
+        "state": {
+          "col": 6,
+          "row": 4
+        },
+        "step": 7
+      }
+    },
+    {
+      "commit": "3f951ebe2107b07330e131dd84fc89a77800e35ebebc982aa28d7d17cc190514",
+      "nonce": "df2009d67269b6add248ecac9ea7ec80",
+      "payload": {
+        "capture_claim": [
+          3,
+          4
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "police",
+        "state": "grid=7;self=[3, 4]",
+        "step": 7
+      }
+    },
+    {
+      "commit": "2ef46cf346762d408790d4628ecbb1ba55f61f7c85ca6619fcb06975edbec03a",
+      "nonce": "0e7c6848b1bb3cf71aebf33c3f965fd43a72d783755786f4f9a99c4e215cf9db",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            4
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          6,
+          6
+        ],
+        "role": "thief",
+        "state": {
+          "col": 6,
+          "row": 5
+        },
+        "step": 8
+      }
+    },
+    {
+      "commit": "eb1bcf9500fda5a1352ee024654fb462af12e4e4d983b4611d06c9bcec5b24d2",
+      "nonce": "ac135d580fb4e80ea9fc67b4682e62ec",
+      "payload": {
+        "capture_claim": [
+          4,
+          4
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[4, 4]",
+        "step": 8
+      }
+    },
+    {
+      "commit": "f2cada6f7f4f1b0a783cd6914f5fcbc29b3c93b34dd193533de6111b9c9b5ff1",
+      "nonce": "579ebb05ffedf8a6862f993ed68cfef5768a5f2eb39a706da0ce1e11dea1739b",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            4
+          ]
+        },
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          6,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 6,
+          "row": 6
+        },
+        "step": 9
+      }
+    },
+    {
+      "commit": "e2247be0ba815049fbb3fa522b6ce0feb9474bd5c05459db8a7362f7e3778026",
+      "nonce": "450ac4d6fc54fd159368cfceb583f31d",
+      "payload": {
+        "capture_claim": [
+          4,
+          5
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "police",
+        "state": "grid=7;self=[4, 5]",
+        "step": 9
+      }
+    },
+    {
+      "commit": "19d16fb150871551b9d437086151f6fc5cccd387e9419792722269b699843b9c",
+      "nonce": "8dfb28c002669b218b71e8fcf7302799913b1606bd30cb3c6517376af6afc3d9",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            5
+          ]
+        },
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          6,
+          4
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 6
+        },
+        "step": 10
+      }
+    },
+    {
+      "commit": "b7f4d07710b46c72cd4334a5a29c96d1d3dd2fb171d88921e6351479feb21868",
+      "nonce": "e40e0d2c7126ce5a716235cae269fa2b",
+      "payload": {
+        "capture_claim": [
+          5,
+          5
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[5, 5]",
+        "step": 10
+      }
+    },
+    {
+      "commit": "b2863f82c91ad80f4b6d2f348c5283eb3f7ef470675a0edd53941c0284b91436",
+      "nonce": "4b94680ef7594437a4e44192b1894426d240bd67822d3e9bc97972cf7ae85ba7",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            5
+          ]
+        },
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          6,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 4,
+          "row": 6
+        },
+        "step": 11
+      }
+    },
+    {
+      "commit": "2b39161c57937ef1251631115d9316e9bfb127f3216ea8c6370af01928b1f8b8",
+      "nonce": "9fd376055d35628e1f592bc596af92e4",
+      "payload": {
+        "capture_claim": [
+          6,
+          5
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[6, 5]",
+        "step": 11
+      }
+    },
+    {
+      "commit": "74ab0bc4778ece581aed53071836c17a07538ff5ed3e9b8adb44649e5262ff62",
+      "nonce": "a18cbf83418cf1af89efef9de1523ff8f2ddfa4d14fe9031f21ed588b8867d1c",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            6,
+            5
+          ]
+        },
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          5,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 6
+        },
+        "step": 12
+      }
+    },
+    {
+      "commit": "b39029c6a57ec0367c1b6d680a4399c1da1736a4b7c35ba01cd9191e7aefcc02",
+      "nonce": "d7adc75893f23379e0430bd3cf51e508",
+      "payload": {
+        "capture_claim": [
+          5,
+          5
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "police",
+        "state": "grid=7;self=[5, 5]",
+        "step": 12
+      }
+    },
+    {
+      "commit": "c3529b063bce3797c3737f98e83644ffea91e1f38ee0f410e12f2de2467e8d79",
+      "nonce": "50b9b6ba5d32941cadd71c24b8798866b86ac03102fa63898ece4c6eb2faba22",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            5
+          ]
+        },
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          5,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 5
+        },
+        "step": 13
+      }
+    },
+    {
+      "commit": "553d208555124937f256c19882ad08c7888acb221594d42ab6dbfcc58a7af0c6",
+      "nonce": "08218d8e93622b6c41582b21e1bb83e8",
+      "payload": {
+        "capture_claim": [
+          5,
+          4
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "police",
+        "state": "grid=7;self=[5, 4]",
+        "step": 13
+      }
+    },
+    {
+      "commit": "ad8adee3f675da405f9c01dd89eae4f1b27c7b9bcbf8b6e7ae4d2df14fd57cc4",
+      "nonce": "28798c0660b149080a8934bca67db3efe60785244af443c13a29980848ad9181",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            4
+          ]
+        },
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          5,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 5
+        },
+        "step": 14
+      }
+    },
+    {
+      "commit": "6ee2b8e2395140816a6de82fa87628c3519401f5c3b987c6672ea17e112fe06d",
+      "nonce": "e72ea137b41a3884245d82a31871e32d",
+      "payload": {
+        "capture_claim": [
+          5,
+          3
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "police",
+        "state": "grid=7;self=[5, 3]",
+        "step": 14
+      }
+    },
+    {
+      "commit": "33c667bd59b5515f3176048b7571b8c72dd27b91dce92a76dd1d28e325cf9049",
+      "nonce": "695185a054425ee227e320f1b3a5ccbc5a8012776ee3d3c8c0c6c34001035d00",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            3
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          4,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 5
+        },
+        "step": 15
+      }
+    },
+    {
+      "commit": "91ba5a2a9c59941201ae3e91e6702fa62aaee4836ddf552877dd6d1cfad88bfc",
+      "nonce": "1e223aeaca9fe2581a122b496034ee34",
+      "payload": {
+        "capture_claim": [
+          5,
+          2
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "police",
+        "state": "grid=7;self=[5, 2]",
+        "step": 15
+      }
+    },
+    {
+      "commit": "dca5d998a536bc56c21c6fced0bdb9ae5ebd8f01ea1d59435cb5e864514c726a",
+      "nonce": "555f2f5f998938a76e41da89e9ca8a086984362e650ffb98b36e1152de954335",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            2
+          ]
+        },
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          3,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 4
+        },
+        "step": 16
+      }
+    },
+    {
+      "commit": "bf59dc60db3542fd4ba24a3d2391934edc6dc9a34454b7555774430070c4ff82",
+      "nonce": "2957c7f45088e7c16f6ec38803888705",
+      "payload": {
+        "capture_claim": [
+          5,
+          1
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "police",
+        "state": "grid=7;self=[5, 1]",
+        "step": 16
+      }
+    },
+    {
+      "commit": "f1dc35efd2c9a580fdf13d8566249f3b10016ddd00239b8c1d5930666726570c",
+      "nonce": "d76e8f85d635eb494e21382498c18e0dcfef2a1505cd96501db6d5aa00505b39",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            1
+          ]
+        },
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          2,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 3
+        },
+        "step": 17
+      }
+    },
+    {
+      "commit": "8378275ff53e7baeae43e5953b837c98d5b448cef489b9a8d3f1ceff12610dad",
+      "nonce": "be576177e90ba429e94a2417c29dd6dd",
+      "payload": {
+        "capture_claim": [
+          4,
+          1
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "police",
+        "state": "grid=7;self=[4, 1]",
+        "step": 17
+      }
+    },
+    {
+      "commit": "7b0fdd1d1ce4c4d31dac411ed2e4dd2691dcb2b14d550f0f4fbf0d186e135cd2",
+      "nonce": "350cac518932f09afdc3a9577897d1ea64cda3c2ab78fc8017ac4ac8307efada",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            1
+          ]
+        },
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          1,
+          1
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 2
+        },
+        "step": 18
+      }
+    },
+    {
+      "commit": "53370bcd6901871eafe912f4dbefa7dacb51b798fb386d0ef0383aa2583f1063",
+      "nonce": "942db154688754702af71597222eb6d5",
+      "payload": {
+        "capture_claim": [
+          3,
+          1
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "police",
+        "state": "grid=7;self=[3, 1]",
+        "step": 18
+      }
+    },
+    {
+      "commit": "69a6c190bf0f88970c14184569c2a82f20f16e338a51f8766535a923ffc05486",
+      "nonce": "4b34a112d06c1d1e47c24195ecb23b08d1d9116c2410f7770022f8d89dff940f",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            1
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          1,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 1,
+          "row": 1
+        },
+        "step": 19
+      }
+    },
+    {
+      "commit": "09d040b23fd2c3ba764a9dc6b7cc888e657bfc72f2e26a74a4ce4d94f2646f11",
+      "nonce": "a2866fae6b65a9acb8c5e76b71a5aa36",
+      "payload": {
+        "capture_claim": [
+          2,
+          1
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "police",
+        "state": "grid=7;self=[2, 1]",
+        "step": 19
+      }
+    },
+    {
+      "commit": "01d95a7183677b4e938dbab1f1a34219634ad7b2e50c2bb2122bd5400b5cdb46",
+      "nonce": "645cbd852f2b1afc8444555669db5459d7d6b5778439408c090f7844169f7bf9",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            1
+          ]
+        },
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          1,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 1
+        },
+        "step": 20
+      }
+    },
+    {
+      "commit": "2972b30b6575a0e4828628c3264b426a60d828ff0ad4d4434f482d7115066221",
+      "nonce": "a4fdb2407129dbdc84bf29a5ee0b63a9",
+      "payload": {
+        "capture_claim": [
+          1,
+          1
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "police",
+        "state": "grid=7;self=[1, 1]",
+        "step": 20
+      }
+    },
+    {
+      "commit": "fb940052a181870bddad7991da38729ea41880125f65f536fd081a844d44ee14",
+      "nonce": "b0bb16e2599c48f9d8f1caa36ec282607ce079818953dbd666e0a5d87a805886",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            1
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          1,
+          4
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 1
+        },
+        "step": 21
+      }
+    },
+    {
+      "commit": "b5100ef0073d12269d4ea67264eaa3e3170eb0594621db161acea28a71495772",
+      "nonce": "9d5de6a6ad31e7bf08b94dd8be25453e",
+      "payload": {
+        "capture_claim": [
+          1,
+          2
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "police",
+        "state": "grid=7;self=[1, 2]",
+        "step": 21
+      }
+    },
+    {
+      "commit": "df063daeb38d7227d8ee70b1191daa0d6b551647ddb98d9caad3c2ae99b6292c",
+      "nonce": "8b486cde3a7e65d3729240eac5c265296e782eeb99fc533f28bbf668f7963646",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            2
+          ]
+        },
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          1,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 4,
+          "row": 1
+        },
+        "step": 22
+      }
+    },
+    {
+      "commit": "b70030164e3a9b7d1bfa3b6f97aa7a649fd53c8bd23923809d3b58e8e9a86afd",
+      "nonce": "6b5da530d4e06efa54bc2624fd4ceea2",
+      "payload": {
+        "capture_claim": [
+          1,
+          3
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "police",
+        "state": "grid=7;self=[1, 3]",
+        "step": 22
+      }
+    },
+    {
+      "commit": "f6ed11445f70d341645102c4f7422ed96ecebc631cb30d5b684f79acaa365957",
+      "nonce": "931eb966303e27c84aeac86bf92771f21fa021ca0db60dfcbeaefe519228cf78",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            3
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          2,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 1
+        },
+        "step": 23
+      }
+    },
+    {
+      "commit": "5d3ff39af48950e0da0d3be6b62e398ea2ab948143697443a1a79d8e88b0d943",
+      "nonce": "ad68fab7a0414423e5a63924316f39ae",
+      "payload": {
+        "capture_claim": [
+          1,
+          4
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "police",
+        "state": "grid=7;self=[1, 4]",
+        "step": 23
+      }
+    },
+    {
+      "commit": "9099605ad964be100732fc5efc9a7e319c160e67320d1bdb2e8cefd2dd871c74",
+      "nonce": "d1fb4a16f7335efa206524f177c839ecb78f7e9ed70de3f9ff604776e5be9cff",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            4
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          3,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 2
+        },
+        "step": 24
+      }
+    },
+    {
+      "commit": "40534439d810ac809e1317897677a62c5596dc71e59a997976e7771e70cc8f18",
+      "nonce": "8f7d324c82316194fc702f0f088e4643",
+      "payload": {
+        "capture_claim": [
+          1,
+          5
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "police",
+        "state": "grid=7;self=[1, 5]",
+        "step": 24
+      }
+    },
+    {
+      "commit": "fd411a402ebdf8f713a4d757ab1a3846532e15a88a628ef3462d8937e98c57c3",
+      "nonce": "18c9efea6d50477e0b65ca3f97291e34e58e21c7a0b0c4f4838370306ffd6736",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            5
+          ]
+        },
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          4,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 3
+        },
+        "step": 25
+      }
+    },
+    {
+      "commit": "c652eb7d6c9a15e83a7e0c0d372f65d3c7d2fc17e77a2406e399ae69cfde53c3",
+      "nonce": "aaff2442cb2802f5aef8075a4eb0c7be",
+      "payload": {
+        "capture_claim": [
+          2,
+          5
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[2, 5]",
+        "step": 25
+      }
+    },
+    {
+      "commit": "2a7e387c5cab4dc1423ab2f3f906da842b1f48b05d1882527d9511c0e4eeb94b",
+      "nonce": "057b0f36fb2a1c11be27fe5c53e6d74856d7ffb5d8edd17364c1ce160d90af64",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            5
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          5,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 4
+        },
+        "step": 26
+      }
+    },
+    {
+      "commit": "5e82992e1d1774e59fcf5a068f64f5190c274e0596d2fb1d2d201792ed06a418",
+      "nonce": "c2526d0a454b01ed7439f254d1f98faf",
+      "payload": {
+        "capture_claim": [
+          3,
+          5
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[3, 5]",
+        "step": 26
+      }
+    },
+    {
+      "commit": "4d25d6704c518a1549d4a60742dcd8b1b02dcae0d03b4b6925e35ccf49d0b23b",
+      "nonce": "95908402cf6d856242b1aee29725f4f43194df413070c8dbf5e72beec2d895e3",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            5
+          ]
+        },
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          5,
+          4
+        ],
+        "role": "thief",
+        "state": {
+          "col": 5,
+          "row": 5
+        },
+        "step": 27
+      }
+    },
+    {
+      "commit": "4f90fd06d5304ffbca6da93fe4b4f4fbe6bdc190f73983cd060f05988259e5d2",
+      "nonce": "b97e92abc5932fa523fde9eaff5cb128",
+      "payload": {
+        "capture_claim": [
+          4,
+          5
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[4, 5]",
+        "step": 27
+      }
+    },
+    {
+      "commit": "b70b5dc58ce383fd4f101751b77456968ea8fc94753ee94b00dcfc39a445cf83",
+      "nonce": "15315ffbed235217b057b885a99ccc1344734cce2762b6d473663703537efbac",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            5
+          ]
+        },
+        "hint": "I moved west.",
+        "intent": true,
+        "move": "W",
+        "position": [
+          5,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 4,
+          "row": 5
+        },
+        "step": 28
+      }
+    },
+    {
+      "commit": "8c3d107732a1ad4847e63eb97eae94b906b4b6cbd308d9ad78ce6033d2e9e4d0",
+      "nonce": "2116595382c3693d4f9227cfcf273771",
+      "payload": {
+        "capture_claim": [
+          5,
+          5
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "police",
+        "state": "grid=7;self=[5, 5]",
+        "step": 28
+      }
+    },
+    {
+      "commit": "0ebc907a5d7f8198cc17451e58e235904bc587aa015fbb4151008d0e605c5baf",
+      "nonce": "52589a31e90f38c90245f1fc9a1f9b2cb294cbdea770714c814560b65cc41094",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            5
+          ]
+        },
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          4,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 5
+        },
+        "step": 29
+      }
+    },
+    {
+      "commit": "73b821951084eca2034db457328e87d777311606ac3941159f05e36593772ac0",
+      "nonce": "6aa258bbf0805ce005c15b7c2f40044c",
+      "payload": {
+        "capture_claim": [
+          5,
+          4
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "police",
+        "state": "grid=7;self=[5, 4]",
+        "step": 29
+      }
+    },
+    {
+      "commit": "3c47e6952af3300fc73ef3a2e73d15561ce7b0a13ebf6206c315cf3124667317",
+      "nonce": "9ff4d3d7e43f27c22d63200f838558a47925bbaca223dc5547785f13a98a594e",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            4
+          ]
+        },
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          4,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 4
+        },
+        "step": 30
+      }
+    },
+    {
+      "commit": "082150c8b9ce22164e73ccd37f623ff8f7d14cd1c376e7f4891d76f14de7c404",
+      "nonce": "fb454fe6b86b62070dbdb545e59c71fb",
+      "payload": {
+        "capture_claim": [
+          5,
+          3
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "police",
+        "state": "grid=7;self=[5, 3]",
+        "step": 30
+      }
+    },
+    {
+      "commit": "894ad5a18aff75f186298df157a5d945f4c92741cade0b854fce0208c851f9af",
+      "nonce": "6b57a42eeaec55cbf50dfcde1e22a59f777d47c5f86de44891413930d73007c7",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            3
+          ]
+        },
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          3,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 4
+        },
+        "step": 31
+      }
+    },
+    {
+      "commit": "3d37004ce40381bb9a606b551c0da88ef87a4c8fb74f056d6031c0788ddc9570",
+      "nonce": "1c98b5442b232fc7b0e7908cbd5eeb6e",
+      "payload": {
+        "capture_claim": [
+          4,
+          3
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "police",
+        "state": "grid=7;self=[4, 3]",
+        "step": 31
+      }
+    },
+    {
+      "commit": "07c4e5873d526674cf32d34b36e4f97e2da613a5993ef9a5c2f073c3609b5438",
+      "nonce": "2e382aaee3dde8e0836e59a3724548f29bc5c418029a48948929ace6d8954f35",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            3
+          ]
+        },
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          2,
+          2
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 32
+      }
+    },
+    {
+      "commit": "2c6ec1bbe6581a431ae758e39e2008f5880da62f780ad52b4fbd1cf2ff3972b3",
+      "nonce": "0ab5294aa9d0fb1bc06038a291f26da8",
+      "payload": {
+        "capture_claim": [
+          4,
+          2
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "police",
+        "state": "grid=7;self=[4, 2]",
+        "step": 32
+      }
+    },
+    {
+      "commit": "bf9896eb9132ac947e3e9e25a703ee137226139e0e326d4d1205b29bd2b1e1ce",
+      "nonce": "1d8fe90a17fdec233a1000344458cdc7cd28b8189aa9015f6cf2763bf3a64edd",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            2
+          ]
+        },
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          2,
+          3
+        ],
+        "role": "thief",
+        "state": {
+          "col": 2,
+          "row": 2
+        },
+        "step": 33
+      }
+    },
+    {
+      "commit": "2f7098281f0a7ecf270083f6650be789ee32c8d1db95adf3c8b2e4cee5b32ad5",
+      "nonce": "8d2f538b17ac4ddec2c7f1ee693906a2",
+      "payload": {
+        "capture_claim": [
+          3,
+          2
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "police",
+        "state": "grid=7;self=[3, 2]",
+        "step": 33
+      }
+    },
+    {
+      "commit": "741ad63034d9be67e638c0347c2db457386a82ac4c1270598dd36d56e80cd491",
+      "nonce": "b1141141d24ed863efb8911731a72d352d2a7c0ee5457d39413941cd214eb369",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            2
+          ]
+        },
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          2,
+          4
+        ],
+        "role": "thief",
+        "state": {
+          "col": 3,
+          "row": 2
+        },
+        "step": 34
+      }
+    },
+    {
+      "commit": "812bdd00823c8e42c77fb967abeb9bba845eab4338f98efc146cd4d63acc21b7",
+      "nonce": "281b0f951e63c2a6a096804d8cd93fc7",
+      "payload": {
+        "capture_claim": [
+          2,
+          2
+        ],
+        "hint": "setting up a roadblock ahead",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "police",
+        "state": "grid=7;self=[2, 2]",
+        "step": 34
+      }
+    },
+    {
+      "commit": "a2a61ab9e8d9921dcb7618092730e20c3c9e6b93d7735f28dc57085f915a7878",
+      "nonce": "8e918dfc613169df41353b04bd8c090e142f4f742c81ada316fa307b3bdb10a8",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            2
+          ]
+        },
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          2,
+          5
+        ],
+        "role": "thief",
+        "state": {
+          "col": 4,
+          "row": 2
+        },
+        "step": 35,
+        "win_claim": {
+          "type": "survival"
+        }
+      }
+    }
+  ],
+  "schema_version": "1.1",
+  "sub_game_number": 6,
+  "summary": {
+    "audit": {
+      "failed_steps": [],
+      "passed": true
+    },
+    "ended_at": "2026-08-11T19:04:28.767082+03:00",
+    "result": "survival",
+    "roles": {
+      "amireman": "police",
+      "uoh-ay26": "thief"
+    },
+    "started_at": "2026-08-11T18:57:47.535004+03:00",
+    "steps": 35,
+    "sub_game_number": 6,
+    "winner_group": "uoh-ay26"
+  }
+}

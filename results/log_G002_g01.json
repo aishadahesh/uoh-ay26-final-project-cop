@@ -1,0 +1,1480 @@
+{
+  "game_id": "G002",
+  "game_uid": "605f754b-7c28-3691-a5cf-f655e485e8ca",
+  "links": {
+    "config": "config_G002_g<NN>.json",
+    "declaration": "declaration_G002.json",
+    "github": {
+      "amireman": {
+        "cop": "https://github.com/AMIR13BD/Game-P2P-Cop-Chase-Police",
+        "thief": "https://github.com/AMIR13BD/Game-P2P-Cop-Chase-Thief"
+      },
+      "uoh-ay26": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      }
+    },
+    "log": "log_G002_g<NN>.json",
+    "result": "result_G002.json"
+  },
+  "records": [
+    {
+      "commit": "f34b54da4a908f3e0059bf2bbad81a1c264c1571462ae6972882398581b93d16",
+      "nonce": "d2bae0d6f3ce0a48b0a739c856ce2153",
+      "payload": {
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[4, 3]",
+        "step": 1
+      }
+    },
+    {
+      "commit": "0bb6ec6828fb79b43ef14e08dd84261609aa9726d8a07fbc4a896923557a650d",
+      "nonce": "c1f88698b549d71342880ea71e68b69cad15dc84fbf7cdb8f40f290812e99e3e",
+      "payload": {
+        "capture_claim": [
+          0,
+          1
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          0,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 0,
+          "row": 0
+        },
+        "step": 1
+      }
+    },
+    {
+      "commit": "74dff4c72aaa50b6ecf6648217ffde025288bfb9418cf35d3825ee4a48bd64d0",
+      "nonce": "f8cfd706fc0ccd194af12bdd26da8c5e",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            0,
+            1
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "thief",
+        "state": "grid=7;self=[4, 4]",
+        "step": 2
+      }
+    },
+    {
+      "commit": "a5961dae52cea9c9ab1e9c32b1a25ba271680d15682f7c0b3c2a0d032a47fd36",
+      "nonce": "be7d73173e5c1641498e0a9de0b571d9a096f3a16c09b3afc1fd25c09b670204",
+      "payload": {
+        "capture_claim": [
+          1,
+          1
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          1,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 0
+        },
+        "step": 2
+      }
+    },
+    {
+      "commit": "41a3f41101363feca484e3e7f9a69e781c7ba43c89958e3f1cace9e808285a91",
+      "nonce": "0ec19454de7f6068e501e06057bd2be3",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            1
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[5, 4]",
+        "step": 3
+      }
+    },
+    {
+      "commit": "0b4665314fd97d3d76f7c2298aa7ce0166f4faa0aa499e484e938ffee6485fba",
+      "nonce": "30749859375a4db42e51bc6e7956d905853fb314e9fd482f93d2953ead7d9a85",
+      "payload": {
+        "capture_claim": [
+          1,
+          2
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          1,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 1
+        },
+        "step": 3
+      }
+    },
+    {
+      "commit": "44e84d3ee85bd6c5b7c962d7e727c458159b5d405aeb485c6ad87c5d8e4ef2b9",
+      "nonce": "3ec5c7b1011c240493e683353acbce5a",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            2
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "thief",
+        "state": "grid=7;self=[5, 5]",
+        "step": 4
+      }
+    },
+    {
+      "commit": "dc282c1391e6c2df0715d7402f1b0065f90b2dd21edbc38d7bf85242ac115877",
+      "nonce": "d629f89945ebc1988ffd22d7bf58bff0d85e016230de50d5b5c96b3b1a129122",
+      "payload": {
+        "capture_claim": [
+          2,
+          2
+        ],
+        "hint": "I moved south.",
+        "intent": true,
+        "move": "S",
+        "position": [
+          2,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 1
+        },
+        "step": 4
+      }
+    },
+    {
+      "commit": "ec33426a58d80c313366743b7c2df9ebf5e5d87a4c205070ce2b60fe0431ad1b",
+      "nonce": "999b48e1ef6539265572ac5d55746aa3",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            2
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[6, 5]",
+        "step": 5
+      }
+    },
+    {
+      "commit": "50abb0f4ea3f3855d8b62277e3522908a8301cff3ea4901c801c74885e3eb054",
+      "nonce": "1347724cbda1273687c198610de49258dc9b2e025d1578d0d84f516f252cc194",
+      "payload": {
+        "capture_claim": [
+          3,
+          2
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          3,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 2
+        },
+        "step": 5
+      }
+    },
+    {
+      "commit": "ab42a2cfc6cf9fb3a7c16de6670292f26d9dfef6c9b0b90ea8a5ff452c41eec6",
+      "nonce": "228af7c8e020d2b1a6a4c26d6813a734",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            2
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "thief",
+        "state": "grid=7;self=[6, 6]",
+        "step": 6
+      }
+    },
+    {
+      "commit": "45afb6c651855680c7ef7baeea9f39b699c09dc4e98e9f3da68dd9ecd277fa3c",
+      "nonce": "1ff537fdfd7b62d1ab30cc4cb0cd9e6ebb0c90d0bcfd6997e33f7da3bf0d9515",
+      "payload": {
+        "capture_claim": [
+          3,
+          3
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          3,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 3
+        },
+        "step": 6
+      }
+    },
+    {
+      "commit": "6918dc0c87baed3b56e9b48004f83eb646256618ccf064912eee053c39f2ace2",
+      "nonce": "e6e7d5bb4dca28611d7a7cda753f6250",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            3
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[5, 6]",
+        "step": 7
+      }
+    },
+    {
+      "commit": "9270ced6c61d15713b62a7bfabe0b2f6d1040c29ee4c34cea590d5db20d1fb6e",
+      "nonce": "0435b848c25febddc35fe71545ede0100599bc750b3dc6c2de268d464c430759",
+      "payload": {
+        "capture_claim": [
+          4,
+          3
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          4,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 3
+        },
+        "step": 7
+      }
+    },
+    {
+      "commit": "01d61517ac3b7650e5e638b8f4875aaff9884ea51444474c7b93c5e16a37693d",
+      "nonce": "49e2a4483885ca5ccb7c8f4d72b90d34",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            3
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[6, 6]",
+        "step": 8
+      }
+    },
+    {
+      "commit": "71836b697144313a49982cb68cfa86e6e7d2be8ed5586fdd4c2225dc4c1ad7b2",
+      "nonce": "c55c47f60c157ad0fdd74f054871b7f237905f352b375f261f4b4aa18a643b06",
+      "payload": {
+        "capture_claim": [
+          4,
+          4
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          4,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 4
+        },
+        "step": 8
+      }
+    },
+    {
+      "commit": "26348617003800436a7b5df55b5dac9f196318b0bcc85202931085a21ffeb685",
+      "nonce": "a6dd043b01beaae88e0fefb231ded863",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            4
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[5, 6]",
+        "step": 9
+      }
+    },
+    {
+      "commit": "9b639c2eed9fd7c1ac6e7607abc230c915636fc37b5f54b3a274f0e8643ff878",
+      "nonce": "d0153920069c7ab1ff95aff8b21994f00e672b504f0278a3e02890fa4e4651c6",
+      "payload": {
+        "capture_claim": [
+          5,
+          4
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          5,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 4
+        },
+        "step": 9
+      }
+    },
+    {
+      "commit": "90076713c6ea61e8c4c91af9c32ff0b9608123a13669b906d2d88f7f0ecec1ce",
+      "nonce": "2db66c1af312f6e7fc9806d70375f9c7",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            4
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[4, 6]",
+        "step": 10
+      }
+    },
+    {
+      "commit": "0122953392c3bcca4a1cb11ad8555488f074ddbfe9d43f707a1df559017c1db7",
+      "nonce": "0842f89fd7807eb1575658c44a4dd014e1e61afce08d24b56467dd023dbc9e4d",
+      "payload": {
+        "capture_claim": [
+          5,
+          5
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          5,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 5
+        },
+        "step": 10
+      }
+    },
+    {
+      "commit": "ddf0de30b47e3f566357b5e411988fb7cab9866abba1f973dbbd47bb722eab17",
+      "nonce": "3ee822f085928be5bdba022c82ec95dd",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            5
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[3, 6]",
+        "step": 11
+      }
+    },
+    {
+      "commit": "be70db146b7bb58638954224a4c310f53ad0bd023a0195e2fe9f6ec3fa84619e",
+      "nonce": "1af4a3935bb6eb2bd0cfef2ba378eba80cc823221f4dd660efb39cee0d568ad1",
+      "payload": {
+        "capture_claim": [
+          4,
+          5
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          4,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 5
+        },
+        "step": 11
+      }
+    },
+    {
+      "commit": "904589b65c6ab88ca29ad0ef046e98522fbb124277a93e7a552bc9c0979eb2d6",
+      "nonce": "3325e9177f8b9357faa6207712019b32",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            5
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[2, 6]",
+        "step": 12
+      }
+    },
+    {
+      "commit": "5e0a807a34bb64fda1572de27f50c5cdbeeb8b2df62d871b0502112fbb783a45",
+      "nonce": "99382e49fa6a3ac36554711644d89a3b7d79fd2b42ab90f5b0aeba09bb5aa199",
+      "payload": {
+        "capture_claim": [
+          3,
+          5
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          3,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 4
+        },
+        "step": 12
+      }
+    },
+    {
+      "commit": "611994d637280d9baca67633f19bc790649d84d4f995ce760b87b6c018158b77",
+      "nonce": "d829145efe6373366dcb6b1c09a5498e",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            5
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[1, 6]",
+        "step": 13
+      }
+    },
+    {
+      "commit": "6b1164ade16c1836990e70134db567bf6994d02a1df06877bed658180695818c",
+      "nonce": "62671a86955f7dffcb876e95f9408d1ec543bc92c278135cc953050e242be794",
+      "payload": {
+        "capture_claim": [
+          3,
+          6
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          3,
+          6
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 3
+        },
+        "step": 13
+      }
+    },
+    {
+      "commit": "da683a68f839758e0e7669bca2936359c8fa660dcca6fae32ae2ba4f853a14a2",
+      "nonce": "2cec5edc3c56d8f769bb8a2990d73131",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            6
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[0, 6]",
+        "step": 14
+      }
+    },
+    {
+      "commit": "c23326b2dc192622b0553d30c5127a4f426e7d7d2f2e5ff05444784339f363e8",
+      "nonce": "fd5b391c2807e3711126c8bddfe82885b7495bc8457691fb40a7a396d9d5c168",
+      "payload": {
+        "capture_claim": [
+          2,
+          6
+        ],
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          2,
+          6
+        ],
+        "role": "police",
+        "state": {
+          "col": 6,
+          "row": 3
+        },
+        "step": 14
+      }
+    },
+    {
+      "commit": "fe1bda285d0a57c5de83b84fdd69b910e97ad03cf4128f150c7d376716b76960",
+      "nonce": "f2fea892845cfe8d0738e96a94f30994",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            6
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "thief",
+        "state": "grid=7;self=[0, 5]",
+        "step": 15
+      }
+    },
+    {
+      "commit": "306741f04ab68a0d2fdb05b3b8c38d048b0019d7232eec2e767da982f4204d0a",
+      "nonce": "389b094c68f8e60a210a1e88ff25cc936c16985c23b8577bb102f5341f886309",
+      "payload": {
+        "capture_claim": [
+          2,
+          5
+        ],
+        "hint": "I moved south.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          2,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 6,
+          "row": 2
+        },
+        "step": 15
+      }
+    },
+    {
+      "commit": "41773b50c3717d22f663b1f37874f4375cf096726e04a18de68f7859f3b331b3",
+      "nonce": "d2e820acdfebec2acdc132a5414e91c1",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            5
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "thief",
+        "state": "grid=7;self=[0, 4]",
+        "step": 16
+      }
+    },
+    {
+      "commit": "b5805a1685b2131157b034742ce825c862c7c3b0e0a1979e7435f967941ad9a6",
+      "nonce": "e11fb75072ab369ba4c5a5f39f7bbf53ecdebb5d3a53b78efdc04fcc86b4a20c",
+      "payload": {
+        "capture_claim": [
+          1,
+          5
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          1,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 2
+        },
+        "step": 16
+      }
+    },
+    {
+      "commit": "e2705cdad46acc8df6cb086c88236618ee8bf950aa8bb6c5492fa0182429760f",
+      "nonce": "857206d86cbdd4aecaf753eeb82ad1b7",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            5
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "thief",
+        "state": "grid=7;self=[0, 3]",
+        "step": 17
+      }
+    },
+    {
+      "commit": "547b67ba963a44cdca0daac73abf2023219cf21c343ee93251b63ae180631928",
+      "nonce": "44d0122af0b273d59f96fefc2e63e09905a32c68453b4e07ed269061d2b73b0e",
+      "payload": {
+        "capture_claim": [
+          1,
+          4
+        ],
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          1,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 5,
+          "row": 1
+        },
+        "step": 17
+      }
+    },
+    {
+      "commit": "cbd666cf3b222e3ad4489dc19784c104fcc6371ad5d194ae30ed305556c36ea0",
+      "nonce": "a671d82b84e92524ff94c5e2b6a10a87",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            4
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "thief",
+        "state": "grid=7;self=[0, 2]",
+        "step": 18
+      }
+    },
+    {
+      "commit": "a47e24acb388e9eccbec6e82de60c304ebbb20b8c17bdd7897a9ba77fd88cec8",
+      "nonce": "94da894fe1d58a7f8d4afc55339e8411f98953bfa5b90b769b5a1f3db750fbb6",
+      "payload": {
+        "capture_claim": [
+          0,
+          4
+        ],
+        "hint": "I moved north.",
+        "intent": true,
+        "move": "N",
+        "position": [
+          0,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 1
+        },
+        "step": 18
+      }
+    },
+    {
+      "commit": "169466d00c3329b5e6368e1e946d2848f8315b64a47f8b617f51be19fe26e92d",
+      "nonce": "5453b034ed28170952a336e7e1f9cac8",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            0,
+            4
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "thief",
+        "state": "grid=7;self=[0, 1]",
+        "step": 19
+      }
+    },
+    {
+      "commit": "f2a346998b226b3718d10be865dcca014917346ceb6f6f719b1b61c90c5c068e",
+      "nonce": "05338b65be60cb1cb1ecf875fc348c93efd1d8403df1038b70a4c52a48769a51",
+      "payload": {
+        "capture_claim": [
+          0,
+          3
+        ],
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          0,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 0
+        },
+        "step": 19
+      }
+    },
+    {
+      "commit": "587d7a6518f90e24ca5425e9c82a199f649047495c2c6334f84f1ce569f8131e",
+      "nonce": "aaed1b32bf57cd7d2eebb980f3442074",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            0,
+            3
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:W",
+        "role": "thief",
+        "state": "grid=7;self=[0, 0]",
+        "step": 20
+      }
+    },
+    {
+      "commit": "4f185c4cd2c964bcae931f0b1fa0c95a34ea4b44772437fbfcc9e4a6941c5593",
+      "nonce": "f496702c0075e8dc7ed0931f6a6f57af84a81e7528670720136c5b8b1eef0c6d",
+      "payload": {
+        "capture_claim": [
+          0,
+          2
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          0,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 0
+        },
+        "step": 20
+      }
+    },
+    {
+      "commit": "a915686b94084f81eb140738eb9fdc7d908a1b532eb4811f1f982ae0cc640694",
+      "nonce": "67155e01eb121f22018002f5165c4b57",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            0,
+            2
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[1, 0]",
+        "step": 21
+      }
+    },
+    {
+      "commit": "e478186708cf5593ed3c530682b7ff7485e70ef40b6d1ffee725269da1a47454",
+      "nonce": "8401053709466b309bd18ee61932d71c552d8b388a71dd1c94fb65c41aa6e4f0",
+      "payload": {
+        "capture_claim": [
+          1,
+          2
+        ],
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          1,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 0
+        },
+        "step": 21
+      }
+    },
+    {
+      "commit": "98c78ac209d9c651318316e90ba614e87720a775697cc945ba6db570d66c2371",
+      "nonce": "ab6aed6de46a639814d3157fa34fe0df",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            2
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[2, 0]",
+        "step": 22
+      }
+    },
+    {
+      "commit": "5bf4589b1af634c9da7a2c2091a9f0f290facd2c7015372d99708121a70417f6",
+      "nonce": "f145f66888a3365d1087ada198106e95b342d59bd5e18344b20b062502257d6b",
+      "payload": {
+        "capture_claim": [
+          1,
+          1
+        ],
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          1,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 1
+        },
+        "step": 22
+      }
+    },
+    {
+      "commit": "1a4111dc51315e5728b61639a8560ea4b6819130b62a45cea792f0631f036a05",
+      "nonce": "8a8de65ef6eb6a1473c306bdd39e9b79",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            1,
+            1
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[3, 0]",
+        "step": 23
+      }
+    },
+    {
+      "commit": "aecefc01c80a6ed803524396996adb1804fc956a686927549b20c6638b16474c",
+      "nonce": "dc4d14aae591c439c64eaa2176a89d3e8b59810110fb1f72d1cfea9caedbf0b5",
+      "payload": {
+        "capture_claim": [
+          2,
+          1
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          2,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 1
+        },
+        "step": 23
+      }
+    },
+    {
+      "commit": "223da2485197a522ac467ecab173b1a89e4888eb62bf6f53bef3fc37e0d873cd",
+      "nonce": "50bd14cf185f9b438be31863dc13a909",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            1
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[4, 0]",
+        "step": 24
+      }
+    },
+    {
+      "commit": "1ef5bb7390536a13304f5e494edaac018389bdf0e2b93547e0d0c22ea1512495",
+      "nonce": "ca8c0109dac8f92ab5074a1347661cf47674bfb4737b3e0d2096a80b925d3dd2",
+      "payload": {
+        "capture_claim": [
+          2,
+          0
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "W",
+        "position": [
+          2,
+          0
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 2
+        },
+        "step": 24
+      }
+    },
+    {
+      "commit": "3853b01b1620144f619a54b1f9085eb76a29bf15015fc3265cc5bc4befeef6e8",
+      "nonce": "4486cfa63c7f58edf64bc6fd0286fb39",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            2,
+            0
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[5, 0]",
+        "step": 25
+      }
+    },
+    {
+      "commit": "0bf4de7863cfb472218289c7ec768e1d7dda6c6d6ee1485a184da644a95e6c31",
+      "nonce": "c734c6afcf2ae383489d83cc35a70ce065d2c77ef3fe04494639cf2871069786",
+      "payload": {
+        "capture_claim": [
+          3,
+          0
+        ],
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          3,
+          0
+        ],
+        "role": "police",
+        "state": {
+          "col": 0,
+          "row": 2
+        },
+        "step": 25
+      }
+    },
+    {
+      "commit": "bce0eaef0ac5dd47968117e48364d1b503385123e2246cea2aa480e53f80ead2",
+      "nonce": "e919d8979f86ea3bd18f895a174f39b7",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            3,
+            0
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:S",
+        "role": "thief",
+        "state": "grid=7;self=[6, 0]",
+        "step": 26
+      }
+    },
+    {
+      "commit": "87ce830964e7549f24c625ef2f096a78676bc2f6538154adbc24023e6cc4c9a3",
+      "nonce": "40e57cc1d3b753daf2bfe8cdf15a772a8671a5889ac78987c7189c6765c7c577",
+      "payload": {
+        "capture_claim": [
+          4,
+          0
+        ],
+        "hint": "I moved north.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          4,
+          0
+        ],
+        "role": "police",
+        "state": {
+          "col": 0,
+          "row": 3
+        },
+        "step": 26
+      }
+    },
+    {
+      "commit": "64e291870348ac1ec84d99696f4f34002f67eb256e3f6f8a881d470a5c6e1887",
+      "nonce": "f4d7950b0af1e410dd565f1a24055cc9",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            0
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "thief",
+        "state": "grid=7;self=[6, 1]",
+        "step": 27
+      }
+    },
+    {
+      "commit": "f59b20ad7528ae2f5fd9e03020bb1a3c7dbfff5f0daeaba1370713661d37e63c",
+      "nonce": "7574570476c89bab9d066824e6fe894c536981d9435012cfad547e231a39e401",
+      "payload": {
+        "capture_claim": [
+          4,
+          1
+        ],
+        "hint": "I moved east.",
+        "intent": true,
+        "move": "E",
+        "position": [
+          4,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 0,
+          "row": 4
+        },
+        "step": 27
+      }
+    },
+    {
+      "commit": "03a02716cbfef6fad93f83d64a88f6152091a9bb9cf13b37ec61ff4563befccd",
+      "nonce": "2295850d98707ae6d5b120966c0cef04",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            4,
+            1
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "thief",
+        "state": "grid=7;self=[6, 2]",
+        "step": 28
+      }
+    },
+    {
+      "commit": "29ba426131626d6af45ed5940b69ce39d646707d8eb33852a92a67f1405640ee",
+      "nonce": "f293815c81c7c646c477a060450bb011768d6c89a88f26864def7f43cd6a6b68",
+      "payload": {
+        "capture_claim": [
+          5,
+          1
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          5,
+          1
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 4
+        },
+        "step": 28
+      }
+    },
+    {
+      "commit": "f43d742553feda1b147907986e662e83ec6bfec9569ef2975e20c7bd3c822bed",
+      "nonce": "62f68cbb506eb024e64f56b91cbedc10",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            1
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "thief",
+        "state": "grid=7;self=[6, 3]",
+        "step": 29
+      }
+    },
+    {
+      "commit": "46458d2bc2a1e32b79d73a69b94937e1c7aa9cf9aa404e1b15afa2a2ada738bd",
+      "nonce": "d253fee8a434dbf6532b674c82ee895775d92c986626f1d87ff6cb78c889c710",
+      "payload": {
+        "capture_claim": [
+          5,
+          2
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          5,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 1,
+          "row": 5
+        },
+        "step": 29
+      }
+    },
+    {
+      "commit": "97651fd75d13ed5cfe02e4729f3e169421460f1c785355cc0462dfa791f6f1a4",
+      "nonce": "2ed950c0439f47417d3c3cc3a86f73e4",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            2
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "thief",
+        "state": "grid=7;self=[6, 4]",
+        "step": 30
+      }
+    },
+    {
+      "commit": "06b40ccf8518acbac71716061ac6032b2ceb906cdebb6beefaf91072c65a3c51",
+      "nonce": "da7b6512243bc86bec6451b9f5603365bda618cbd2473e2e68c8e82c59e07adc",
+      "payload": {
+        "capture_claim": [
+          6,
+          2
+        ],
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "S",
+        "position": [
+          6,
+          2
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 5
+        },
+        "step": 30
+      }
+    },
+    {
+      "commit": "957adae41156a04a356c2b998fc63d694445c2484dd122cfdad097ba7bafb8b2",
+      "nonce": "32d4f530616353379704bf3883f3deae",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            6,
+            2
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "thief",
+        "state": "grid=7;self=[6, 5]",
+        "step": 31
+      }
+    },
+    {
+      "commit": "86f84c55d12839adac0e2630a5f0a1e370d3a0398b24116742f65cf990d0e959",
+      "nonce": "cb3eefe1dcf60a4fce1a6afcac79b3b0972b44e1b793f7f34fff8a7bfabd58f9",
+      "payload": {
+        "capture_claim": [
+          6,
+          3
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          6,
+          3
+        ],
+        "role": "police",
+        "state": {
+          "col": 2,
+          "row": 6
+        },
+        "step": 31
+      }
+    },
+    {
+      "commit": "72fb5a8d59a86787174549e6c0a8022566da1a8f3387449b2c9a0b45bf23685a",
+      "nonce": "be005f0a49960675f493d80d559be4fd",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            6,
+            3
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:E",
+        "role": "thief",
+        "state": "grid=7;self=[6, 6]",
+        "step": 32
+      }
+    },
+    {
+      "commit": "fa552b5f31e14cc43b6af873117d244a479829f1979b09044f5db8efca483130",
+      "nonce": "802532264fc8ca349af43b483899f958f5e3f17ee82411c3fa3301783635fc2a",
+      "payload": {
+        "capture_claim": [
+          6,
+          4
+        ],
+        "hint": "I stayed put.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          6,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 3,
+          "row": 6
+        },
+        "step": 32
+      }
+    },
+    {
+      "commit": "2cc84bdc1f7c7bf008c25215d063d07f3bf7ced9a3ddc2eff999264616ad273f",
+      "nonce": "ad177e56a88625e13e58943349f6cc9f",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            6,
+            4
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[5, 6]",
+        "step": 33
+      }
+    },
+    {
+      "commit": "88762ebfd61d95b5e54acc2ebe97b3596611d8d34029ed44b8b0a2c30abef382",
+      "nonce": "bd180de92fc975b3e9594781ca2f704c536437b3e787d8ab392a41b83e7e6ec5",
+      "payload": {
+        "capture_claim": [
+          5,
+          4
+        ],
+        "hint": "I moved east.",
+        "intent": false,
+        "move": "N",
+        "position": [
+          5,
+          4
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 6
+        },
+        "step": 33
+      }
+    },
+    {
+      "commit": "09aa754f74bef12b0ef162f04aa291f6093b9c90fb2a2d1a72309c9a52defb2f",
+      "nonce": "56aef994adeca11ee53b30f42e39fd35",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            4
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[4, 6]",
+        "step": 34
+      }
+    },
+    {
+      "commit": "54770568c38dd868242864b906c484836812cd778787e2297e084424f7ed94f8",
+      "nonce": "10ca0348381fe18fabbec4b2532ee48d2797a12c6d6268a6d51ba0e4c4079ac3",
+      "payload": {
+        "capture_claim": [
+          5,
+          5
+        ],
+        "hint": "I moved west.",
+        "intent": false,
+        "move": "E",
+        "position": [
+          5,
+          5
+        ],
+        "role": "police",
+        "state": {
+          "col": 4,
+          "row": 5
+        },
+        "step": 34
+      }
+    },
+    {
+      "commit": "ddb6b86994366edd37521d08b5952e4c070ee981ea05f8f78f4ae67bcacff5c7",
+      "nonce": "f89df44b68eebbdea2c6f697b361aaf4",
+      "payload": {
+        "claim_response": {
+          "caught": false,
+          "claim": [
+            5,
+            5
+          ]
+        },
+        "hint": "keeping to the crowded main roads",
+        "intent": "truth",
+        "move": "MOVE:N",
+        "role": "thief",
+        "state": "grid=7;self=[3, 6]",
+        "step": 35
+      }
+    }
+  ],
+  "schema_version": "1.1",
+  "sub_game_number": 1,
+  "summary": {
+    "audit": {
+      "failed_steps": [],
+      "passed": true
+    },
+    "ended_at": "2026-08-11T18:33:01.812310+03:00",
+    "result": "survival",
+    "roles": {
+      "amireman": "thief",
+      "uoh-ay26": "police"
+    },
+    "started_at": "2026-08-11T18:26:17.813734+03:00",
+    "steps": 35,
+    "sub_game_number": 1,
+    "winner_group": "amireman"
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "audit": null,
+  "cop_score": 20,
+  "game_id": "G009",
+  "log_sha256": "e0abbb5323c84629a53ef4beecea37f76a563fc8e4c9b5fc5db284b45e9bc8aa",
+  "mutual_sign_off": true,
+  "outcome": "capture",
+  "participants": {
+    "sharNamr": {
+      "code_version": "3.0.0",
+      "github_commit": "0f240a0e7a749483e093370885d1182ff05461c2",
+      "group_id": "sharNamr",
+      "group_name": "sharNamr",
+      "hardware_spec": {
+        "cpu_cores": 4,
+        "cpu_freq_mhz": 1992,
+        "cpu_type": "Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz",
+        "gpu_model": "Intel(R) UHD Graphics 620",
+        "os": "Microsoft Windows 11 Home",
+        "ram_gb": 8,
+        "vram_gb": 1
+      },
+      "llm_model": "template-zero-token",
+      "mcp_servers": {
+        "sharNamr": "https://rentals-fuzzy-word-actually.trycloudflare.com/mcp"
+      },
+      "members": [
+        "Sharbel Maroun",
+        "Amr safadi"
+      ],
+      "repos": {
+        "cop": "https://github.com/SharbelMaroun/p2p-cop-agent",
+        "thief": "https://github.com/SharbelMaroun/p2p-thief-agent"
+      },
+      "signature": "sha256:20637edf89a6f96c550eed7811449eb1c10d93f81b544640d2793958d91d22d2"
+    },
+    "uoh-ay26": {
+      "code_version": "3.0.0",
+      "github_commit": "5ca6c5155e1303331dcaec5c0855ab21e2c196f0",
+      "group_id": "uoh-ay26",
+      "group_name": "uoh-ay26",
+      "hardware_spec": {
+        "cpu_cores": 16,
+        "cpu_freq_mhz": "unknown",
+        "cpu_type": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+        "gpu_cores_or_cuda": "unknown",
+        "gpu_type": "unknown",
+        "os": "Windows",
+        "ram_gb": 15.71,
+        "vram_gb": "unknown"
+      },
+      "llm_model": "gemini-3.1-flash-lite",
+      "mcp_servers": {
+        "thief": "https://theif.uohay26game.com/mcp"
+      },
+      "members": [
+        "Aisha Abu Dahesh",
+        "Yousef Asadi"
+      ],
+      "repos": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      },
+      "signature": "sha256:c9ef18bc354469d43f500fb92b6828def8bd45daeed96129a6b73a3e81b77d2c"
+    }
+  },
+  "repo_links": {
+    "team_a_cop_repo": "https://github.com/SharbelMaroun/p2p-cop-agent",
+    "team_a_thief_repo": "https://github.com/SharbelMaroun/p2p-thief-agent",
+    "team_b_cop_repo": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+    "team_b_thief_repo": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+  },
+  "sub_game_number": 6,
+  "team_a": {
+    "members": [
+      "Sharbel Maroun",
+      "Amr safadi"
+    ],
+    "team_name": "sharNamr"
+  },
+  "team_b": {
+    "members": [
+      "Aisha Abu Dahesh",
+      "Yousef Asadi"
+    ],
+    "team_name": "uoh-ay26"
+  },
+  "thief_score": 5,
+  "token_usage_available": false,
+  "token_usage_by_group": {
+    "sharNamr": 0,
+    "uoh-ay26": 14259
+  },
+  "total_tokens_used": 14259
+}

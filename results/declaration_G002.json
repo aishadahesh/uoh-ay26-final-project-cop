@@ -1,0 +1,84 @@
+{
+  "declaration_type": "pre_game_declaration",
+  "game_id": "G002",
+  "game_started_at": "2026-08-11T18:26:17.813734+03:00",
+  "game_uid": "605f754b-7c28-3691-a5cf-f655e485e8ca",
+  "groups": {
+    "group_1": {
+      "code_version": "3.0.0",
+      "github_commit": "8804cf250cf0e47237b60be7049f65fa95c5acd9",
+      "group_id": "amireman",
+      "group_name": "amireman",
+      "hardware_spec": {
+        "cpu_cores": 8,
+        "cpu_type": "x86_64",
+        "os": "Linux-6.18.33.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+        "python": "3.13.14"
+      },
+      "llm_model": "template",
+      "mcp_servers": {
+        "cop": "https://mechanism-programming-cleveland-length.trycloudflare.com/mcp",
+        "thief": "https://mechanism-programming-cleveland-length.trycloudflare.com/mcp"
+      },
+      "members": [
+        "Amir Fadila",
+        "Eman Sarhan"
+      ],
+      "repos": {
+        "cop": "https://github.com/AMIR13BD/Game-P2P-Cop-Chase-Police",
+        "thief": "https://github.com/AMIR13BD/Game-P2P-Cop-Chase-Thief"
+      },
+      "signature": "sha256:7664f21bd1bd681e5e1c841af571fdef9b9a754f521e7d3e5598c0bd07a90a40"
+    },
+    "group_2": {
+      "code_version": "3.0.0",
+      "github_commit": "1074d7b16aa63d701f67079c57b07443139a3cc5",
+      "group_id": "uoh-ay26",
+      "group_name": "uoh-ay26",
+      "hardware_spec": {
+        "cpu_cores": 16,
+        "cpu_freq_mhz": "unknown",
+        "cpu_type": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+        "gpu_cores_or_cuda": "unknown",
+        "gpu_type": "unknown",
+        "os": "Windows",
+        "ram_gb": 15.71,
+        "vram_gb": "unknown"
+      },
+      "llm_model": "gemini-3.1-flash-lite",
+      "mcp_servers": {
+        "cop": "https://cop.uohay26game.com/mcp"
+      },
+      "members": [
+        "Aisha Abu Dahesh",
+        "Yousef Asadi"
+      ],
+      "repos": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      },
+      "signature": "sha256:630b25b9747e51c6ca6a0280b027587425d3e49cc24e444ba0a429ef1f863ac2"
+    }
+  },
+  "links": {
+    "config": "config_G002_g<NN>.json",
+    "declaration": "declaration_G002.json",
+    "github": {
+      "amireman": {
+        "cop": "https://github.com/AMIR13BD/Game-P2P-Cop-Chase-Police",
+        "thief": "https://github.com/AMIR13BD/Game-P2P-Cop-Chase-Thief"
+      },
+      "uoh-ay26": {
+        "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
+        "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
+      }
+    },
+    "log": "log_G002_g<NN>.json",
+    "result": "result_G002.json"
+  },
+  "max_tokens_per_game": 200000,
+  "num_sub_games": 6,
+  "report_type": "declaration",
+  "schema_version": "1.1",
+  "timezone": "Asia/Jerusalem"
+}
