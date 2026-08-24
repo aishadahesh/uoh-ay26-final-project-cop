@@ -44,7 +44,7 @@ def test_a_mid_match_disconnect_resolves_to_technical_loss_on_both_sides(tmp_pat
     source_path = scratch_dir / "source.json"
     source_path.write_text(json.dumps(shared_config), encoding="utf-8")
     monkeypatch.setattr(
-        "police_thief.services.pregame_validation.inspect_public_repository",
+        "police_thief.services.pregame_peer_check.inspect_public_repository",
         lambda *_args: ([], [{"status": "verified-test-double"}]),
     )
     monkeypatch.setattr(

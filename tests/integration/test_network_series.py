@@ -28,7 +28,7 @@ def test_two_peers_play_agreed_series_with_role_alternation(
 ):
     project_root = Path(__file__).parents[2]
     monkeypatch.setattr(
-        "police_thief.services.pregame_validation.inspect_public_repository",
+        "police_thief.services.pregame_peer_check.inspect_public_repository",
         lambda *_args: ([], [{"status": "verified-test-double"}]),
     )
     monkeypatch.setattr(

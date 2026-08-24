@@ -1,0 +1,11 @@
+version = "1.00"
+[game]
+group_name = "beta"
+group_id = "beta"
+sub_game_number = 1
+members = ["Linus", "Margaret"]
+repos = {cop = "https://github.com/example/b-cop", thief = "https://github.com/example/b-thief"}
+[network]
+my_port = 8801
+opponent_url = "https://peer.example/mcp"
+turn_timeout_seconds = 2

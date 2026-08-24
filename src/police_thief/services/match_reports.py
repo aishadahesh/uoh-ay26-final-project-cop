@@ -18,149 +18,61 @@ simulator" -- the same file Chapter 7's Replay Viewer already consumes).
 
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from police_thief.services.commit_reveal import LogEntry, canonical_json
-from police_thief.services.step0 import SignedStep0, TokenUsage
+from police_thief.services.commit_reveal import LogEntry
+from police_thief.services.match_report_declaration import (
+    MatchConfigSnapshot,
+    MatchDeclaration,
+    TeamInfo,
+    build_config_snapshot,
+    build_declaration,
+    load_config_snapshot_dict,
+    load_declaration_dict,
+    save_config_snapshot,
+    save_declaration,
+)
+from police_thief.services.match_report_files import (
+    MatchReportError,
+    _read_json,
+    _write_json,
+    config_filename,
+    declaration_filename,
+    log_filename,
+    result_filename,
+    sha256_of_log,
+)
+from police_thief.services.step0 import TokenUsage
 
+__all__ = [
+    "MatchConfigSnapshot",
+    "MatchDeclaration",
+    "MatchReportError",
+    "MatchResult",
+    "RepoCrossLinks",
+    "ResultTeamIdentity",
+    "TeamInfo",
+    "_read_json",
+    "_write_json",
+    "build_config_snapshot",
+    "build_declaration",
+    "build_match_result",
+    "config_filename",
+    "declaration_filename",
+    "load_config_snapshot_dict",
+    "load_declaration_dict",
+    "load_match_result_dict",
+    "log_filename",
+    "result_filename",
+    "results_agree",
+    "save_config_snapshot",
+    "save_declaration",
+    "save_match_result",
+    "save_series_result",
+    "sha256_of_log",
+]
 
-class MatchReportError(ValueError):
-    """Raised when a report file is missing, malformed, or schema-invalid."""
-
-
-def declaration_filename(game_id: str) -> str:
-    return f"declaration_{game_id}.json"
-
-
-def config_filename(game_id: str, sub_game_number: int) -> str:
-    return f"config_{game_id}_g{sub_game_number:02d}.json"
-
-
-def log_filename(game_id: str, sub_game_number: int) -> str:
-    return f"log_{game_id}_g{sub_game_number:02d}.json"
-
-
-def result_filename(game_id: str, sub_game_number: int | None = None) -> str:
-    suffix = "" if sub_game_number is None else f"_g{sub_game_number:02d}"
-    return f"result_{game_id}{suffix}.json"
-
-
-def _write_json(data: dict, path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
-
-
-def _read_json(path: Path) -> dict:
-    if not path.is_file():
-        raise MatchReportError(f"missing report file: {path}")
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise MatchReportError(f"malformed JSON report at {path}: {exc}") from exc
-
-
-def sha256_of_log(entries: list[LogEntry]) -> str:
-    """SHA-256 over the canonically-serialized log (Sec. 9.3.17's "SHA-256 of the match log")."""
-    payload = canonical_json([asdict(entry) for entry in entries])
-    return hashlib.sha256(payload).hexdigest()
-
-
-# --- declaration_<game_id>.json --------------------------------------------
-
-
-@dataclass(frozen=True)
-class TeamInfo:
-    """Sec. 9.3.17/9.4.1-9.4.3: identity + the mandatory sibling-repo cross-link."""
-
-    team_name: str
-    members: tuple[str, ...]
-    cop_repo_url: str
-    thief_repo_url: str
-
-
-@dataclass(frozen=True)
-class MatchDeclaration:
-    """Sec. 9.3.19's `[declaration file]`: everything fixed before the first move."""
-
-    game_id: str
-    sub_game_number: int
-    team: TeamInfo
-    step0: SignedStep0
-    token_budget_per_series: int
-
-
-def build_declaration(
-    game_id: str,
-    sub_game_number: int,
-    team: TeamInfo,
-    step0: SignedStep0,
-    token_budget_per_series: int,
-) -> MatchDeclaration:
-    return MatchDeclaration(
-        game_id=game_id,
-        sub_game_number=sub_game_number,
-        team=team,
-        step0=step0,
-        token_budget_per_series=token_budget_per_series,
-    )
-
-
-def save_declaration(declaration: MatchDeclaration, directory: Path) -> Path:
-    path = directory / declaration_filename(declaration.game_id)
-    _write_json(asdict(declaration), path)
-    return path
-
-
-def load_declaration_dict(directory: Path, game_id: str) -> dict:
-    return _read_json(directory / declaration_filename(game_id))
-
-
-# --- config_<game_id>_g<NN>.json --------------------------------------------
-
-
-@dataclass(frozen=True)
-class MatchConfigSnapshot:
-    """Sec. 9.3.19's `[config file]`: the agreed, locked match parameters."""
-
-    game_id: str
-    sub_game_number: int
-    config: dict
-    config_sha256: str
-
-
-def build_config_snapshot(
-    game_id: str, sub_game_number: int, config: dict, config_sha256: str
-) -> MatchConfigSnapshot:
-    return MatchConfigSnapshot(
-        game_id=game_id,
-        sub_game_number=sub_game_number,
-        config=config,
-        config_sha256=config_sha256,
-    )
-
-
-def save_config_snapshot(snapshot: MatchConfigSnapshot, directory: Path) -> Path:
-    path = directory / config_filename(snapshot.game_id, snapshot.sub_game_number)
-    _write_json(asdict(snapshot), path)
-    return path
-
-
-def load_config_snapshot_dict(directory: Path, game_id: str, sub_game_number: int) -> dict:
-    return _read_json(directory / config_filename(game_id, sub_game_number))
-
-
-# --- log_<game_id>_g<NN>.json ------------------------------------------------
-# Deliberately not re-implemented here: Chapter 7's domain.replay.save_log/
-# load_log already write/read exactly this file's content (a JSON array of
-# LogEntry records). Callers should pass `log_filename(game_id, sub_game_number)`
-# as the path's name when calling those functions, e.g.:
-#     save_log(entries, directory / log_filename(game_id, sub_game_number))
-
-
-# --- result_<game_id>.json ---------------------------------------------------
 
 
 @dataclass(frozen=True)
