@@ -1,6 +1,7 @@
 Educational Use License
 
-Copyright (c) 2026 the author of this repository.
+Copyright (c) 2026 the authors of this repository,
+Aisha Abu Dahesh and Yousef Asadi.
 
 This repository was produced as coursework for the University of Haifa
 "Orchestration of AI Agents" course (AY26), final project. It is shared
@@ -27,7 +28,7 @@ This license deliberately mirrors the "educational use license" terms
 referenced by the course's own example repository (`docs/tasks.md`,
 Appendix D, Sec. 15.5.1): reuse and adaptation for coursework is
 welcomed, but the code is a starting point, not a substitute for the
-author's own solution against the full specification.
+authors' own solution against the full specification.
 
 Third-party acknowledgements:
 - The distributed peer-to-peer match protocol, board/scent/belief-map
@@ -36,7 +37,7 @@ Third-party acknowledgements:
   Table, which take precedence wherever this repository's design
   choices might diverge from them.
 - The Gmail OAuth transport pattern (`src/police_thief/services/gmail_oauth.py`)
-  was adapted from a proven pattern used in the author's own prior,
+  was adapted from a proven pattern used in the authors' own prior,
   separate project for the same course track.
 - The GUI's shared-board, click-to-move interaction model was inspired
   by (but not copied from) a course reference example repository

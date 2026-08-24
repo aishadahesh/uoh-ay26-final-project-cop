@@ -61,6 +61,14 @@ attachment carries the same uid — and both were confirmed by the opposing peer
 match time, so the disagreement is with this repository's local re-derivation
 rather than between the two teams. The other four series validate cleanly.
 
+As of 2026-08-24 the repository also completed a submission-readiness
+refactor: every Python file in src/, tests/ and scripts/ is now within the
+course's 150-code-line guideline except `services/network_match.py`
+(~1976 code lines), which is kept as a documented exception (TODO T0899)
+because its turn loop has no unit coverage and produced the signed match
+evidence above. The suite is unchanged at 626 passed / 3 skipped (+1 known disconnect failure), and both repos
+now share the same module layout for the split services.
+
 The current live path includes cross-machine FastMCP, Cloudflare endpoints,
 Step-0 attestation, sealed turns, end-game nonce reveal, signed Capture Claim
 responses, preserved gameplay outcomes on audit-envelope incompatibility,

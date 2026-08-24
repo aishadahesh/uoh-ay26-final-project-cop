@@ -999,7 +999,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [ ] T0744 Remove dead code and unused imports across both repos
 - [ ] T0745 Remove any leftover debug print statements not needed for the final submission
 - [ ] T0746 Review variable/function naming for clarity and consistency
-- [ ] T0747 Refactor any duplicated logic between cop and thief repos into clearly-documented shared reference points (without violating process separation)
+- [x] T0747 Refactor any duplicated logic between cop and thief repos into clearly-documented shared reference points (without violating process separation) — the byte-identical service modules (`game_config`, `gemini_agent`, `pregame_validation`, `submission_artifacts`, `series_coordinator`, `match_reports` and the shared halves of `network_protocol`) are now split into identical sibling-module structures in both repos, authored once and copied
 - [ ] T0748 Ensure consistent error handling/logging style across all modules
 
 ### P.2 Performance Tuning
@@ -1079,11 +1079,11 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 ## R. Two-Repo Parity & Cross-Team Consistency Checklist
 
 ### R.1 Structural Parity Between Cop and Thief Repos
-- [ ] T0799 Confirm both repos follow the same folder layout convention (domain/infra/shared/tests/docs/config/PRD)
+- [x] T0799 Confirm both repos follow the same folder layout convention (domain/infra/shared/tests/docs/config/PRD) — re-confirmed after the 150-line refactor: both repos now also share the same `cli/` package, the same `planner_*`/`protocol_*`/`pregame_*`/`submission_*` module layout, and the same themed test-module structure
 - [x] T0800 Confirm both READMEs cover the same required subjects while retaining role-specific strategy and replay sections
 - [ ] T0801 Confirm both repos' `.gitignore` files cover the same secret-file patterns
-- [ ] T0802 Confirm both repos' `pyproject.toml`/dependency files are kept in sync where shared libraries are used
-- [ ] T0803 Confirm both repos independently pass their own full test suite
+- [x] T0802 Confirm both repos' `pyproject.toml`/dependency files are kept in sync where shared libraries are used — verified in the same pass that added `src/police_thief/cli/*` to both coverage omit lists; dependencies and tool sections match
+- [x] T0803 Confirm both repos independently pass their own full test suite — cop: 626 passed / 3 skipped plus the one known, documented disconnect failure (T0522/T0622); thief: 627 passed / 2 skipped
 - [x] T0804 Confirm both repos independently start their fixed-role FastMCP server; the sibling is used only by the series coordinator for alternating games
 - [x] T0805 Confirm both repos ship independent copies of the shared `config/game.json`
 - [ ] T0806 Confirm both repos' `BrainBase` strategy interfaces expose equivalent extension points
@@ -1190,6 +1190,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0888 Verify rule 54: the final-results JSON reports total token consumption — `MatchResult.total_tokens_used`, sourced from `TokenUsage.total` (Chapter 9)
 - [x] T0889 Verify rule 55: self-scoring reflects code quality only, not league game outcome — a submission-process discipline for the humans involved, not a code-level mechanism; noted here as a reminder for whoever fills out the final self-grading, not something this codebase itself can enforce
 - [ ] T0898 Reconcile `game_uid` derivation with the forms used by opposing peers — two of the six retained bundles report `derivation_mismatch`: `SMNGRP05-vs-uoh-ay26-C01` records the league interop-kit's labeled uid, and `counted-2` records a uid that neither the labeled nor the unlabeled form reproduces from the terms committed beside it. Both bundles are internally consistent and were confirmed by the opposing peer at match time, so the disagreement is with the local re-derivation, not between teams; accepted as a known limitation rather than changing the shipped derivation before submission
+- [ ] T0899 Bring `services/network_match.py` within the 150-code-line guideline — every other file in src/, tests/ and scripts/ now complies (verified by AST-based count excluding blanks/comments/docstrings), but this one file remains ~1976 code lines by explicit decision: its ~500-line turn loop has no unit coverage (only the integration tier reaches it) and it is the code that produced the already-signed counted-series evidence, so restructuring it days before submission was judged a worse risk than documenting the exception. The mechanical extractions that were safe (settings, wire adapters, inference, reveal audit, identity, artifacts, email) would still leave the loop itself over the limit
 
 ---
 
