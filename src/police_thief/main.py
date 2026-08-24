@@ -205,6 +205,7 @@ def _peer(args: argparse.Namespace) -> None:
         llm_model=gemini_advisor.model,
         counted=defaults["counted"],
         counted_games_played=defaults["counted_games_played"],
+        opponent_counted_games_played=defaults["opponent_counted_games_played"],
         prior_counted_opponents=defaults["prior_counted_opponents"],
         settlement_scope=defaults["settlement_scope"],
     )
@@ -413,3 +414,4 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
+

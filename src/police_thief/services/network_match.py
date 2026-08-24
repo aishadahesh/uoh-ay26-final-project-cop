@@ -86,6 +86,25 @@ def _turn_timeout(base_timeout: float, step: int) -> float:
     return base_timeout
 
 
+
+def _games_played_including_this(settings, participants: dict) -> dict[str, int | None]:
+    """Return each side's counted-game total including this series.
+
+    The opponent's prior count normally arrives in its negotiation identity. For
+    counted-3, keep the agreed written value in config as a fallback so the
+    official report cannot file null if that optional identity field is absent.
+    """
+    own = str(settings.team_name).casefold().replace(" ", "-")
+    increment = 1 if settings.counted else 0
+    played: dict[str, int | None] = {}
+    for group_id, participant in participants.items():
+        declared = participant.get("counted_games_played")
+        if str(group_id).casefold() == own:
+            declared = settings.counted_games_played
+        elif declared is None and settings.opponent_counted_games_played is not None:
+            declared = settings.opponent_counted_games_played
+        played[group_id] = None if declared is None else int(declared) + increment
+    return played
 def _is_first_meeting(settings, participants: dict) -> bool | None:
     """Have these two groups never completed a COUNTED series together?
 
@@ -142,6 +161,7 @@ class NetworkMatchSettings:
     # explicit rather than derived, because an under-declared count reads as
     # gaming the diversity reward.
     counted_games_played: int = 0
+    opponent_counted_games_played: int | None = None
     prior_counted_opponents: tuple[str, ...] = ()
     # Which settlement preimage both peers agreed to hash. Must match the
     # opponent's exactly; see submission_artifacts.SETTLEMENT_SCOPES.
@@ -2350,6 +2370,7 @@ def finalize_completed_series(
             own_group_id=str(settings.team_name).casefold().replace(" ", "-"),
             settlement_scope=settings.settlement_scope,
             first_meeting_between_groups=_is_first_meeting(settings, participants),
+            games_played_including_this=_games_played_including_this(settings, participants),
         )
     except SubmissionBundleError as exc:
         errors, _ = validate_submission_directory(settings.output_dir, report_game_id)
@@ -2559,6 +2580,7 @@ class NetworkMatchSeriesRunner:
                 own_group_id=str(self.settings.team_name).casefold().replace(" ", "-"),
                 settlement_scope=self.settings.settlement_scope,
                 first_meeting_between_groups=_is_first_meeting(self.settings, participants),
+                games_played_including_this=_games_played_including_this(self.settings, participants),
             )
         except SubmissionBundleError as exc:
             errors, _ = validate_submission_directory(

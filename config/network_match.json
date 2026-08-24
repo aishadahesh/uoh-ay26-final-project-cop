@@ -40,7 +40,8 @@
     "repos": {
       "cop": "https://github.com/Nell-Kh/police-agent",
       "thief": "https://github.com/Nell-Kh/thief-agent"
-    }
+    },
+    "counted_games_played": 4
   },
   "email": {
     "automatic": true,
