@@ -23,3 +23,6 @@ token.json
 # OS
 .DS_Store
 Thumbs.db
+
+# scratch config the disconnect integration test writes at runtime
+tests/integration/_scratch_disconnect_test/
