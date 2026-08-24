@@ -2292,7 +2292,7 @@ def finalize_completed_series(
     )
     terms = NetworkMatchRunner(settings, inboxes, transport=transport)._terms(params)
     game_uid = derive_game_uid(terms, list(participants), game_id=report_game_id)
-    local_sha = series_consensus_hash(report_game_id, game_uid, series_result)
+    local_sha = series_consensus_hash(settings.game_id, game_uid, series_result)
     emit(
         "Waiting for final series consensus exchange; "
         f"local consensus_sha={local_sha}"
@@ -2494,12 +2494,11 @@ class NetworkMatchSeriesRunner:
         }
         if participants is None:
             raise RuntimeError("series completed without participant metadata")
+        report_game_id = canonical_game_id(self.settings.game_id, list(participants))
         terms = NetworkMatchRunner(
             self.settings, self.inboxes, self.gemini_advisor, self.transport,
         )._terms(params)
-        game_uid = derive_game_uid(
-            terms, list(participants), game_id=self.settings.game_id,
-        )
+        game_uid = derive_game_uid(terms, list(participants), game_id=report_game_id)
         local_consensus_sha = series_consensus_hash(
             self.settings.game_id, game_uid, series_result,
         )
@@ -2563,15 +2562,15 @@ class NetworkMatchSeriesRunner:
             )
         except SubmissionBundleError as exc:
             errors, _ = validate_submission_directory(
-                self.settings.output_dir, self.settings.game_id,
+                self.settings.output_dir, report_game_id,
             )
             report = save_submission_validation_report(
                 self.settings.output_dir,
-                self.settings.game_id,
+                report_game_id,
                 errors,
                 str(exc),
             )
-            path = self.settings.output_dir / f"result_{self.settings.game_id}.json"
+            path = self.settings.output_dir / f"result_{report_game_id}.json"
             emit(
                 "WARNING: submission has "
                 f"{len(errors)} validation error(s); report saved to {report}"
@@ -2580,7 +2579,7 @@ class NetworkMatchSeriesRunner:
                 path, params, self.settings, emit,
             )
             return path
-        path = self.settings.output_dir / f"result_{self.settings.game_id}.json"
+        path = self.settings.output_dir / f"result_{report_game_id}.json"
         emit(
             f"Series complete; {len(submission_paths)} validated submission JSON files "
             f"ready in {self.settings.output_dir}"
@@ -2621,3 +2620,4 @@ def _deliver_unverified_result(
         "validation/consensus failure before email submission"
     )
     return False
+

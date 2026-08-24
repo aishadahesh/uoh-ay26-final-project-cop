@@ -69,7 +69,8 @@ def canonical_game_id(game_id: str, group_ids: list[str]) -> str:
     label = str(game_id).strip()
     if "-vs-" in label:
         return label
-    if re.fullmatch(r"[A-Za-z]+\d{3,}", label):
+    if (re.fullmatch(r"[A-Za-z]+\d{3,}", label) or
+            re.fullmatch(r"counted-\d+", label, re.IGNORECASE)):
         return f"{pair[0]}-vs-{pair[1]}-{label}"
     return label or f"{pair[0]}-vs-{pair[1]}"
 
@@ -717,3 +718,4 @@ def _walk(value: Any, prefix: str = "$"):
     elif isinstance(value, list):
         for index, item in enumerate(value):
             yield from _walk(item, f"{prefix}[{index}]")
+

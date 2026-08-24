@@ -6,6 +6,7 @@ from email import message_from_bytes
 from police_thief.services.gmail_report_sender import build_report_email
 from police_thief.services.submission_artifacts import (
     canonical_bytes,
+    canonical_game_id,
     derive_game_uid,
     finalize_submission_bundle,
     public_participant,
@@ -167,6 +168,19 @@ def test_series_consensus_payload_matches_exact_cross_team_preimage():
     }
 
 
+
+def test_counted_label_files_full_pair_id_but_settles_bare_label():
+    groups = ["yanell11", "uoh-ay26"]
+
+    assert canonical_game_id("counted-3", groups) == "uoh-ay26-vs-yanell11-counted-3"
+    assert series_consensus_payload("counted-3", "uid", {"sub_games": [
+        {
+            "sub_game_number": 1,
+            "outcome": "survival",
+            "roles": {"uoh-ay26": "thief", "yanell11": "cop"},
+            "score": {"uoh-ay26": 10, "yanell11": 5},
+        }
+    ]}, scope="uid")["game_id"] == "counted-3"
 def test_game_uid_expands_bare_label_to_sorted_pair_game_id():
     terms = _terms()
     seed = canonical_bytes(terms) + b"|alpha-vs-beta-G010"
@@ -469,3 +483,4 @@ def test_the_two_settlement_scopes_stay_distinct_and_stable():
     assert series_consensus_hash("G010", "some-uid", _VECTOR_OPEN_1, scope="uid") != (
         series_consensus_hash("G010", "some-uid", _VECTOR_OPEN_1, scope="kit")
     )
+
