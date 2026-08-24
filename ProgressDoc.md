@@ -36,7 +36,7 @@ print(send_move('http://127.0.0.1:8801/mcp', signed_move='N', signature='abc123'
 
 ## Current verified project status
 
-As of 2026-08-23, the team has completed five counted six-sub-game series
+As of 2026-08-24, the team has completed six counted six-sub-game series
 against distinct opponents. Every aggregate listed below records
 `mutual_agreement.confirmed=true`.
 
@@ -47,14 +47,19 @@ against distinct opponents. Every aggregate listed below records
 | G009 | `sharNamr` | 2–4 | 40–60 | Loss |
 | `SMNGRP05-vs-uoh-ay26-C01` | `SMNGRP05` | 3–3 | 47–47 | Tie |
 | `AHK-YOSI-vs-uoh-ay26-C001` | `ahk-yosi` | 5–1 | 75–35 | Win |
-| **Total** | 5 distinct teams | **14–16** | **252–272** | **2–2–1** |
+| `counted-2` | `yanell11` | 0–6 | 30–90 | Loss |
+| **Total** | 6 distinct teams | **14–22** | **282–362** | **2–3–1** |
 
-One known limitation in the retained evidence: the `SMNGRP05-vs-uoh-ay26-C01` bundle records the league interop-kit's *labeled* `game_uid`
-(the agreed `game_id` folded into the derivation), while this repository derives the
-unlabeled form from the agreed terms and group IDs. Re-running the local
-`validate_submission_directory` over that one bundle therefore reports a
-`derivation_mismatch` on `game_uid`. The bundle is internally consistent and was
-confirmed by both peers at match time; the other four series validate cleanly.
+One known limitation in the retained evidence: two bundles report a
+`derivation_mismatch` on `game_uid` when the local `validate_submission_directory`
+is re-run over them. `SMNGRP05-vs-uoh-ay26-C01` records the league interop-kit's
+*labeled* `game_uid` (the agreed `game_id` folded into the derivation), while this
+repository derives the unlabeled form from the agreed terms and group IDs.
+`counted-2` records a `game_uid` that neither form reproduces from the terms
+committed beside it. Both bundles are internally consistent — every required
+attachment carries the same uid — and both were confirmed by the opposing peer at
+match time, so the disagreement is with this repository's local re-derivation
+rather than between the two teams. The other four series validate cleanly.
 
 The current live path includes cross-machine FastMCP, Cloudflare endpoints,
 Step-0 attestation, sealed turns, end-game nonce reveal, signed Capture Claim

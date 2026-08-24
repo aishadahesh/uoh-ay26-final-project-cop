@@ -3,7 +3,7 @@
 ## Counted-series evidence now available
 
 The original analysis below used the earliest supplied G001 logs. The repository
-now holds five mutually verified counted-series aggregates:
+now holds six mutually verified counted-series aggregates:
 
 | Series | Opponent | uoh-ay26 sub-games | Score |
 |---|---|---:|---:|
@@ -12,6 +12,7 @@ now holds five mutually verified counted-series aggregates:
 | G009 | `sharNamr` | 2–4 | 40–60 |
 | `SMNGRP05-vs-uoh-ay26-C01` | `SMNGRP05` | 3–3 | 47–47 |
 | `AHK-YOSI-vs-uoh-ay26-C001` | `ahk-yosi` | 5–1 | 75–35 |
+| `counted-2` | `yanell11` | 0–6 | 30–90 |
 
 These results show that legality and audit correctness do not imply a guaranteed
 strategy win. The README therefore includes both win and loss replays. Cop

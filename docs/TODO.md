@@ -3,10 +3,11 @@
 > **Live-status reconciliation (2026-08-14):** the historical notes below record
 > the state when each chapter was first implemented. The project has since been
 > split into independent public Cop and Thief repositories and has completed
-> five mutually verified counted series against distinct opponents: G001
+> six mutually verified counted series against distinct opponents: G001
 > (najamjad), G002 (amireman), G009 (sharNamr),
-> SMNGRP05-vs-uoh-ay26-C01 (SMNGRP05), and
-> AHK-YOSI-vs-uoh-ay26-C001 (ahk-yosi). Current checkboxes and notes
+> SMNGRP05-vs-uoh-ay26-C01 (SMNGRP05),
+> AHK-YOSI-vs-uoh-ay26-C001 (ahk-yosi), and counted-2 (yanell11).
+> Current checkboxes and notes
 > supersede stale phrases such as “single shared repo” or “zero real matches.”
 
 Derived from `requirements.md` (itself derived from `ref/police_thief_p2p.pdf` + `ref/software_submission_guidelines-V3.pdf`). Organized by the book's recommended 7-layer incremental build order (Ch.10), plus setup, reliability, league, testing, docs, and submission phases. Each task is atomic and checkable. "Both roles" means duplicate the task once for the cop repo and once for the thief repo, since they must run as fully separate codebases/processes.
@@ -431,7 +432,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 ### F.6 Stage-4 Milestone
 - [ ] T0326 Confirm milestone: free-form hint reporting subject to the word-count limit works end-to-end — works as a standalone mechanism; "end-to-end" in a live match/network sense awaits Chapter 8
 - [ ] T0327 Confirm milestone: a scent map is computed and viewable/loggable — computed since Chapter 4, and the *derived* belief heatmap is viewable since Chapter 7's `LiveGUI`; still not "loggable," though — `LogManager`/`LogEntry` (Chapter 8) only ever record `{state, move, intent, nonce, h_commit}`, never the raw scent field itself
-- [ ] T0328 Confirm milestone: the LLM produces a hint (true or lie) every step without crashing the match — a live match loop now exists and has run five counted series without crashing, so the original blocker is gone; the milestone is still unmet as written because `[trash_talk] provider = "template"` produces hints deterministically at zero token cost — no LLM sits on the per-step path
+- [ ] T0328 Confirm milestone: the LLM produces a hint (true or lie) every step without crashing the match — a live match loop now exists and has run six counted series without crashing, so the original blocker is gone; the milestone is still unmet as written because `[trash_talk] provider = "template"` produces hints deterministically at zero token cost — no LLM sits on the per-step path
 - [ ] T0329 Run a full match with real scent + real LLM-generated hints end-to-end with no crash — not built, same reason
 - [x] T0330 Verify belief maps visibly track approximate opponent location better than random guessing over a test match — `test_cop_belief_converges_toward_the_true_thief_position_over_time`, and the full capture achieved via belief alone in `tests/integration/test_strategy_pipeline.py`
 - [x] T0331 Document Stage-4 decisions and worked examples in `PRD/04-language-scent.md` — written as `docs/PRD_strategy_module.md` (this chapter's belief/hint content) alongside `docs/PRD_pheromone_scent.md` (Chapter 4's scent-only content)
@@ -445,7 +446,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 ### G.1 Tunnel Setup
 - [x] T0332 Configure a public HTTPS tunnel for the Cop port — completed with Cloudflare Tunnel
 - [x] T0333 Configure a public HTTPS tunnel for the Thief port — completed with Cloudflare Tunnel
-- [x] T0334 Verify the public tunnel URL is reachable from an external network — proven in five counted cross-team series
+- [x] T0334 Verify the public tunnel URL is reachable from an external network — proven in six counted cross-team series
 - [x] T0335 Update `config/game.toml` `opponent_url` to a public opponent URL rather than localhost
 - [ ] T0336 Test Localtonet as a fallback tunnel provider in case ngrok is unavailable
 - [x] T0337 Document the tunnel-startup procedure step by step for reproducibility — `docs/RUNNING.md`
@@ -455,7 +456,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 
 ### G.2 Cross-Machine Match Testing
 - [x] T0341 Recruit a second machine/opponent team for a real cross-machine test
-- [x] T0342 Run a full match between genuinely separate machines over the public internet — repeated across five counted opponents
+- [x] T0342 Run a full match between genuinely separate machines over the public internet — repeated across six counted opponents
 - [x] T0343 Verify tunnel latency fits the negotiated timeouts — six-sub-game series completed under the configured deadlines
 - [ ] T0344 Write integration test/checklist: confirm no `localhost`-only assumptions remain anywhere in networking code
 - [x] T0345 Test behavior when the opponent's tunnel is temporarily down — observed and diagnosed during live series
@@ -498,7 +499,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [ ] T0370 Add sequence diagrams/comments in code documenting the four-step handshake per turn — the sequence diagram already exists in `docs/PLAN.md` §6; per-turn network code to comment doesn't exist yet (Chapter 8)
 
 ### H.3 Mutual Audit & Log Integrity
-- [x] T0371 Implement full match-log recording of every step's state, move, intent, nonce, and commitment hash — exercised in five counted six-game series and saved as replayable JSON
+- [x] T0371 Implement full match-log recording of every step's state, move, intent, nonce, and commitment hash — exercised in six counted six-game series and saved as replayable JSON
 - [x] T0372 Implement end-of-match mutual audit: recompute every step's hash and compare against the log's recorded commitment — `audit_log()`
 - [x] T0373 Write unit test: audit passes on an untampered log
 - [x] T0374 Write unit test: audit fails and flags tampering when any single byte of a logged step is altered
@@ -534,7 +535,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 ### H.8 Stage-6 Milestone
 - [ ] T0395 Confirm milestone: moves must be committed via Commit and only then revealed via Reveal, with Nonce — updated status post-Chapter-8: the Orchestrator now sends a real commitment (`H_commit`) over a real network call and self-verifies it, but does not yet transmit a separate Reveal message (nonce + move) to the opponent at all — only one side's commitment ever crosses the wire, so the full two-sided Commit-then-Reveal *exchange* the milestone describes is still not implemented, only the Commit half plus local self-verification
 - [x] T0396 Confirm milestone: correct Step-0 hardware declaration exchanged and verified — active in the live peer runner and opponent audits
-- [x] T0397 Run a full match with the complete crypto protocol active end-to-end with no crash — five mutually verified counted six-game series completed
+- [x] T0397 Run a full match with the complete crypto protocol active end-to-end with no crash — six mutually verified counted six-game series completed
 - [ ] T0398 Deliberately inject a tampering bug and confirm the match is correctly disqualified — done at the primitive level (`audit_log` correctly catches injected tampering); "the match is disqualified" implies live `MatchOutcome` wiring, which is Chapter 8
 - [x] T0399 Document Stage-6 decisions in `PRD/06-security-crypto.md` — written as `docs/PRD_commit_reveal_crypto.md`, per the naming reconciliation in `docs/PRD.md` §7
 - [ ] T0400 Peer-review the cryptographic code with your teammate for subtle bugs (constant-time comparisons, nonce reuse, serialization consistency) — genuinely requires the human teammate's involvement; not something this session can complete alone
@@ -785,10 +786,10 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0587 Run a counted game against Opponent Team 2 — G002 vs `amireman`
 - [x] T0588 Confirm both sides' end-of-match JSON reports were exchanged/reconciled for the second counted opponent
 - [x] T0589 Run an additional counted game against a third opponent — G009 vs `sharNamr`
-- [x] T0590 Track a running tally — 5 counted series, 5 distinct opponents
+- [x] T0590 Track a running tally — 6 counted series, 6 distinct opponents
 - [x] T0591 Confirm at least the required minimum distinct-opponent games are complete — 3 complete
 - [x] T0592 Avoid replaying completed counted opponents for extra scoring — friendly verification series remain explicitly non-counted
-- [x] T0593 Record every counted result in the README — G001 30–90, G002 60–40, G009 40–60, SMNGRP05-vs-uoh-ay26-C01 47–47, AHK-YOSI-vs-uoh-ay26-C001 75–35
+- [x] T0593 Record every counted result in the README — G001 30–90, G002 60–40, G009 40–60, SMNGRP05-vs-uoh-ay26-C01 47–47, AHK-YOSI-vs-uoh-ay26-C001 75–35, counted-2 30–90
 
 ### L.3 Handling League-Level Failures
 - [x] T0594 Define tunnel-down procedure — `docs/OPPONENT_MATCH_GUIDE.md#shared-failure-policy`
@@ -893,7 +894,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0667 Insert the mandatory Replay Viewer "Verified OK" screenshot — `assets/replay_verified_ok.png`
 - [x] T0668 Insert the cross-link to the sibling repository (cop <-> thief) — banner and companion-repository link
 - [x] T0669 Write a section explaining the scent/pheromone model and how uncertainty/deception were combined — README `Formal problem formulation`
-- [x] T0670 Write a section summarizing league results — README records all five counted opponents and verified scores
+- [x] T0670 Write a section summarizing league results — README records all six counted opponents and verified scores
 - [x] T0671 Write a section documenting any book-contradiction interpretation choices made per the academic-freedom clause — README `Specification interpretations`
 - [x] T0672 Proofread the README for clarity, spelling, and academic tone
 - [ ] T0673 Verify the README renders correctly on GitHub's web UI (formatting, images, links)
@@ -982,9 +983,9 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [ ] T0734 Confirm commit-reveal and mutual audit pass cleanly with no tampering flagged — the primitives and the Replay Viewer's audit pass cleanly on a real, untampered log (Chapter 5/7, re-verified passing); the live, two-sided Commit-then-Reveal network exchange is not fully wired yet (see rule 17/19 above and `docs/PRD_reliability_layer.md` §3)
 - [x] T0735 Confirm scent map and belief map are implemented and actually influence decisions — `test_strategy_pipeline.py`'s headline proof: two real brains capture using only their own belief maps, never touching the opponent's true position (Chapter 6)
 - [x] T0736 Confirm Live GUI and Replay Viewer both show correct, matching, "Verified OK" state — proven via real Tkinter widget-state assertions (Chapter 7); the *screenshot* deliverable itself remains a flagged manual step (no native-window-capture tool available in this session)
-- [ ] T0737 Confirm both sides sent their own separate Gmail JSON report for every counted match — still open, but for a narrower reason than originally recorded: five counted matches now exist and OAuth is set up (live delivery is proven for G009). What remains unproven is that *both* sides sent their own report for *every* counted series — the retained artifacts only evidence this end. Same gap as T0866
+- [ ] T0737 Confirm both sides sent their own separate Gmail JSON report for every counted match — still open, but for a narrower reason than originally recorded: six counted matches now exist and OAuth is set up (live delivery is proven for G009). What remains unproven is that *both* sides sent their own report for *every* counted series — the retained artifacts only evidence this end. Same gap as T0866
 - [ ] T0738 Confirm GitHub repos are tagged and README is properly structured — README is complete and role-specific; only the final annotated submission tag remains
-- [x] T0739 Confirm at least `[min games to pass]` distinct-opponent games were completed — done: `config/game.json` sets `min_games_to_pass = 2`; five counted six-sub-game series were completed against five distinct opponents (`najamjad`, `amireman`, `sharNamr`, `SMNGRP05`, `ahk-yosi`), each retained as a signed result bundle
+- [x] T0739 Confirm at least `[min games to pass]` distinct-opponent games were completed — done: `config/game.json` sets `min_games_to_pass = 2`; six counted six-sub-game series were completed against six distinct opponents (`najamjad`, `amireman`, `sharNamr`, `SMNGRP05`, `ahk-yosi`, `yanell11`), each retained as a signed result bundle
 - [x] T0740 Do a final full read-through of `requirements.md` against the finished project, line by line — performed as this chapter's Section T sweep: all 55 mandatory rules in `docs/tasks.md` App. E individually cross-checked against the actual code/tests/git history, one genuinely new rulebook tension found (rule 47, see T0881) and documented rather than silently resolved either way
 
 ---
@@ -1142,7 +1143,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0841 Verify rule 7: a Watchdog monitors the main process with controlled data flush — `Watchdog` (Chapter 8); "controlled data flush" specifically (persisting state before shutdown) is not yet implemented — see `docs/TODO.md` T0533/T0534, honestly left unchecked there too
 - [x] T0842 Verify rule 8: the GUI displays only local truth — `LiveViewModel`/`build_live_view_model` structurally cannot hold the opponent's true position (Chapter 7)
 - [x] T0843 Verify rule 9: the GUI never displays the full objective board state — same structural guarantee, proven by a dedicated structural test in Chapter 7
-- [x] T0844 Verify rule 10: Cloudflare Tunnel exposes both local role servers publicly — proven in five counted cross-team series
+- [x] T0844 Verify rule 10: Cloudflare Tunnel exposes both local role servers publicly — proven in six counted cross-team series
 - [x] T0845 Verify rule 11: shared configuration identity is checked before play — byte hash and canonical `config_sha256` are exchanged and divergent terms are rejected
 - [x] T0846 Verify rule 12: minimum parameter values are never reduced below the floor — `MIN_GRID_SIZE=7`/`MIN_MAX_BARRIERS=14` enforced with a hard `GameConfigError` in `shared/game_config.py`
 - [x] T0847 Verify rule 13: movement is orthogonal-only — `Move` StrEnum has no diagonal member; `Board.apply_move` only ever computes N/S/E/W/STAY deltas
@@ -1163,14 +1164,14 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0862 Verify rule 28: a token-bucket rate limiter protects Gmail report sending — `TokenBucket`/`Gatekeeper` (Chapter 9), wired in front of every `send_match_report` call; not yet exercised against the real Gmail API since no real OAuth client exists (see rule 30)
 - [x] T0863 Verify rule 29: a DOS/anomaly detector protects network resources — `AnomalyDetector` (Chapter 9), composed into the same `Gatekeeper` pipeline
 - [x] T0864 Verify rule 30: the Gmail interface code uses send-only permission scope — verified in code: `services/gmail_oauth.py::SCOPES = ["https://www.googleapis.com/auth/gmail.send"]`, tested (`test_scopes_are_send_only_per_the_least_privilege_mandate`), deliberately narrower than the `gmail.modify` scope used in the prior course project this OAuth flow was ported from. The *Google Cloud Console* consent-screen configuration itself must still be double-checked to match once a team completes the real, manual OAuth setup (Section I.3) — the code-side guarantee is done, the human-side console configuration is not yet verifiable
-- [x] T0865 Verify rule 31: the team completed five counted series against distinct opponents — `najamjad`, `amireman`, `sharNamr`, `SMNGRP05`, and `ahk-yosi`
-- [ ] T0866 Verify rule 32: every counted match was automatically reported via Gmail — live Gmail delivery is proven for G009, but the retained artifacts do not independently prove automatic delivery for all five counted series
+- [x] T0865 Verify rule 31: the team completed six counted series against distinct opponents — `najamjad`, `amireman`, `sharNamr`, `SMNGRP05`, `ahk-yosi`, and `yanell11`
+- [ ] T0866 Verify rule 32: every counted match was automatically reported via Gmail — live Gmail delivery is proven for G009, but the retained artifacts do not independently prove automatic delivery for all six counted series
 - [x] T0867 Verify rule 33: the match report is structured as valid JSON — all four mandatory report types round-trip correctly (Chapter 9)
 - [x] T0868 Verify rule 34: no end-of-match report is ever sent as free text — `build_report_email` raises `TypeError` at runtime on anything that isn't a `dict`/`list`, a genuine enforcement, not just a type hint
 - [x] T0869 Verify rule 35: mutual result claims and reciprocal series SHA gate `mutual_agreement.confirmed`; each team retains its independently produced report
 - [x] T0870 Verify rule 36: every live sub-game performs a final mutual nonce/log audit and the series performs reciprocal consensus
 - [x] T0871 Verify rule 37: counted-game history is declared and recorded during opponent coordination before counted play
-- [x] T0872 Verify rule 38: declarations used for the five counted opponents were explicit and consistent; false-count detection remains tested
+- [x] T0872 Verify rule 38: declarations used for the six counted opponents were explicit and consistent; false-count detection remains tested
 - [x] T0873 Verify rule 39: no secrets or credentials are ever pushed to any repo — actively re-verified in Chapter 11: `git log --all --diff-filter=A --name-only` searched for `credentials.json`/`token.json`/`.env`/`secret`-like filenames across the entire commit history; none found
 - [x] T0874 Verify rule 40: authorization/secret files are listed in `.gitignore` — confirmed present: `credentials.json`, `token.json`, `*.pem`, `*.key`, `.env`
 - [ ] T0875 Verify rule 41: the final submission version is tagged with a documented annotated Git tag — confirmed not done (`git tag -l` returns nothing); this is correctly a submission-time action, not a mid-development one, and should not be created without an explicit request at actual submission time
@@ -1188,7 +1189,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0887 Verify rule 53: the commit-hash identifier is recorded and updated in every Step-0 declaration — `get_git_commit_hash()`/`Step0Declaration.git_commit_hash` (Chapter 5), tested against this real repository
 - [x] T0888 Verify rule 54: the final-results JSON reports total token consumption — `MatchResult.total_tokens_used`, sourced from `TokenUsage.total` (Chapter 9)
 - [x] T0889 Verify rule 55: self-scoring reflects code quality only, not league game outcome — a submission-process discipline for the humans involved, not a code-level mechanism; noted here as a reminder for whoever fills out the final self-grading, not something this codebase itself can enforce
-- [ ] T0898 Reconcile `game_uid` derivation with the league interop-kit's labeled form — `SMNGRP05-vs-uoh-ay26-C01` records the labeled uid, so `validate_submission_directory` reports `derivation_mismatch` for that bundle only; accepted as a known limitation rather than changing the shipped derivation before submission
+- [ ] T0898 Reconcile `game_uid` derivation with the forms used by opposing peers — two of the six retained bundles report `derivation_mismatch`: `SMNGRP05-vs-uoh-ay26-C01` records the league interop-kit's labeled uid, and `counted-2` records a uid that neither the labeled nor the unlabeled form reproduces from the terms committed beside it. Both bundles are internally consistent and were confirmed by the opposing peer at match time, so the disagreement is with the local re-derivation, not between teams; accepted as a known limitation rather than changing the shipped derivation before submission
 
 ---
 
