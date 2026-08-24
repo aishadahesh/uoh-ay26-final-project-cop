@@ -210,11 +210,11 @@ def _peer(args: argparse.Namespace) -> None:
     inboxes = PeerInboxes()
     server = build_peer_server(AgentRole.COP.value, inboxes)
     server_thread = threading.Thread(
-        target=run_peer_server, args=(server, "0.0.0.0", network.my_port),
+        target=run_peer_server, args=(server, "127.0.0.1", network.my_port),
         daemon=True, name="mcp-peer-server",
     )
     server_thread.start()
-    print(f"MCP server listening on 0.0.0.0:{network.my_port}/mcp")
+    print(f"MCP server listening on 127.0.0.1:{network.my_port}/mcp")
     # Keep the submitted Cop and Thief as independent live processes.  This
     # Cop entry point runs exactly one configured sub-game and never changes
     # its role in-process; the sibling Thief repository owns thief-role games.

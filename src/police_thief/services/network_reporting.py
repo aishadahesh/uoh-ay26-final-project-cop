@@ -13,19 +13,28 @@ from police_thief.services.quota_manager import QuotaManager
 from police_thief.services.token_bucket import TokenBucket
 
 
-def submission_email_subject(settings) -> str:
+def submission_email_subject(settings, game_id: str | None = None) -> str:
     """Build one role-neutral subject for the complete alternating-role series."""
     group_1_id = settings.team_name.strip().lower().replace(" ", "-")
     group_2_id = settings.opponent_team_name.strip().lower().replace(" ", "-")
+    report_game_id = game_id or settings.game_id
     return (
-        f"Final Project, Police-Thief result, {settings.game_id} "
+        f"Final Project, Police-Thief result, {report_game_id} "
         f"({group_1_id}, {group_2_id})"
     )
 
 
 def email_result_file(path: Path, params, settings, emit) -> None:
     """Send the mandatory result JSON through OAuth and all Gatekeeper layers."""
-    expected_filename = f"result_{settings.game_id}.json"
+    if not path.name.startswith("result_") or path.suffix != ".json":
+        raise RuntimeError(
+            f"automatic email accepts only result_*.json aggregate files, received {path.name}"
+        )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    expected_filename = (
+        payload.get("links", {}).get("result")
+        or f"result_{payload.get('game_id', settings.game_id)}.json"
+    )
     if path.name != expected_filename:
         raise RuntimeError(
             f"automatic email accepts only {expected_filename}, received {path.name}"
@@ -37,13 +46,12 @@ def email_result_file(path: Path, params, settings, emit) -> None:
         AnomalyDetector(rate.requests_per_minute, 60.0),
     )
     transport = build_gmail_api_transport(settings.credentials_path, settings.token_path)
-    payload = json.loads(path.read_text(encoding="utf-8"))
     result = send_match_report(
         gatekeeper=gatekeeper,
         transport=transport,
         backoff_policy=Http429BackoffPolicy(rate.retry_backoff_sec, rate.max_retries),
         to_addr=settings.email_recipient,
-        subject=submission_email_subject(settings),
+        subject=submission_email_subject(settings, payload.get("game_id")),
         json_payload=payload,
         attachment_filename=path.name,
     )

@@ -150,7 +150,13 @@ class McpPeerTransport:
             raise PeerClientError("opponent turn timed out") from exc
 
     def exchange_audit(self, payload: dict, timeout: float) -> dict:
-        self._send("submit_audit", "payload", payload, timeout)
+        response = self._send("submit_audit", "payload", payload, timeout)
+        required = {"sender", "records", "result_claim"}
+        for candidate in (
+            response.get("audit"), response.get("payload"), response,
+        ):
+            if isinstance(candidate, dict) and required <= set(candidate):
+                return candidate
         try:
             return self.inboxes.audits.get(timeout=timeout)
         except queue.Empty as exc:
