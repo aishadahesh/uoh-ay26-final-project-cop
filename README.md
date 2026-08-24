@@ -530,10 +530,10 @@ Where examples and fixed tables differ, the official mandatory-parameters table 
 
 ## Recommended self-score for submission
 
-**Recommendation: 84 / 100 for the group.**
+**Recommendation: 85 / 100 for the group.**
 
 Per rule 55 (`docs/tasks.md` §11, line 839), this figure scores **code quality only and
-deliberately ignores the league game outcome** — the 2–2–1 series record above played no part in
+deliberately ignores the league game outcome** — the 2–3–1 series record above played no part in
 it. The weighting follows the four mandatory grading axes of Table 4 (§11.3.2), 25 points each.
 Every deduction below names the open `docs/TODO.md` item that documents it, so the number can be
 audited rather than taken on trust.
@@ -543,7 +543,7 @@ audited rather than taken on trust.
 | **Coordination** (Ch.2) | 21 / 25 | Peer-to-peer FastMCP with no central referee; the four-tool contract; six counted six-sub-game series completed cross-machine over public tunnels with alternating roles and reciprocal consensus | The mid-match disconnect integration test does not pass in the cop repo (`T0522`, `T0622`); the slow-but-responsive opponent path is unit-tested only, never over real HTTP (`T0530`) |
 | **Adaptation** (Ch.4, 6) | 20 / 25 | Pheromone emission/decay, a belief map that demonstrably drives move selection, a deterministic brain, and a standalone bluff classifier | Verbal hints are never fused into the belief map with a trust weight (`T0283`, `T0290`); no LLM sits on the per-step path — hints are template-generated at zero token cost (`T0328`); the per-series token budget is not enforced (`T0316`) |
 | **Integrity** (Ch.5) | 23 / 25 | SHA-256 commit–reveal with end-game nonce reveal, mutual per-sub-game audit, signed Step-0 declarations, a reciprocal series consensus digest, and a submission validator that four of the six retained bundles pass cleanly | Two bundles fail the local validator on `game_uid` — `SMNGRP05-vs-uoh-ay26-C01` on the interop-kit's labeled form and `counted-2` on a uid this repository cannot re-derive from the committed terms (`T0898`); both-sides Gmail delivery is proven for G009 but not for every counted series (`T0866`, `T0737`) |
-| **Architecture** (Ch.8, 10) | 20 / 25 | Gatekeeper and Orchestrator patterns, a real rate limiter, typed peer-client errors, and graceful degradation rather than crashes; 626 (cop) and 627 (thief) tests passing | Rule 3 is not satisfied — no single Orchestrator entry point fronts all sub-systems (`T0837`, found by our own review); line coverage is ~81% in both repos against the project's own 85% gate; rule 47's illegal-exit case is still unresolved, with `MoveRejectedError` propagating uncaught (`T0881`) |
+| **Architecture** (Ch.8, 10) | 21 / 25 | Gatekeeper and Orchestrator patterns, a real rate limiter, typed peer-client errors, and graceful degradation rather than crashes; 626 (cop) and 627 (thief) tests passing; every file in src/, tests/ and scripts/ now within the 150-code-line guideline except the one documented `network_match.py` exception (`T0899`), with suites unchanged | Rule 3 is not satisfied — no single Orchestrator entry point fronts all sub-systems (`T0837`, found by our own review); line coverage is ~81% in both repos against the project's own 85% gate; rule 47's illegal-exit case is still unresolved, with `MoveRejectedError` propagating uncaught (`T0881`) |
 
 ### Why not higher, and why not lower
 

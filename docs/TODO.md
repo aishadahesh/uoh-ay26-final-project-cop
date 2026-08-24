@@ -975,7 +975,7 @@ Legend: `[ ]` = not started, `[x]` = done. Do not skip layers — each stage sho
 - [x] T0728 Re-verify rule set 31-45 (league fairness & admin procedures) against the final code — performed in Chapter 11 and recorded item-by-item as T0865-T0879, one entry per rule; the verifications that found genuine gaps (rules 32, 41, 43, 44, 47) are honestly left unchecked rather than marked passing
 - [ ] T0729 Re-verify completions 46-55 (cross-checked additions) against the final code
 - [ ] T0730 Re-verify every entry in the Mandatory Parameters Table matches the final `config/game.json`
-- [x] T0731 Confirm the self-grading submitted reflects code quality only, not league game outcomes — the README now carries a "Recommended self-score for submission" section: 84/100 weighted across the four mandatory grading axes of Table 4, with every deduction naming the open TODO item that documents it, and an explicit statement that the 2–2–1 series record played no part in the figure
+- [x] T0731 Confirm the self-grading submitted reflects code quality only, not league game outcomes — the README now carries a "Recommended self-score for submission" section: 85/100 weighted across the four mandatory grading axes of Table 4, with every deduction naming the open TODO item that documents it, and an explicit statement that the 2–3–1 series record played no part in the figure
 
 ### O.6 Final Pre-Submission Checklist (Ch.11 restated)
 - [x] T0732 Confirm base logic works: full match runs with no crash and correct scoring — re-verified live in Chapter 11: `uv run python -m police_thief simulate` → `outcome=survival cop_score=5 thief_score=10 turns_played=35`, matching the mandatory scoring table exactly
