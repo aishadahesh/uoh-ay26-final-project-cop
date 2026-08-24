@@ -206,6 +206,7 @@ def _peer(args: argparse.Namespace) -> None:
         counted=defaults["counted"],
         counted_games_played=defaults["counted_games_played"],
         prior_counted_opponents=defaults["prior_counted_opponents"],
+        settlement_scope=defaults["settlement_scope"],
     )
     inboxes = PeerInboxes()
     server = build_peer_server(AgentRole.COP.value, inboxes)

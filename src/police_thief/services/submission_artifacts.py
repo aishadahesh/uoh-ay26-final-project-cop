@@ -74,8 +74,12 @@ def canonical_game_id(game_id: str, group_ids: list[str]) -> str:
     return label or f"{pair[0]}-vs-{pair[1]}"
 
 
+SETTLEMENT_SCOPES = ("uid", "kit")
+
+
 def series_consensus_payload(
     game_id: str, game_uid: str, series_result: dict[str, Any],
+    scope: str = "kit",
 ) -> dict[str, Any]:
     """Return the stable, cross-peer series adjudication preimage.
 
@@ -102,6 +106,15 @@ def series_consensus_payload(
         })
     if not rows:
         raise ValueError("series consensus requires at least one sub-game")
+    if scope == "uid":
+        # The scope our own filer published and yanell11 reproduced
+        # byte-for-byte: the bare game label, game_uid beside it, no derived
+        # aggregate, compact separators. Agreed by both sides for counted play.
+        return {
+            "game_id": str(game_id),
+            "game_uid": str(game_uid),
+            "sub_games": rows,
+        }
     group_ids = sorted(rows[0]["roles"])
     totals = {key: sum(int(row["score"].get(key, 0)) for row in rows) for key in group_ids}
     wins = {key: sum(row["winner_group"] == key for row in rows) for key in group_ids}
@@ -125,20 +138,31 @@ def series_consensus_payload(
 
 def series_consensus_preimage(
     game_id: str, game_uid: str, series_result: dict[str, Any],
+    scope: str = "kit",
 ) -> str:
+    """Serialize the settlement preimage under the agreed scope.
+
+    The two scopes differ in separators as well as shape: `uid` is compact,
+    `kit` is spaced. Both peers must pick the same one or the settlement hash
+    forks -- which is exactly what happened in the G010 friendly.
+    """
+    if scope not in SETTLEMENT_SCOPES:
+        raise ValueError(f"unknown settlement scope {scope!r}; expected one of {SETTLEMENT_SCOPES}")
+    separators = (",", ":") if scope == "uid" else (", ", ": ")
     return json.dumps(
-        series_consensus_payload(game_id, game_uid, series_result),
+        series_consensus_payload(game_id, game_uid, series_result, scope=scope),
         sort_keys=True,
         ensure_ascii=False,
-        separators=(", ", ": "),
+        separators=separators,
     )
 
 
 def series_consensus_hash(
     game_id: str, game_uid: str, series_result: dict[str, Any],
+    scope: str = "kit",
 ) -> str:
     return hashlib.sha256(
-        series_consensus_preimage(game_id, game_uid, series_result).encode("utf-8")
+        series_consensus_preimage(game_id, game_uid, series_result, scope=scope).encode("utf-8")
     ).hexdigest()
 
 
@@ -274,6 +298,7 @@ def finalize_submission_bundle(
     counted: bool = False,
     previous_counted_games: int = 0,
     own_group_id: str = "",
+    settlement_scope: str = "kit",
     first_meeting_between_groups: bool | None = None,
     games_played_including_this: dict[str, int | None] | None = None,
 ) -> list[Path]:
@@ -444,7 +469,14 @@ def finalize_submission_bundle(
         ),
         "diversity_reward_applied": dict(sorted(diversity_reward_applied.items())),
     })
-    consensus_sha = series_consensus_hash(report_game_id, game_uid, series_result)
+    # The settlement scope must match the opponent's or the hash forks. `uid`
+    # files the bare label with game_uid beside it; `kit` files the canonical
+    # game_id with a derived aggregate. G010 settled under kit by mutual
+    # agreement; counted play is uid on both sides.
+    settle_game_id = source_game_id if settlement_scope == "uid" else report_game_id
+    consensus_sha = series_consensus_hash(
+        settle_game_id, game_uid, series_result, scope=settlement_scope,
+    )
     result_doc = {
         **base,
         "report_type": "final_game_result",

@@ -48,6 +48,7 @@ def load_network_defaults(path: Path, project_root: Path) -> dict:
         "counted_games_played": int(team1.get("counted_games_played", 0)),
         "prior_counted_opponents": tuple(team1.get("prior_counted_opponents", ())),
         "counted": bool(raw.get("league", {}).get("counted", True)),
+        "settlement_scope": str(raw.get("league", {}).get("settlement_scope", "uid")),
         "team1_member1": str(team1_members[0]),
         "team1_member2": str(team1_members[1]),
         "own_cop": str(team1.get("repos", {}).get("cop", "")),

@@ -48,7 +48,7 @@
   },
   "league": {
     "counted": false,
-    "reason": "friendly"
+    "reason": "friendly",
+    "settlement_scope": "uid"
   }
 }
-

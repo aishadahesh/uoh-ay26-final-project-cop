@@ -12,6 +12,7 @@ from police_thief.services.submission_artifacts import (
     save_submission_validation_report,
     series_consensus_hash,
     series_consensus_payload,
+    series_consensus_preimage,
     steps_played,
     validate_submission_directory,
 )
@@ -423,3 +424,48 @@ def test_an_undeclared_opponent_count_is_filed_as_null_not_zero(tmp_path):
     played = result["final_result"]["games_played_including_this"]
     assert played["beta"] is None
     assert played["alpha"] == 5
+
+
+_VECTOR_OPEN_1 = {
+    "sub_games": [
+        {"sub_game_number": 1, "outcome": "capture",
+         "roles": {"uoh-ay26": "thief", "yanell11": "police"},
+         "score": {"uoh-ay26": 5, "yanell11": 20}},
+        {"sub_game_number": 2, "outcome": "survival",
+         "roles": {"uoh-ay26": "police", "yanell11": "thief"},
+         "score": {"uoh-ay26": 5, "yanell11": 10}},
+        {"sub_game_number": 3, "outcome": "tie",
+         "roles": {"uoh-ay26": "thief", "yanell11": "police"},
+         "score": {"uoh-ay26": 2, "yanell11": 2}},
+        {"sub_game_number": 4, "outcome": "capture",
+         "roles": {"uoh-ay26": "police", "yanell11": "thief"},
+         "score": {"uoh-ay26": 20, "yanell11": 5}},
+    ]
+}
+
+
+def test_open_conformance_vector_matches_the_opponents_published_digest():
+    """yanell11's open vector, kit scope. Locking the exact digest keeps our
+    filer interoperable: a silent change to row trimming, aggregate
+    derivation or separators would fork the settlement hash mid-series."""
+    preimage = series_consensus_preimage("vector-open-1", "", _VECTOR_OPEN_1, scope="kit")
+
+    assert len(preimage) == 882
+    assert series_consensus_hash("vector-open-1", "", _VECTOR_OPEN_1, scope="kit") == (
+        "79c96f76546d50d1128833be5109d27fc567ae0c29a791d85781b8fb7331ad00"
+    )
+
+
+def test_the_two_settlement_scopes_stay_distinct_and_stable():
+    """Both peers must select the same scope or the hash forks -- which is
+    exactly what happened in the G010 friendly, where we filed uid and they
+    filed kit. uid is compact with game_uid and no aggregate; kit is spaced
+    with a derived aggregate."""
+    uid = series_consensus_payload("G010", "some-uid", _VECTOR_OPEN_1, scope="uid")
+    kit = series_consensus_payload("G010", "some-uid", _VECTOR_OPEN_1, scope="kit")
+
+    assert uid["game_uid"] == "some-uid" and "aggregate" not in uid
+    assert "aggregate" in kit and "game_uid" not in kit
+    assert series_consensus_hash("G010", "some-uid", _VECTOR_OPEN_1, scope="uid") != (
+        series_consensus_hash("G010", "some-uid", _VECTOR_OPEN_1, scope="kit")
+    )

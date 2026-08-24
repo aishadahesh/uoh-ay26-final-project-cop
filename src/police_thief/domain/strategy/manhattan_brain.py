@@ -17,6 +17,27 @@ from police_thief.domain.strategy.brain_base import BrainBase
 from police_thief.domain.strategy.tactical_planner import StrategyPlan, TacticalPlanner
 from police_thief.shared.constants import AgentRole
 
+_ENDGAME_BARRIER_RESERVE = 5
+"""Barriers held back from wall-building so the endgame still has something to
+seal the final pocket with. Without it the opening wall consumed all 14 and
+captures slid from turn ~10 out to ~26, losing one outright."""
+
+
+def _wall_anchors(board: Board, cell: Position) -> int:
+    """How many sides of `cell` are already solid -- an existing barrier or the
+    arena edge. A candidate with at least one anchor extends a wall rather than
+    starting an isolated dot, which is what turns a barrier budget into a
+    partition."""
+    size = board.config.grid_size
+    anchors = 0
+    for row, col in (
+        (cell.row - 1, cell.col), (cell.row + 1, cell.col),
+        (cell.row, cell.col - 1), (cell.row, cell.col + 1),
+    ):
+        if not (0 <= row < size and 0 <= col < size) or board.is_blocked(Position(row, col)):
+            anchors += 1
+    return anchors
+
 
 class ManhattanHeuristicBrain(BrainBase):
     """Chases the belief peak if `role` is COP, flees it if THIEF."""
@@ -118,6 +139,58 @@ class ManhattanHeuristicBrain(BrainBase):
             ),
             key=lambda scored: (scored[0], manhattan_distance(scored[1], target)),
         )
-        if baseline_area - best_area <= 1:
+        if baseline_area - best_area > 1:
+            return best_candidate
+        # Wall-building. Requiring an immediate disconnection is a deadlock on
+        # an open board: nothing disconnects until a wall exists, so the wall
+        # that would create the chokepoint never gets built. In the yanell11
+        # G010 series our cop spent 0 of its 14 barriers across all three
+        # sub-games it played as police and simply tail-chased the scent peak,
+        # one step behind, for 34 moves -- an equal-speed pursuer can never
+        # close that way. Their cop spent 9 barriers walling a column and won
+        # every one.
+        #
+        # A barrier that disconnects nothing today still pays off when it
+        # extends an existing wall or the arena edge, because that is how a
+        # partition gets built. So also accept a candidate that removes a cell
+        # the thief could actually use AND is anchored to something solid,
+        # which grows contiguous walls instead of scattering barriers.
+        if baseline_area - best_area < 1:
             return None
-        return best_candidate
+        # Wall while far, chase while close. Spending a barrier when the thief
+        # is already within reach trades a tempo we need for the capture
+        # itself: an unpaced version of this rule burned the whole 14-barrier
+        # budget and pushed captures from turn ~10 out to ~26, losing one
+        # outright. Their cop spent 9 over 25 turns and only while building.
+        if manhattan_distance(own, target) <= 2:
+            return None
+        # Keep a reserve for the endgame. Wall-building is an opening
+        # investment; spending the last barrier on a wall leaves nothing to
+        # seal the final pocket with, which is how a capture actually lands.
+        if board.remaining_barrier_budget <= _ENDGAME_BARRIER_RESERVE:
+            return None
+        anchored = [
+            candidate
+            for candidate in structural_candidates
+            if _wall_anchors(board, candidate) >= 1
+            and board.reachable_area(target, extra_blocked=candidate) < baseline_area
+        ]
+        if not anchored:
+            return None
+        anchored.sort(
+            key=lambda candidate: (
+                board.reachable_area(target, extra_blocked=candidate),
+                -_wall_anchors(board, candidate),
+                manhattan_distance(candidate, target),
+            )
+        )
+        chosen = anchored[0]
+        # Never wall ourselves out of the thief's region: after placing, the
+        # cop must still be able to reach at least as much of the board as the
+        # thief can. This is the guard the reviewed G001 self-boxing failure
+        # asked for, applied to wall-building rather than only to pockets.
+        if board.reachable_area(own, extra_blocked=chosen) < board.reachable_area(
+            target, extra_blocked=chosen
+        ):
+            return None
+        return chosen
