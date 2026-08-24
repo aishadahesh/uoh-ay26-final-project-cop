@@ -12,6 +12,7 @@ from police_thief.services.submission_artifacts import (
     save_submission_validation_report,
     series_consensus_hash,
     series_consensus_payload,
+    steps_played,
     validate_submission_directory,
 )
 
@@ -64,9 +65,18 @@ def test_public_participant_accepts_github_commit_alias():
     assert participant["github_commit"] == "c" * 40
 
 
-def _bundle(tmp_path, scores=None):
+def _bundle(tmp_path, scores=None, *, counted=True, first_meeting=None,
+            alpha_counted_games=4, beta_counted_games=4):
+    identities = {}
+    for key, played in (("alpha", alpha_counted_games), ("beta", beta_counted_games)):
+        identity = _identity(key)
+        if played is None:
+            identity.pop("counted_games_played", None)
+        else:
+            identity["counted_games_played"] = played
+        identities[key] = identity
     participants = {
-        key: public_participant(_identity(key)) for key in ("alpha", "beta")
+        key: public_participant(identity) for key, identity in identities.items()
     }
     rows = []
     for number in (1, 2):
@@ -97,7 +107,7 @@ def _bundle(tmp_path, scores=None):
     return finalize_submission_bundle(
         tmp_path, game_id="G1", terms=_terms(), participants=participants,
         series_result=series, game_started_at="2026-08-06T10:00:00+03:00",
-        token_budget=200000,
+        token_budget=200000, counted=counted, first_meeting=first_meeting,
     )
 
 
@@ -337,3 +347,65 @@ def test_failed_bundle_validation_is_saved_as_structured_json(tmp_path):
     assert report["valid"] is False
     assert report["message"] == "not sent"
     assert any(error["field"].endswith("github_commit") for error in report["errors"])
+
+
+def _steps(*counts_per_step):
+    """Records laid out as (rows at step 1, rows at step 2, ...)."""
+    return [
+        {"payload": {"step": index}}
+        for index, rows in enumerate(counts_per_step, start=1)
+        for _ in range(rows)
+    ]
+
+
+def test_capture_steps_ignore_a_turn_recorded_after_the_sub_game_ended():
+    """Regression for the yanell11 G010 friendly: we filed 26 where the
+    opponent filed 25 on every capture sub-game, because this runner appends
+    one more turn after the capture has already resolved and `steps` was
+    taken from the highest step index present."""
+    records = _steps(2, 2, 2, 1)
+
+    assert steps_played(records, "capture") == 3
+
+
+def test_capture_steps_keep_a_final_round_both_sides_answered():
+    records = _steps(2, 2, 2)
+
+    assert steps_played(records, "capture") == 3
+
+
+def test_survival_steps_keep_the_thiefs_unanswered_final_move():
+    """On a survival the thief's last move IS the terminal event, so its
+    lone row is legitimate -- both peers agree on the step cap."""
+    records = _steps(2, 2, 1)
+
+    assert steps_played(records, "survival") == 3
+
+
+def test_friendly_series_does_not_advance_either_league_tally(tmp_path):
+    _bundle(tmp_path, counted=False)
+    result = json.loads((tmp_path / "result_G1.json").read_text(encoding="utf-8"))
+
+    assert result["league"] == {"counted": False, "reason": "friendly"}
+    assert result["final_result"]["games_played_including_this"] == {"alpha": 4, "beta": 4}
+    assert result["final_result"]["diversity_reward_applied"] == {"alpha": False, "beta": False}
+
+
+def test_counted_series_advances_both_tallies_by_one(tmp_path):
+    _bundle(tmp_path, counted=True, first_meeting=True)
+    result = json.loads((tmp_path / "result_G1.json").read_text(encoding="utf-8"))
+
+    assert result["league"]["counted"] is True
+    assert result["final_result"]["games_played_including_this"] == {"alpha": 5, "beta": 5}
+    assert result["final_result"]["first_meeting_between_groups"] is True
+
+
+def test_an_undeclared_opponent_count_is_filed_as_null_not_zero(tmp_path):
+    """Filing 0 for an opponent who never declared is the exact error the
+    yanell11 friendly caught; null says "not declared", 0 is a claim."""
+    _bundle(tmp_path, counted=True, beta_counted_games=None)
+    result = json.loads((tmp_path / "result_G1.json").read_text(encoding="utf-8"))
+
+    played = result["final_result"]["games_played_including_this"]
+    assert played["beta"] is None
+    assert played["alpha"] == 5

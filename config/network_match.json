@@ -14,15 +14,29 @@
   },
   "team_1": {
     "name": "uoh-ay26",
-    "members": ["Aisha Abu Dahesh", "Yousef Asadi"],
+    "members": [
+      "Aisha Abu Dahesh",
+      "Yousef Asadi"
+    ],
     "repos": {
       "cop": "https://github.com/aishadahesh/uoh-ay26-final-project-cop",
       "thief": "https://github.com/aishadahesh/uoh-ay26-final-project-thief"
-    }
+    },
+    "counted_games_played": 5,
+    "prior_counted_opponents": [
+      "najamjad",
+      "amireman",
+      "sharNamr",
+      "SMNGRP05",
+      "ahk-yosi"
+    ]
   },
   "team_2": {
     "name": "yanell11",
-    "members": ["Nell Khoury", "Yanal Serhan"],
+    "members": [
+      "Nell Khoury",
+      "Yanal Serhan"
+    ],
     "repos": {
       "cop": "https://github.com/Nell-Kh/police-agent",
       "thief": "https://github.com/Nell-Kh/thief-agent"
@@ -31,5 +45,9 @@
   "email": {
     "automatic": true,
     "recipient": "assdiyousef@gmail.com"
+  },
+  "league": {
+    "counted": false,
+    "reason": "friendly"
   }
 }

@@ -203,6 +203,9 @@ def _peer(args: argparse.Namespace) -> None:
         credentials_path=project_root / "credentials.json",
         token_path=project_root / "token.json",
         llm_model=gemini_advisor.model,
+        counted=defaults["counted"],
+        counted_games_played=defaults["counted_games_played"],
+        prior_counted_opponents=defaults["prior_counted_opponents"],
     )
     inboxes = PeerInboxes()
     server = build_peer_server(AgentRole.COP.value, inboxes)

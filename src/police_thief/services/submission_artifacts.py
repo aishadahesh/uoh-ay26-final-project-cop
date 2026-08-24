@@ -105,6 +105,34 @@ def series_consensus_hash(
     return canonical_hash(series_consensus_payload(game_id, game_uid, series_result))
 
 
+def steps_played(records: list[dict[str, Any]], outcome: str) -> int:
+    """How many steps the sub-game actually lasted.
+
+    Not simply `max(step)`. On a capture this runner can append one further
+    turn after the sub-game has already resolved: the losing side writes its
+    next move before it learns the game ended, and the opponent never answers
+    it. Counting that orphan row overstates the sub-game by one and makes our
+    `steps` disagree with the opponent's report -- observed in the yanell11
+    G010 friendly, where we filed 26 against their 25 on exactly the three
+    capture sub-games, and visible in our own log_G002_g03 (capture claimed at
+    step 14, lone thief row at 15, filed 15).
+
+    A trailing row is only an orphan when the sub-game ended in a capture. On
+    a survival the thief's final move IS the terminal event: it legitimately
+    has no answering row, and both peers agree on the step cap.
+    """
+    counts: dict[int, int] = {}
+    for item in records:
+        step = int(item.get("payload", {}).get("step", 0))
+        counts[step] = counts.get(step, 0) + 1
+    if not counts:
+        return 0
+    last = max(counts)
+    if outcome == "capture" and last > 1 and counts[last] == 1:
+        return last - 1
+    return last
+
+
 def derive_game_uid(
     terms: dict[str, Any],
     group_ids: list[str],
@@ -154,6 +182,14 @@ def public_participant(identity: dict[str, Any]) -> dict[str, Any]:
             identity.get("git_commit_hash") or identity.get("github_commit") or ""
         ),
         "code_version": str((identity.get("protocol") or {}).get("version", "3.0.0")),
+        # Each side's own prior counted-game total, as declared on the wire
+        # (Sec. 9.2.4). None means the peer never declared one -- kept
+        # distinct from a declared 0 so the report can file null instead of
+        # inventing a number for the opponent.
+        "counted_games_played": (
+            None if identity.get("counted_games_played") is None
+            else int(identity["counted_games_played"])
+        ),
     }
     # A SHA-256 integrity signature over exactly the public declaration.
     participant["signature"] = f"sha256:{canonical_hash(participant)}"
@@ -197,8 +233,22 @@ def finalize_submission_bundle(
     series_result: dict[str, Any],
     game_started_at: str,
     token_budget: int,
+    counted: bool = True,
+    counted_reason: str = "",
+    counted_games_played: dict[str, int | None] | None = None,
+    first_meeting: bool | None = None,
 ) -> list[Path]:
-    """Replace internal artifacts with the canonical email-ready envelopes."""
+    """Replace internal artifacts with the canonical email-ready envelopes.
+
+    `counted_games_played` maps each group id to the number of COUNTED games
+    that group had played BEFORE this series -- each side's own league-wide
+    total, not a per-opponent or shared figure. Our own number comes from
+    config; the opponent's comes off the wire (their negotiation identity).
+    A group whose figure never arrived maps to None and is filed as JSON null
+    rather than 0: "not declared" and "declared zero" are different claims,
+    and inventing a number for the opponent is exactly the error the yanell11
+    friendly caught us making in both directions.
+    """
     if len(participants) != 2:
         raise SubmissionBundleError(
             f"submission requires exactly two distinct groups; received {sorted(participants)}"
@@ -265,7 +315,7 @@ def finalize_submission_bundle(
             "winner_group": winner,
             "started_at": row["started_at"],
             "ended_at": row["ended_at"],
-            "steps": max((int(item["payload"].get("step", 0)) for item in records), default=0),
+            "steps": steps_played(records, row["outcome"]),
             "audit": {"passed": bool(row.get("mutual_sign_off", True)), "failed_steps": []},
         }
         log_doc = {
@@ -313,6 +363,15 @@ def finalize_submission_bundle(
         key: sum(int(item["tokens"].get(key, 0)) for item in result_rows)
         for key in participants
     }
+    # A friendly advances nobody's league tally, so each side's figure stays
+    # at its own prior count; a counted series adds one to both.
+    declared = dict(counted_games_played) if counted_games_played is not None else {
+        key: value.get("counted_games_played") for key, value in participants.items()
+    }
+    including_this = {
+        key: (None if declared.get(key) is None else int(declared[key]) + (1 if counted else 0))
+        for key in participants
+    }
     final = {
         "total_score": totals,
         "sub_games_won": wins,
@@ -320,6 +379,13 @@ def finalize_submission_bundle(
         "winner_group": winner,
         "series_tie": series_tie,
         "tokens_total_series": token_totals,
+        "games_played_including_this": including_this,
+        "first_meeting_between_groups": bool(first_meeting) if first_meeting is not None else None,
+        # The Diversity Incentive is only ever awarded on a counted series
+        # against an opponent this team has not counted before.
+        "diversity_reward_applied": {
+            key: bool(counted and first_meeting and winner == key) for key in participants
+        },
     }
     consensus_sha = series_consensus_hash(game_id, game_uid, series_result)
     result_doc = {
@@ -327,6 +393,10 @@ def finalize_submission_bundle(
         "report_type": "final_game_result",
         "timezone": "Asia/Jerusalem",
         "groups": sorted(participants),
+        "league": {
+            "counted": bool(counted),
+            "reason": counted_reason or ("counted" if counted else "friendly"),
+        },
         "num_sub_games": num_games,
         "sub_games": result_rows,
         "final_result": final,

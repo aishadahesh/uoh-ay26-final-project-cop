@@ -85,6 +85,26 @@ def _turn_timeout(base_timeout: float, step: int) -> float:
     return base_timeout
 
 
+def _is_first_meeting(settings, participants: dict) -> bool | None:
+    """Have these two groups never completed a COUNTED series together?
+
+    Per-opponent, and deliberately NOT derived from counted_games_played --
+    that is a league-wide total, so a team with games behind it can still be
+    meeting this particular opponent for the first time. Returns None when
+    the opponent cannot be identified, so the report files null rather than
+    asserting something unverified.
+    """
+    own = str(settings.team_name).casefold().replace(" ", "-")
+    peer = next(
+        (key for key in participants if str(key).casefold() != own),
+        None,
+    )
+    if peer is None:
+        return None
+    prior = {str(name).casefold() for name in settings.prior_counted_opponents}
+    return str(peer).casefold() not in prior
+
+
 @dataclass(frozen=True)
 class NetworkMatchSettings:
     role: AgentRole
@@ -115,6 +135,13 @@ class NetworkMatchSettings:
     game_index: int = 0
     counted: bool = True
     smoke_test: bool = False
+    # Our own league-wide tally of COUNTED games played BEFORE this series,
+    # and the opponents already counted. Both are declared on the wire
+    # (Sec. 9.2.4) and drive the report's league block; they are deliberately
+    # explicit rather than derived, because an under-declared count reads as
+    # gaming the diversity reward.
+    counted_games_played: int = 0
+    prior_counted_opponents: tuple[str, ...] = ()
 
 
 class _WireScent:
@@ -1854,6 +1881,10 @@ class NetworkMatchRunner:
             "repos": {"cop": s.own_cop_repo, "thief": s.own_thief_repo},
             "mcp_servers": {s.role.value: s.public_url},
             "llm_model": s.llm_model,
+            # Sec. 9.2.4: each side declares its own prior counted-game total
+            # to the opponent before play; the opponent files this number
+            # rather than guessing one.
+            "counted_games_played": int(s.counted_games_played),
             # Exact public hardware keys consumed by the reference report
             # builder after a successful match.
             "spec": {
@@ -2294,6 +2325,8 @@ def finalize_completed_series(
             series_result=series_result,
             game_started_at=state.get("series_started_at", now_iso()),
             token_budget=params.network_league.token_budget_per_series,
+            counted=settings.counted,
+            first_meeting=_is_first_meeting(settings, participants),
         )
     except SubmissionBundleError as exc:
         errors, _ = validate_submission_directory(settings.output_dir, settings.game_id)
@@ -2478,6 +2511,8 @@ class NetworkMatchSeriesRunner:
                 series_result=series_result,
                 game_started_at=series_started_at,
                 token_budget=params.network_league.token_budget_per_series,
+                counted=self.settings.counted,
+                first_meeting=_is_first_meeting(self.settings, participants),
             )
         except SubmissionBundleError as exc:
             errors, _ = validate_submission_directory(
