@@ -12,6 +12,8 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
 
+from police_thief.gui.network_setup_form import _FormMixin
+from police_thief.gui.network_setup_start import _StartMixin
 from police_thief.gui.theme import COLORS, FONT, configure_window, install_styles
 from police_thief.services.network_match import NetworkMatchSettings
 from police_thief.services.network_match_config import (
@@ -19,14 +21,13 @@ from police_thief.services.network_match_config import (
     load_network_defaults,
     validate_mcp_url,
 )
-from police_thief.shared.constants import AgentRole
 
 __all__ = [
     "DEFAULT_REPORT_EMAIL", "NetworkSetupDialog", "load_network_defaults", "validate_mcp_url",
 ]
 
 
-class NetworkSetupDialog:
+class NetworkSetupDialog(_FormMixin, _StartMixin):
     def __init__(self, master: tk.Misc, project_root: Path) -> None:
         self.project_root = project_root
         defaults_path = project_root / "config" / "network_match.json"
@@ -156,95 +157,9 @@ class NetworkSetupDialog:
             self.window.grab_release()
         self.window.destroy()
 
-    def _toggle_email(self) -> None:
-        state = "normal" if self.vars["email"].get() else "disabled"
-        self.email_entry.configure(state=state)
 
-    def _row(
-        self, parent, label: str, key: str, choices: tuple[str, ...] = (),
-        second_key: str | None = None, secret: bool = False,
-    ) -> None:
-        ttk.Label(parent, text=label, style="Subtitle.TLabel").pack(anchor="w", pady=(8, 3))
-        if choices:
-            widget = ttk.Combobox(parent, textvariable=self.vars[key], values=choices, state="readonly")
-        else:
-            widget = tk.Entry(
-                parent, textvariable=self.vars[key], bg=COLORS["surface_alt"],
-                fg=COLORS["text"], insertbackground=COLORS["text"], relief="flat",
-                font=(FONT, 10), show="*" if secret else "",
-            )
-        if second_key is None:
-            widget.pack(fill="x", ipady=5)
-            return
-        row = ttk.Frame(parent, style="App.TFrame")
-        row.pack(fill="x")
-        widget.pack(in_=row, side="left", fill="x", expand=True, ipady=5, padx=(0, 5))
-        tk.Entry(
-            row, textvariable=self.vars[second_key], bg=COLORS["surface_alt"],
-            fg=COLORS["text"], insertbackground=COLORS["text"], relief="flat", font=(FONT, 10),
-        ).pack(side="left", fill="x", expand=True, ipady=5, padx=(5, 0))
 
-    @staticmethod
-    def _section_label(parent, text: str) -> None:
-        tk.Label(
-            parent, text=text, bg=COLORS["bg"], fg=COLORS["accent"],
-            font=(FONT, 10, "bold"), anchor="w",
-        ).pack(fill="x", pady=(18, 0))
 
-    def _start(self) -> None:
-        try:
-            role = AgentRole(self.vars["role"].get())
-            port = int(self.vars["port"].get())
-            if not 1 <= port <= 65535:
-                raise ValueError("local port must be between 1 and 65535")
-            opponent = validate_mcp_url(self.vars["opponent"].get())
-            public = validate_mcp_url(self.vars["public"].get())
-            game_id = self.vars["game"].get().strip()
-            if not game_id:
-                raise ValueError("game ID is required")
-            subgame = int(self.vars["subgame"].get())
-            required = (
-                "team1_name", "team1_member1", "team1_member2", "team2_name",
-                "team2_member1", "team2_member2", "own_cop", "own_thief",
-                "opponent_cop", "opponent_thief", "secret",
-            )
-            missing = [key for key in required if not self.vars[key].get().strip()]
-            if missing:
-                raise ValueError("team identity, all four repository URLs, and shared secret are required")
-            recipient = self.vars["email_recipient"].get().strip()
-            if self.vars["email"].get() and (
-                "@" not in recipient or recipient.startswith("@") or recipient.endswith("@")
-            ):
-                raise ValueError("enter a valid result email recipient")
-        except ValueError as exc:
-            messagebox.showerror("Invalid network setup", str(exc), parent=self.window)
-            return
-        self.result = NetworkMatchSettings(
-            role=role, local_port=port, opponent_url=opponent, public_url=public,
-            game_id=game_id, sub_game_number=subgame,
-            shared_config=self.project_root / "config" / "game.json",
-            output_dir=Path(self.vars["output"].get()),
-            team_name=self.vars["team1_name"].get().strip(),
-            members=(
-                self.vars["team1_member1"].get().strip(),
-                self.vars["team1_member2"].get().strip(),
-            ),
-            opponent_team_name=self.vars["team2_name"].get().strip(),
-            opponent_members=(
-                self.vars["team2_member1"].get().strip(),
-                self.vars["team2_member2"].get().strip(),
-            ),
-            own_cop_repo=self.vars["own_cop"].get().strip(),
-            own_thief_repo=self.vars["own_thief"].get().strip(),
-            opponent_cop_repo=self.vars["opponent_cop"].get().strip(),
-            opponent_thief_repo=self.vars["opponent_thief"].get().strip(),
-            shared_key=self.vars["secret"].get().encode(),
-            email_mode="real" if self.vars["email"].get() else "dry_run",
-            email_recipient=recipient or DEFAULT_REPORT_EMAIL,
-            credentials_path=self.project_root / "credentials.json",
-            token_path=self.project_root / "token.json",
-        )
-        self._close()
 
     def show(self) -> NetworkMatchSettings | None:
         self.window.wait_window()

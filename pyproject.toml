@@ -50,6 +50,8 @@ asyncio_mode = "auto"
 source = ["src"]
 omit = [
     "src/police_thief/main.py",
+    # same CLI code as main.py above, split out into per-subcommand modules
+    "src/police_thief/cli/*",
     "src/police_thief/__main__.py",
     "*/tests/*",
 ]
