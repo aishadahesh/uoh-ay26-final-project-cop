@@ -210,12 +210,26 @@ class TacticalPlanner:
                 )
                 for item in safety_pool
             }
+            # Only the board edge itself is a hard constraint. Excluding every
+            # move below the BEST available clearance made this a filter rather
+            # than a preference, and on a 7x7 the single centre cell (3,3) has
+            # strictly greater clearance than all four of its neighbours -- so
+            # a thief standing there, which is exactly the mandated thief_start,
+            # had every move but STAY eliminated and could never leave. In the
+            # yanell11 G010 logs our thief sat on (3,3) for ten consecutive
+            # turns while the cop walled the board around it, in all three
+            # sub-games it played as thief. Relative centrality is already
+            # priced by boundary_penalty in _score_move; this constraint now
+            # only keeps the thief off the edge, where the Police can build an
+            # irreversible two-barrier corner trap.
             if clearances and not loop_detected:
-                best_clearance = max(clearances.values())
-                hard_excluded.update(
-                    move for move, clearance in clearances.items()
-                    if clearance < best_clearance
-                )
+                interior = {
+                    move for move, clearance in clearances.items() if clearance >= 1
+                }
+                if interior:
+                    hard_excluded.update(
+                        move for move, clearance in clearances.items() if clearance < 1
+                    )
 
         excluded: set[Move] = set(hard_excluded)
         if loop_detected and len(evaluations) > 1:
@@ -385,9 +399,16 @@ class TacticalPlanner:
             # treated as one more wall.  Slipping into a region whose sole
             # doorway the cop occupies reads as ~zero escape space here even
             # when one-step mobility still looks healthy.
+            # Worst-case room left once the cop spends its next barrier. The
+            # earlier version read plain reachable area, which against a
+            # partition-and-shrink cop stays flat while the wall is built and
+            # then collapses in a single turn -- in the yanell11 G010 logs our
+            # thief sat on the doorway cell for ten turns watching its area
+            # drift 48 -> 45, then lost 20 cells in one move and was captured
+            # six turns later, three times identically.
             escape_space = sum(
                 probability
-                * (0.0 if destination == target else board.reachable_area(destination, extra_blocked=target))
+                * (0.0 if destination == target else self._sealable_escape_space(board, destination, target))
                 for target, probability in targets
             ) / weight
             # Current mobility overvalues an arena edge. The Police may spend
@@ -412,7 +433,11 @@ class TacticalPlanner:
                 + 3.0 * future_value
                 + 2.2 * mobility
                 + 5.0 * escape_routes
-                + 0.6 * escape_space
+                # Room to run is the thief's real currency: at 0.6 a cell it
+                # was worth less than one edge-avoidance step, so the planner
+                # preferred a central cell in a closing pocket over an edge
+                # cell in open board. Space now outranks cosmetic centrality.
+                + 3.0 * escape_space
                 - revisit_penalty
                 - loop_penalty
                 - dead_end_penalty
@@ -484,6 +509,30 @@ class TacticalPlanner:
             if worst_case_routes == 0:
                 trapped_weight += probability
         return expected_routes / weight, trapped_weight / weight
+
+    def _sealable_escape_space(
+        self,
+        board: Board,
+        destination: Position,
+        cop: Position,
+    ) -> float:
+        """Escape space left if the cop spends its next turn sealing us in.
+
+        Plain reachable area is a lagging signal against a wall-builder: it
+        barely moves while the wall goes up and then collapses in one turn,
+        far too late to run. The cop may place a barrier on its own cell or
+        any open neighbour (Sec. 3.3.3-3.3.4), so the honest figure is the
+        WORST area over those placements -- which drops as soon as the cop
+        is one move from a chokepoint, not after it has already stepped
+        through it.
+        """
+        options = [cop, *(n for n in board.neighbors(cop) if not board.is_blocked(n))]
+        worst = board.reachable_area(destination, extra_blocked=cop)
+        for cell in options:
+            if cell == destination:
+                return 0.0
+            worst = min(worst, board.reachable_area(destination, extra_blocked=cell))
+        return float(worst)
 
     def _variation_bonus(self, own: Position, move: Move) -> float:
         """Small stable preference that varies only strategically close choices.

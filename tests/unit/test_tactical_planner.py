@@ -481,3 +481,40 @@ def test_cop_captures_the_recorded_game_one_path_without_stalling():
     assert cop == thief == Position(4, 4)
     assert len(cop_moves) == 32
     assert Move.STAY not in cop_moves
+
+
+def test_thief_is_not_pinned_to_the_board_centre_by_boundary_clearance():
+    """Regression for the yanell11 G010 losses.
+
+    Boundary clearance used to hard-exclude every move below the BEST
+    available clearance. On a 7x7 the centre cell (3,3) has clearance 3 while
+    all four neighbours have 2, so a thief standing there -- which is exactly
+    the mandated `thief_start` -- had every move except STAY eliminated and
+    could never leave. Our thief sat on (3,3) for ten consecutive turns while
+    the opposing cop walled the board around it, in all three sub-games it
+    played as thief, and was captured every time.
+    """
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    plan = TacticalPlanner(AgentRole.THIEF).evaluate(
+        board, Position(3, 3), _belief_at(board, Position(0, 0))
+    )
+
+    assert plan.allowed_moves != (Move.STAY,)
+    assert any(move is not Move.STAY for move in plan.allowed_moves)
+
+
+def test_thief_still_refuses_a_board_edge_when_an_interior_cell_is_free():
+    """The constraint that survives: the edge is where the Police can build
+    an irreversible two-barrier corner trap, so it stays hard-excluded."""
+    board = Board(BoardConfig(grid_size=7, max_barriers=14))
+    plan = TacticalPlanner(AgentRole.THIEF).evaluate(
+        board, Position(1, 3), _belief_at(board, Position(6, 3))
+    )
+
+    edge_moves = [
+        move
+        for move, destination in board.legal_moves(Position(1, 3)).items()
+        if destination.row in (0, 6) or destination.col in (0, 6)
+    ]
+    assert edge_moves, "fixture must offer at least one edge move to reject"
+    assert all(move not in plan.allowed_moves for move in edge_moves)
