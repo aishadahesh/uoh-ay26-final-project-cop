@@ -11,7 +11,7 @@ from pathlib import Path
 # directory has to be importable before the sibling modules below.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from replay_events import _entity_positions, _events
+from replay_events import _entity_positions, _events, _finalize_frames
 from replay_model import Entity, ReplayFrame, UnsupportedLogError, _role, parse_position
 from replay_records import _find_mapping, _records_from_root, _verify_record  # noqa: E402
 
@@ -155,27 +155,5 @@ def load_replay(path: Path) -> tuple[list[ReplayFrame], int, str]:
             )
         )
 
-    final = frames[-1]
-    summary = metadata.get("summary") if isinstance(metadata, dict) else None
-    result = str(summary.get("result", "")).lower() if isinstance(summary, dict) else ""
-    if result == "capture":
-        final.events.append("CAPTURE — verified terminal result")
-    elif final.positions.get("cop") == final.positions.get("thief") and "cop" in final.positions:
-        final.events.append("CAPTURE — cop and thief occupy the same cell")
-    else:
-        final.events.append("Replay complete — final recorded state")
-    final.is_final = True
-
-    explicit_size = None
-    candidates = [metadata, metadata.get("board", {}) if isinstance(metadata, dict) else {}]
-    for source in candidates:
-        if not isinstance(source, dict):
-            continue
-        for key in ("grid_size", "board_size", "size"):
-            value = source.get(key)
-            if isinstance(value, int) and value > 0:
-                explicit_size = value
-                break
-    inferred = max((max(position) for position in seen_coordinates), default=6) + 1
-    board_size = explicit_size or max(recorded_board_sizes, default=max(2, inferred))
+    board_size = _finalize_frames(frames, metadata, seen_coordinates, recorded_board_sizes)
     return frames, board_size, game_id

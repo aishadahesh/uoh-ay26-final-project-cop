@@ -11,7 +11,7 @@ from typing import Any
 # directory has to be importable before the sibling modules below.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from replay_model import Entity, parse_position  # noqa: E402
+from replay_model import Entity, ReplayFrame, parse_position  # noqa: E402
 
 
 def _entity_positions(source: Any, keys: Iterable[str], kind: str) -> list[Entity]:
@@ -72,3 +72,39 @@ def _events(record: dict[str, Any], payload: dict[str, Any]) -> list[str]:
         if collected:
             events.append(f"Collected {collected}")
     return list(dict.fromkeys(events))
+
+
+def _finalize_frames(
+    frames: list[ReplayFrame],
+    metadata: Any,
+    seen_coordinates: set[tuple[int, int]],
+    recorded_board_sizes: set[int],
+) -> int:
+    """Append the terminal event to the last frame and settle the board size.
+
+    Extracted verbatim from the tail of `load_replay`.
+    """
+    final = frames[-1]
+    summary = metadata.get("summary") if isinstance(metadata, dict) else None
+    result = str(summary.get("result", "")).lower() if isinstance(summary, dict) else ""
+    if result == "capture":
+        final.events.append("CAPTURE — verified terminal result")
+    elif final.positions.get("cop") == final.positions.get("thief") and "cop" in final.positions:
+        final.events.append("CAPTURE — cop and thief occupy the same cell")
+    else:
+        final.events.append("Replay complete — final recorded state")
+    final.is_final = True
+
+    explicit_size = None
+    candidates = [metadata, metadata.get("board", {}) if isinstance(metadata, dict) else {}]
+    for source in candidates:
+        if not isinstance(source, dict):
+            continue
+        for key in ("grid_size", "board_size", "size"):
+            value = source.get(key)
+            if isinstance(value, int) and value > 0:
+                explicit_size = value
+                break
+    inferred = max((max(position) for position in seen_coordinates), default=6) + 1
+    board_size = explicit_size or max(recorded_board_sizes, default=max(2, inferred))
+    return board_size

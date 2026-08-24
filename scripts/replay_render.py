@@ -15,8 +15,13 @@ except ImportError as exc:  # pragma: no cover - depends on the caller environme
 # directory has to be importable before the sibling modules below.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from replay_draw import _fit_text, _font, _rounded
-from replay_model import MOVE_LABELS, ReplayFrame  # noqa: E402
+from replay_draw import (
+    _draw_agents,  # noqa: E402
+    _font,
+    _rounded,
+)
+from replay_model import ReplayFrame  # noqa: E402
+from replay_panel import _draw_panel  # noqa: E402
 
 
 def render_frame(
@@ -131,41 +136,10 @@ def render_frame(
         ]
         draw.polygon(points, fill="#fbbf24")
 
-    # Agents; overlap becomes a capture ring.
-    for role in ("thief", "cop"):
-        position = frame.positions.get(role)
-        if position is None:
-            continue
-        row, col = position
-        cx = board_left + int((col + 0.5) * cell)
-        cy = board_top + int((row + 0.5) * cell)
-        radius = int(cell * (0.30 if role == frame.actor else 0.25))
-        color = "#14b8a6" if role == "thief" else "#3b82f6"
-        outline = "#99f6e4" if role == "thief" else "#bfdbfe"
-        if frame.positions.get("cop") == frame.positions.get("thief"):
-            offset = -radius // 3 if role == "cop" else radius // 3
-            cx += offset
-            draw.ellipse(
-                (cx - radius - 6, cy - radius - 6, cx + radius + 6, cy + radius + 6),
-                outline="#fb7185",
-                width=5,
-            )
-        draw.ellipse(
-            (cx - radius, cy - radius, cx + radius, cy + radius),
-            fill=color,
-            outline=outline,
-            width=max(3, cell // 18),
-        )
-        letter = "C" if role == "cop" else "T"
-        font = _font(max(16, cell // 3), True)
-        bbox = draw.textbbox((0, 0), letter, font=font)
-        draw.text(
-            (cx - (bbox[2] - bbox[0]) / 2, cy - (bbox[3] - bbox[1]) / 2 - bbox[1]),
-            letter,
-            font=font,
-            fill="#ffffff",
-        )
-
+    _draw_agents(
+        draw, frame,
+        board_left=board_left, board_top=board_top, cell=cell, width=width,
+    )
     # Coordinate labels
     tiny = _font(max(11, width // 105))
     for i in range(board_size):
@@ -174,104 +148,10 @@ def render_frame(
         draw.text((x - 4, board_top - 30), str(i), font=tiny, fill="#7890aa")
         draw.text((board_left - 28, y - 7), str(i), font=tiny, fill="#7890aa")
 
-    # Information panel
-    px = panel_left
-    panel_right = width - margin
-    _rounded(
-        draw,
-        (px, board_top - 14, panel_right, board_top + grid_px + 14),
-        24,
-        "#101f33",
-        "#263c55",
-        2,
+    _draw_panel(
+        draw, frame,
+        width=width, height=height, margin=margin, panel_left=panel_left,
+        board_top=board_top, grid_px=grid_px, accent=accent,
+        actor_name=actor_name, total_frames=total_frames,
     )
-    inner = px + int(width * 0.025)
-    panel_width = panel_right - inner - int(width * 0.025)
-    y = board_top + 18
-    draw.text(
-        (inner, y), f"{actor_name} ACTED", font=_font(max(14, width // 78), True), fill=accent
-    )
-    y += int(height * 0.055)
-    move_name = MOVE_LABELS.get(frame.move, frame.move.title())
-    draw.text(
-        (inner, y),
-        f"{move_name}  {frame.before} → {frame.after}",
-        font=_font(max(20, width // 51), True),
-        fill="#f8fafc",
-    )
-    y += int(height * 0.075)
-
-    for role, color in (("cop", "#60a5fa"), ("thief", "#5eead4")):
-        pos = frame.positions.get(role)
-        draw.ellipse((inner, y + 3, inner + 15, y + 18), fill=color)
-        draw.text(
-            (inner + 26, y),
-            f"{role.title()} position",
-            font=_font(max(12, width // 90)),
-            fill="#8fa6bf",
-        )
-        value = str(pos) if pos is not None else "not revealed yet"
-        value_font = _font(max(13, width // 82), True)
-        value_w = draw.textbbox((0, 0), value, font=value_font)[2]
-        draw.text((inner + panel_width - value_w, y), value, font=value_font, fill="#e8f0ff")
-        y += int(height * 0.047)
-
-    y += 8
-    status = (
-        "VERIFIED"
-        if frame.verified is True
-        else "TAMPERED"
-        if frame.verified is False
-        else "UNSIGNED"
-    )
-    status_color = (
-        "#34d399" if frame.verified is True else "#fb7185" if frame.verified is False else "#94a3b8"
-    )
-    draw.text((inner, y), "COMMITMENT", font=_font(max(11, width // 100), True), fill="#7890aa")
-    y += int(height * 0.035)
-    _rounded(draw, (inner, y, inner + panel_width, y + int(height * 0.046)), 10, "#14283d")
-    draw.text(
-        (inner + 12, y + 7), status, font=_font(max(11, width // 96), True), fill=status_color
-    )
-    digest = frame.commitment[:10] + "…" if frame.commitment else "n/a"
-    digest_w = draw.textbbox((0, 0), digest, font=tiny)[2]
-    draw.text((inner + panel_width - digest_w - 12, y + 8), digest, font=tiny, fill="#8fa6bf")
-    y += int(height * 0.075)
-
-    if frame.scores:
-        draw.text((inner, y), "SCORE", font=_font(max(11, width // 100), True), fill="#7890aa")
-        y += 24
-        draw.text(
-            (inner, y),
-            "  •  ".join(f"{k}: {v}" for k, v in frame.scores.items()),
-            font=_font(max(12, width // 90), True),
-            fill="#e8f0ff",
-        )
-        y += int(height * 0.055)
-    if frame.collected:
-        draw.text((inner, y), "COLLECTED", font=_font(max(11, width // 100), True), fill="#7890aa")
-        y += 24
-        draw.text(
-            (inner, y),
-            ", ".join(f"{k}: {v}" for k, v in frame.collected.items()),
-            font=_font(max(12, width // 90)),
-            fill="#e8f0ff",
-        )
-        y += int(height * 0.055)
-
-    draw.text((inner, y), "TURN NOTE", font=_font(max(11, width // 100), True), fill="#7890aa")
-    y += 25
-    note = frame.events[-1] if frame.events else frame.hint or "Recorded legal movement"
-    note_color = "#fecdd3" if frame.important else "#d8e5f3"
-    for line in _fit_text(draw, note, _font(max(12, width // 88)), panel_width, 3):
-        draw.text((inner, y), line, font=_font(max(12, width // 88)), fill=note_color)
-        y += int(height * 0.033)
-
-    # Progress rail and legend
-    progress_y = height - int(height * 0.045)
-    draw.line((margin, progress_y, width - margin, progress_y), fill="#29405a", width=5)
-    progress = (frame.index + 1) / max(1, total_frames or frame.index + 1)
-    marker_x = margin + int((width - 2 * margin) * min(1.0, progress))
-    draw.line((margin, progress_y, marker_x, progress_y), fill=accent, width=5)
-    draw.ellipse((marker_x - 7, progress_y - 7, marker_x + 7, progress_y + 7), fill=accent)
     return image
